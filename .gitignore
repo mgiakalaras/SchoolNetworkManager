@@ -1,0 +1,53 @@
+# Visual Studio / .NET build
+.vs/
+bin/
+obj/
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+publish/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider / VS Code
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local databases - DO NOT UPLOAD
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Uploaded logos/files - may contain personal/school data
+SchoolNetworkManager/wwwroot/uploads/
+wwwroot/uploads/
+
+# Publish / installer outputs
+SchoolNetworkManagerWinApp/
+SchoolNetworkManagerSetup.exe
+*.iss
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+
+# Local backup files
+Program_BACKUP.txt
+*_BACKUP.txt
+
+# Local publish profiles
+SchoolNetworkManager/Properties/PublishProfiles/
+*.pubxml

@@ -1,0 +1,116 @@
+﻿@page "{id:int}"
+@model SchoolNetworkManager.Pages.Computers.DeleteModel
+
+@{
+    ViewData["Title"] = "Διαγραφή Υπολογιστή";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-1 text-danger">Διαγραφή Υπολογιστή</h1>
+        <p class="text-muted mb-0">Επιβεβαίωση διαγραφής καταχώρησης</p>
+    </div>
+
+    <a class="btn btn-outline-secondary" asp-page="./Index">
+        Πίσω στη λίστα
+    </a>
+</div>
+
+<div class="alert alert-danger shadow-sm">
+    <strong>Προσοχή:</strong> Η διαγραφή είναι οριστική. Θέλεις σίγουρα να διαγράψεις αυτή την καταχώρηση;
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="text-muted small">IP Address</div>
+                <div class="fs-5 fw-semibold">@Model.Computer.IpAddress</div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">Τύπος Μηχανήματος</div>
+                <div>
+                    <span class="badge bg-info text-dark">
+                        @Model.Computer.MachineType
+                    </span>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">Name</div>
+                <div class="fs-5 fw-semibold">@Model.Computer.Name</div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">MAC Address</div>
+                <div>@Model.Computer.MacAddress</div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">Location</div>
+                <div>@Model.Computer.Location</div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">Username</div>
+                <div>@Model.Computer.Username</div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">LAN Messenger</div>
+                @if (Model.Computer.HasLanMessenger)
+                {
+                    <span class="badge bg-success">Ναι</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">Όχι</span>
+                }
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">Veyon</div>
+                @if (Model.Computer.HasVeyon)
+                {
+                    <span class="badge bg-success">Ναι</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">Όχι</span>
+                }
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Computer.Notes) || !string.IsNullOrWhiteSpace(Model.Computer.Comments))
+        {
+            <hr />
+
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="text-muted small">NOTES</div>
+                    <div>@Model.Computer.Notes</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="text-muted small">Σημειώσεις</div>
+                    <div>@Model.Computer.Comments</div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<form method="post">
+    <input type="hidden" asp-for="Computer.Id" />
+
+    <div class="d-flex justify-content-end gap-2">
+        <a class="btn btn-outline-secondary" asp-page="./Index">
+            Άκυρο
+        </a>
+
+        <button type="submit" class="btn btn-danger">
+            Οριστική Διαγραφή
+        </button>
+    </div>
+</form>

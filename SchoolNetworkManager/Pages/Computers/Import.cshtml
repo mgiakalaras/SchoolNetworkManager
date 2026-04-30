@@ -1,0 +1,63 @@
+﻿@page
+@model SchoolNetworkManager.Pages.Computers.ImportModel
+
+@{
+    ViewData["Title"] = "Import Excel";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-1">Import Excel</h1>
+        <p class="text-muted mb-0">Εισαγωγή υπολογιστών από αρχείο .xlsx</p>
+    </div>
+
+    <a class="btn btn-outline-secondary" asp-page="./Index">
+        Πίσω στη λίστα
+    </a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.ResultMessage))
+{
+    <div class="alert alert-success shadow-sm">
+        @Model.ResultMessage
+    </div>
+}
+
+@if (Model.Errors.Any())
+{
+    <div class="alert alert-warning shadow-sm">
+        <strong>Προσοχή:</strong>
+        <ul class="mb-0">
+            @foreach (var error in Model.Errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label asp-for="UploadFile" class="form-label">Αρχείο Excel</label>
+                <input asp-for="UploadFile" class="form-control" accept=".xlsx" />
+                <span asp-validation-for="UploadFile" class="text-danger"></span>
+            </div>
+
+            <div class="alert alert-info">
+                Το αρχείο πρέπει να έχει στήλες όπως:
+                <strong>IP Address, Name, MAC Address, Location, NOTES, Username, Password, Extras, LAN Messenger, Veyon, Σημειώσεις</strong>.
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <a class="btn btn-outline-secondary" asp-page="./Index">Άκυρο</a>
+                <button type="submit" class="btn btn-primary">Import</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

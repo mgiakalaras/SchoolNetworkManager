@@ -1,0 +1,15 @@
+﻿**/bin/
+**/obj/
+**/.vs/
+
+.git/
+.gitignore
+
+*.user
+*.suo
+
+schoolnetworkmanager.db
+schoolnetworkmanager.db-shm
+schoolnetworkmanager.db-wal
+
+wwwroot/uploads/

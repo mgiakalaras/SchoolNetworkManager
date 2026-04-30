@@ -1,0 +1,293 @@
+﻿@page
+@model SchoolNetworkManager.Pages.Computers.IndexModel
+
+@{
+    ViewData["Title"] = "Υπολογιστές";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-1">Υπολογιστές</h1>
+        <p class="text-muted mb-0">
+            Καταγραφή υπολογιστών σχολικού δικτύου — Σύνολο: @Model.TotalCount
+        </p>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap justify-content-end">
+        <form method="post"
+              asp-page="./Index"
+              asp-page-handler="CheckOnline"
+              asp-route-SearchTerm="@Model.SearchTerm"
+              asp-route-PageNumber="@Model.PageNumber"
+              asp-route-VeyonFilter="@Model.VeyonFilter"
+              asp-route-LanFilter="@Model.LanFilter"
+              asp-route-StatusFilter="@Model.StatusFilter"
+              asp-route-SortBy="@Model.SortBy">
+            <button type="submit" class="btn btn-outline-warning">
+                Έλεγχος Online/Offline
+            </button>
+        </form>
+
+        <a class="btn btn-outline-success"
+               asp-page="./Index"
+               asp-page-handler="Export"
+               asp-route-SearchTerm="@Model.SearchTerm"
+               asp-route-VeyonFilter="@Model.VeyonFilter"
+               asp-route-LanFilter="@Model.LanFilter"
+               asp-route-StatusFilter="@Model.StatusFilter"
+               asp-route-SortBy="@Model.SortBy">
+            Export Excel
+        </a>
+
+        <a class="btn btn-outline-primary" asp-page="./Import">
+            Import Excel
+        </a>
+
+        <a class="btn btn-primary" asp-page="./Create">
+            + Νέα Καταχώρηση
+        </a>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-success shadow-sm">
+        @Model.StatusMessage
+    </div>
+}
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <input type="hidden" name="PageNumber" value="1" />
+
+            <div class="col-md-4">
+                <label class="form-label">Αναζήτηση</label>
+                <input asp-for="SearchTerm"
+                       class="form-control"
+                       placeholder="IP, όνομα, MAC, χώρος, τύπος, σημειώσεις..." />
+            </div>
+
+            <div class="col-md-2">
+                <label asp-for="VeyonFilter" class="form-label">Veyon</label>
+                <select asp-for="VeyonFilter" class="form-select">
+                    <option value="">Όλα</option>
+                    <option value="yes">Μόνο με Veyon</option>
+                    <option value="no">Χωρίς Veyon</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label asp-for="LanFilter" class="form-label">LAN Messenger</label>
+                <select asp-for="LanFilter" class="form-select">
+                    <option value="">Όλα</option>
+                    <option value="yes">Μόνο με LAN</option>
+                    <option value="no">Χωρίς LAN</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label asp-for="StatusFilter" class="form-label">Status</label>
+                <select asp-for="StatusFilter" class="form-select">
+                    <option value="">Όλα</option>
+                    <option value="online">Online</option>
+                    <option value="offline">Offline</option>
+                    <option value="unknown">Άγνωστο</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label asp-for="SortBy" class="form-label">Ταξινόμηση</label>
+                <select asp-for="SortBy" class="form-select">
+                    <option value="ip">IP Address</option>
+                    <option value="type">Τύπος</option>
+                    <option value="name">Name</option>
+                    <option value="location">Location</option>
+                    <option value="veyon">Veyon</option>
+                    <option value="lan">LAN Messenger</option>
+                    <option value="status">Status</option>
+                </select>
+            </div>
+
+            <div class="col-12 d-flex gap-2 mt-3">
+                <button type="submit" class="btn btn-primary">
+                    Εφαρμογή φίλτρων
+                </button>
+
+                <a class="btn btn-outline-secondary" asp-page="./Index">
+                    Καθαρισμός
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        @if (!Model.Computers.Any())
+        {
+            <div class="alert alert-info mb-0">
+                Δεν υπάρχουν καταχωρήσεις με τα συγκεκριμένα φίλτρα.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>IP</th>
+                            <th>Τύπος</th>
+                            <th>Name</th>
+                            <th>MAC</th>
+                            <th>Location</th>
+                            <th>LAN</th>
+                            <th>Veyon</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var computer in Model.Computers)
+                        {
+                            <tr class="location-row" style="@Model.GetLocationStyle(computer)">
+                                <td><strong>@computer.IpAddress</strong></td>
+
+                                <td>
+                                    @if (computer.IsEmptySlot)
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info text-dark">
+                                            @computer.DisplayMachineType
+                                        </span>
+                                    }
+                                </td>
+
+                                <td>@computer.Name</td>
+                                <td>@computer.MacAddress</td>
+                                <td>@computer.Location</td>
+
+                                <td>
+                                    @if (computer.HasLanMessenger)
+                                    {
+                                        <span class="badge bg-success">Ναι</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Όχι</span>
+                                    }
+                                </td>
+
+                                <td>
+                                    @if (computer.HasVeyon)
+                                    {
+                                        <span class="badge bg-success">Ναι</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Όχι</span>
+                                    }
+                                </td>
+
+                                <td>
+                                    @if (computer.IsOnline == true)
+                                    {
+                                        <span class="badge bg-success">Online</span>
+                                    }
+                                    else if (computer.IsOnline == false)
+                                    {
+                                        <span class="badge bg-danger">Offline</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">Άγνωστο</span>
+                                    }
+                                </td>
+
+                                <td class="text-end">
+                                    <a class="btn btn-sm btn-outline-primary"
+                                           asp-page="./Edit"
+                                           asp-route-id="@computer.Id"
+                                           asp-route-returnUrl="@Url.Page("./Index", new { SearchTerm = Model.SearchTerm, PageNumber = Model.PageNumber, VeyonFilter = Model.VeyonFilter, LanFilter = Model.LanFilter, StatusFilter = Model.StatusFilter, SortBy = Model.SortBy })">
+                                        Edit
+                                    </a>
+
+                                    <a class="btn btn-sm btn-outline-secondary"
+                                           asp-page="./Details"
+                                           asp-route-id="@computer.Id">
+                                        Details
+                                    </a>
+
+                                    <a class="btn btn-sm btn-outline-danger"
+                                           asp-page="./Delete"
+                                           asp-route-id="@computer.Id">
+                                        Delete
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (Model.TotalPages > 1)
+                {
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div class="text-muted small">
+                            Σελίδα @Model.PageNumber από @Model.TotalPages — Εμφάνιση @Model.Computers.Count από @Model.TotalCount εγγραφές
+                        </div>
+
+                        <nav>
+                            <ul class="pagination mb-0">
+                                <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                    <a class="page-link"
+                                           asp-page="./Index"
+                                           asp-route-SearchTerm="@Model.SearchTerm"
+                                           asp-route-VeyonFilter="@Model.VeyonFilter"
+                                           asp-route-LanFilter="@Model.LanFilter"
+                                           asp-route-StatusFilter="@Model.StatusFilter"
+                                           asp-route-SortBy="@Model.SortBy"
+                                           asp-route-PageNumber="@(Model.PageNumber - 1)">
+                                        Προηγούμενη
+                                    </a>
+                                </li>
+
+                                @for (var i = 1; i <= Model.TotalPages; i++)
+                                {
+                                    <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                                        <a class="page-link"
+                                               asp-page="./Index"
+                                               asp-route-SearchTerm="@Model.SearchTerm"
+                                               asp-route-VeyonFilter="@Model.VeyonFilter"
+                                               asp-route-LanFilter="@Model.LanFilter"
+                                               asp-route-StatusFilter="@Model.StatusFilter"
+                                               asp-route-SortBy="@Model.SortBy"
+                                               asp-route-PageNumber="@i">
+                                            @i
+                                        </a>
+                                    </li>
+                                }
+
+                                <li class="page-item @(Model.PageNumber >= Model.TotalPages ? "disabled" : "")">
+                                    <a class="page-link"
+                                           asp-page="./Index"
+                                           asp-route-SearchTerm="@Model.SearchTerm"
+                                           asp-route-VeyonFilter="@Model.VeyonFilter"
+                                           asp-route-LanFilter="@Model.LanFilter"
+                                           asp-route-StatusFilter="@Model.StatusFilter"
+                                           asp-route-SortBy="@Model.SortBy"
+                                           asp-route-PageNumber="@(Model.PageNumber + 1)">
+                                        Επόμενη
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

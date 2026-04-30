@@ -1,0 +1,327 @@
+﻿@page
+@model SchoolNetworkManager.Pages.IndexModel
+
+@{
+    ViewData["Title"] = "Dashboard";
+
+    var onlinePct = Model.TotalComputers == 0 ? 0 : Model.OnlineComputers * 100.0 / Model.TotalComputers;
+    var offlinePct = Model.TotalComputers == 0 ? 0 : Model.OfflineComputers * 100.0 / Model.TotalComputers;
+    var unknownPct = Model.TotalComputers == 0 ? 0 : Model.UnknownStatusComputers * 100.0 / Model.TotalComputers;
+
+    var onlineCss = onlinePct.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
+    var offlineCss = offlinePct.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
+    var unknownCss = unknownPct.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex align-items-center gap-3">
+        @if (!string.IsNullOrWhiteSpace(Model.Settings.LogoPath))
+        {
+            <img src="@Model.Settings.LogoPath"
+                 alt="Λογότυπο"
+                 class="dashboard-logo" />
+        }
+
+        <div>
+            <h1 class="mb-1">@Model.Settings.SchoolTitle</h1>
+            <p class="text-muted mb-0">@Model.Settings.SchoolSubtitle</p>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-success"
+               asp-page="/Computers/Index"
+               asp-page-handler="Export">
+            Export Excel
+        </a>
+
+        <a class="btn btn-outline-primary" asp-page="/Computers/Import">
+            Import Excel
+        </a>
+
+        <a class="btn btn-primary" asp-page="/Computers/Create">
+            + Νέα Καταχώρηση
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Σύνολο Συσκευών</div>
+                <div class="display-6 fw-semibold">@Model.TotalComputers</div>
+                <a asp-page="/Computers/Index" class="small">Προβολή λίστας</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Veyon</div>
+                <div class="display-6 fw-semibold">@Model.VeyonComputers</div>
+                <div class="text-muted small">συσκευές με Veyon</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">LAN Messenger</div>
+                <div class="display-6 fw-semibold">@Model.LanMessengerComputers</div>
+                <div class="text-muted small">συσκευές με LAN Messenger</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Τύποι Συσκευών</div>
+                <div class="display-6 fw-semibold">@Model.MachineTypeStats.Count</div>
+                <div class="text-muted small">διαφορετικές κατηγορίες</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Συσκευές ανά τύπο</span>
+                <span class="badge bg-info text-dark">@Model.MachineTypeStats.Count τύποι</span>
+            </div>
+
+            <div class="card-body">
+                @if (!Model.MachineTypeStats.Any())
+                {
+                    <div class="text-muted">Δεν υπάρχουν ακόμα δεδομένα τύπων.</div>
+                }
+                else
+                {
+                    <div class="d-flex flex-column gap-3">
+                        @foreach (var item in Model.MachineTypeStats)
+                        {
+                            <a class="text-decoration-none text-reset"
+                                   asp-page="/Computers/Index"
+                                   asp-route-SearchTerm="@item.MachineType">
+
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <div>
+                                        <span class="fw-semibold">@item.MachineType</span>
+                                        <span class="text-muted small ms-2">@item.Count συσκευές</span>
+                                    </div>
+
+                                    <span class="badge bg-primary">
+                                        @item.PercentageText
+                                    </span>
+                                </div>
+
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar"
+                                         role="progressbar"
+                                         style="width: @item.PercentageCss;"
+                                         aria-valuenow="@item.Percentage"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100">
+                                    </div>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Κατάσταση Δικτύου</span>
+
+                <form method="post" asp-page-handler="CheckOnline">
+                    <button type="submit" class="btn btn-sm btn-outline-warning">
+                        Έλεγχος Online/Offline
+                    </button>
+                </form>
+            </div>
+
+            <div class="card-body">
+                @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+                {
+                    <div class="alert alert-success py-2 mb-3">
+                        @Model.StatusMessage
+                    </div>
+                }
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="fw-semibold">Online</span>
+                        <span class="badge bg-success">@Model.OnlineComputers — @onlinePct.ToString("0.0")%</span>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-success" style="width: @onlineCss;"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="fw-semibold">Offline</span>
+                        <span class="badge bg-danger">@Model.OfflineComputers — @offlinePct.ToString("0.0")%</span>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-danger" style="width: @offlineCss;"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="fw-semibold">Άγνωστο</span>
+                        <span class="badge bg-warning text-dark">@Model.UnknownStatusComputers — @unknownPct.ToString("0.0")%</span>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-warning" style="width: @unknownCss;"></div>
+                    </div>
+                </div>
+
+                <div class="text-muted small mt-3">
+                    Τα ποσοστά ενημερώνονται μετά από χρήση του ελέγχου Online/Offline.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Συσκευές ανά χώρο</span>
+                <span class="badge bg-secondary">@Model.Locations.Count χώροι</span>
+            </div>
+
+            <div class="card-body">
+                @if (!Model.Locations.Any())
+                {
+                    <div class="text-muted">Δεν υπάρχουν ακόμα δεδομένα χώρων.</div>
+                }
+                else
+                {
+                    <div class="d-flex flex-column gap-3">
+                        @foreach (var item in Model.Locations)
+                        {
+                            <a class="text-decoration-none text-reset"
+                                   asp-page="/Computers/Index"
+                                   asp-route-SearchTerm="@item.Location">
+
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <div>
+                                        <span class="fw-semibold">@item.Location</span>
+                                        <span class="text-muted small ms-2">@item.Count συσκευές</span>
+                                    </div>
+
+                                    <span class="badge bg-secondary">
+                                        @item.PercentageText
+                                    </span>
+                                </div>
+
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar bg-secondary"
+                                         role="progressbar"
+                                         style="width: @item.PercentageCss;"
+                                         aria-valuenow="@item.Percentage"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100">
+                                    </div>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Τελευταίες καταχωρήσεις</span>
+                <a asp-page="/Computers/Index" class="btn btn-sm btn-outline-secondary">
+                    Όλες οι εγγραφές
+                </a>
+            </div>
+
+            <div class="card-body">
+                @if (!Model.LatestComputers.Any())
+                {
+                    <div class="text-muted">Δεν υπάρχουν ακόμα καταχωρήσεις.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>IP</th>
+                                    <th>Τύπος</th>
+                                    <th>Name</th>
+                                    <th>Location</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Άνοιγμα</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var computer in Model.LatestComputers)
+                                {
+                                    <tr>
+                                        <td><strong>@computer.IpAddress</strong></td>
+                                        <td>
+                                            <span class="badge bg-info text-dark">
+                                                @if (computer.IsEmptySlot)
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-info text-dark">
+                                                        @computer.DisplayMachineType
+                                                    </span>
+                                                }
+                                            </span>
+                                        </td>
+                                        <td>@computer.Name</td>
+                                        <td>@computer.Location</td>
+                                        <td>
+                                            @if (computer.IsOnline == true)
+                                            {
+                                                <span class="badge bg-success">Online</span>
+                                            }
+                                            else if (computer.IsOnline == false)
+                                            {
+                                                <span class="badge bg-danger">Offline</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning text-dark">Άγνωστο</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <a class="btn btn-sm btn-outline-primary"
+                                                   asp-page="/Computers/Details"
+                                                   asp-route-id="@computer.Id">
+                                                Details
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

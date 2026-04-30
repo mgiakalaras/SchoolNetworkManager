@@ -1,0 +1,124 @@
+﻿@page
+@model SchoolNetworkManager.Pages.AboutModel
+
+@{
+    ViewData["Title"] = "Πληροφορίες";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-1">Πληροφορίες</h1>
+        <p class="text-muted mb-0">Σχετικά με την εφαρμογή και τον δημιουργό</p>
+    </div>
+
+    <a class="btn btn-outline-secondary" asp-page="/Index">
+        Πίσω στο Dashboard
+    </a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-header fw-semibold">
+                School Network Manager
+            </div>
+
+            <div class="card-body">
+                <h2 class="h4 mb-3">Εφαρμογή διαχείρισης σχολικού δικτύου</h2>
+
+                <p>
+                    Το <strong>School Network Manager</strong> είναι μια εφαρμογή καταγραφής,
+                    οργάνωσης και διαχείρισης σχολικού δικτύου και τεχνολογικού εξοπλισμού.
+                </p>
+
+                <p>
+                    Στόχος της εφαρμογής είναι να διευκολύνει την καθημερινή διαχείριση
+                    υπολογιστών, φορητών συσκευών, διαδραστικών πινάκων, δικτυακού εξοπλισμού
+                    και λοιπών συσκευών που υπάρχουν σε ένα σχολικό περιβάλλον.
+                </p>
+
+                <div class="alert alert-info mt-4 mb-0">
+                    Η εφαρμογή αναπτύχθηκε με γνώμονα την πρακτική χρήση σε σχολικές μονάδες,
+                    την ευκολία καταχώρησης, την εισαγωγή/εξαγωγή δεδομένων από Excel και την
+                    γρήγορη εποπτεία του δικτύου.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-header fw-semibold">
+                Σχεδιασμός και ανάπτυξη
+            </div>
+
+            <div class="card-body">
+                <h2 class="h4 mb-1">Δρ. Μάριος Μ. Γιακαλάρας</h2>
+                <div class="text-muted mb-3">Εκπαιδευτικός Πληροφορικής ΠΕ86</div>
+
+                <div class="mb-3">
+                    <div class="text-muted small">Ακαδημαϊκοί τίτλοι</div>
+
+                    <ul class="mb-0">
+                        <li>
+                            <strong>Διδάκτωρ</strong><br />
+                            Πανεπιστήμιο Αιγαίου<br />
+                            Τμήμα Πολιτισμικής Τεχνολογίας και Επικοινωνίας
+                        </li>
+
+                        <li class="mt-2">
+                            <strong>Μεταπτυχιακό Δίπλωμα Ειδίκευσης</strong><br />
+                            Πανεπιστήμιο Αιγαίου<br />
+                            Τμήμα Πολιτισμικής Τεχνολογίας και Επικοινωνίας
+                        </li>
+
+                        <li class="mt-2">
+                            <strong>Προπτυχιακό Δίπλωμα Ειδίκευσης</strong><br />
+                            Πανεπιστήμιο Αιγαίου<br />
+                            Τμήμα Πολιτισμικής Τεχνολογίας και Επικοινωνίας
+                        </li>
+                    </ul>
+                </div>
+
+                <hr />
+
+                <div class="mb-3">
+                    <div class="text-muted small">Ενδεικτικά πεδία ενδιαφέροντος</div>
+
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        <span class="badge bg-secondary">3D εφαρμογές</span>
+                        <span class="badge bg-secondary">Εικονική Πραγματικότητα</span>
+                        <span class="badge bg-secondary">Rendering</span>
+                        <span class="badge bg-secondary">Animation</span>
+                        <span class="badge bg-secondary">Ανάπτυξη Βιντεοπαιχνιδιών</span>
+                        <span class="badge bg-secondary">Φωτορεαλισμός</span>
+                        <span class="badge bg-secondary">HCI</span>
+                    </div>
+                </div>
+
+                <hr />
+
+                <div>
+                    <div class="text-muted small">Επικοινωνία</div>
+                    <div>
+                        <a href="mailto:mgiakalaras@hotmail.com">
+                            mgiakalaras@hotmail.com
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mt-4">
+    <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <strong>Έκδοση:</strong> 1.0.0
+        </div>
+
+        <div class="text-muted">
+            © 2026 - School Network Manager
+        </div>
+    </div>
+</div>

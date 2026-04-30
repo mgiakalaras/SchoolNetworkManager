@@ -1,0 +1,53 @@
+﻿@page
+@model SchoolNetworkManager.Pages.ExitModel
+
+@{
+    ViewData["Title"] = "Έξοδος";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-1">Έξοδος</h1>
+        <p class="text-muted mb-0">Κλείσιμο της εφαρμογής School Network Manager</p>
+    </div>
+
+    @if (!Model.IsClosing)
+    {
+        <a class="btn btn-outline-secondary" asp-page="/Index">
+            Πίσω στο Dashboard
+        </a>
+    }
+</div>
+
+@if (Model.IsClosing)
+{
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+            <h2 class="h4 mb-3">Η εφαρμογή κλείνει...</h2>
+
+            <p class="text-muted mb-0">
+                Μπορείτε να κλείσετε αυτό το παράθυρο ή την καρτέλα του browser.
+            </p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="alert alert-warning">
+                Θέλεις σίγουρα να κλείσεις το School Network Manager;
+            </div>
+
+            <form method="post" class="d-flex justify-content-end gap-2">
+                <a class="btn btn-outline-secondary" asp-page="/Index">
+                    Άκυρο
+                </a>
+
+                <button type="submit" class="btn btn-danger">
+                    Κλείσιμο εφαρμογής
+                </button>
+            </form>
+        </div>
+    </div>
+}

@@ -1,0 +1,209 @@
+﻿@page "{id:int}"
+@model SchoolNetworkManager.Pages.Computers.DetailsModel
+
+@{
+    ViewData["Title"] = "Στοιχεία Υπολογιστή";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-1">Στοιχεία Υπολογιστή</h1>
+        <p class="text-muted mb-0">Αναλυτική προβολή καταχώρησης</p>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-primary" asp-page="./Edit" asp-route-id="@Model.Computer.Id">
+            Επεξεργασία
+        </a>
+
+        <a class="btn btn-outline-secondary" asp-page="./Index">
+            Πίσω στη λίστα
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="text-muted small">IP Address</div>
+                <div class="fs-5 fw-semibold">@Model.Computer.IpAddress</div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">Τύπος Μηχανήματος</div>
+
+                @if (Model.Computer.IsEmptySlot)
+                {
+                    <div class="text-muted">-</div>
+                }
+                else
+                {
+                    <span class="badge bg-info text-dark">
+                        @Model.Computer.DisplayMachineType
+                    </span>
+                }
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">Name</div>
+                <div class="fs-5 fw-semibold">@Model.Computer.Name</div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">MAC Address</div>
+                <div class="fs-6">@Model.Computer.MacAddress</div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">Location</div>
+                <div class="fs-6">@Model.Computer.Location</div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">Username</div>
+                <div class="fs-6">@Model.Computer.Username</div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">Password</div>
+
+                @if (!string.IsNullOrWhiteSpace(Model.Computer.Password))
+                {
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="passwordText">••••••••</span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="togglePassword()">
+                            Εμφάνιση
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-muted">—</div>
+                }
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">LAN Messenger</div>
+                @if (Model.Computer.HasLanMessenger)
+                {
+                    <span class="badge bg-success">Ναι</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">Όχι</span>
+                }
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">Veyon</div>
+                @if (Model.Computer.HasVeyon)
+                {
+                    <span class="badge bg-success">Ναι</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">Όχι</span>
+                }
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">Status</div>
+                @if (Model.Computer.IsOnline == true)
+                {
+                    <span class="badge bg-success">Online</span>
+                }
+                else if (Model.Computer.IsOnline == false)
+                {
+                    <span class="badge bg-danger">Offline</span>
+                }
+                else
+                {
+                    <span class="badge bg-warning text-dark">Άγνωστο</span>
+                }
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">Τελευταίος έλεγχος</div>
+                <div>
+                    @(Model.Computer.LastCheckedAt?.ToString("dd/MM/yyyy HH:mm") ?? "—")
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">Δημιουργήθηκε</div>
+                <div>@Model.Computer.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted small">Τελευταία αλλαγή</div>
+                <div>
+                    @(Model.Computer.UpdatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "—")
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header fw-semibold">Extras</div>
+            <div class="card-body">
+                @if (!string.IsNullOrWhiteSpace(Model.Computer.Extras))
+                {
+                    <p class="mb-0">@Model.Computer.Extras</p>
+                }
+                else
+                {
+                    <span class="text-muted">Δεν υπάρχουν extras.</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header fw-semibold">NOTES</div>
+            <div class="card-body">
+                @if (!string.IsNullOrWhiteSpace(Model.Computer.Notes))
+                {
+                    <p class="mb-0">@Model.Computer.Notes</p>
+                }
+                else
+                {
+                    <span class="text-muted">Δεν υπάρχουν notes.</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header fw-semibold">Σημειώσεις</div>
+            <div class="card-body">
+                @if (!string.IsNullOrWhiteSpace(Model.Computer.Comments))
+                {
+                    <p class="mb-0">@Model.Computer.Comments</p>
+                }
+                else
+                {
+                    <span class="text-muted">Δεν υπάρχουν σημειώσεις.</span>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let visible = false;
+        const realPassword = "@Model.Computer.Password";
+
+        function togglePassword() {
+            const el = document.getElementById("passwordText");
+            visible = !visible;
+            el.textContent = visible ? realPassword : "••••••••";
+        }
+    </script>
+}
