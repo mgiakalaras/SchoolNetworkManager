@@ -1,5 +1,6 @@
 \# School Network Manager
 
+<img width="1870" height="1480" alt="image" src="https://github.com/user-attachments/assets/677c8799-eb1a-4cfd-8dca-4864caf566f9" />
 
 
 Το \*\*School Network Manager\*\* είναι μια εφαρμογή καταγραφής, οργάνωσης και διαχείρισης σχολικού δικτύου και τεχνολογικού εξοπλισμού.
