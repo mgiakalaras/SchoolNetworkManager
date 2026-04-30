@@ -119,6 +119,7 @@
 
 Η εφαρμογή υποστηρίζει εισαγωγή δεδομένων από αρχείο `.xlsx`.
 
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/f94041ee-882b-4e92-ac68-8225e21f1fef" />
 
 
 Το Excel μπορεί να περιέχει στήλες όπως:
