@@ -464,45 +464,25 @@
 
 
 
-```powershell
+\powershell
 
+```
 dotnet restore
 
 dotnet build
 
 dotnet run --project .\\SchoolNetworkManager\\SchoolNetworkManager.csproj
 
+```
 
-
-
-
-Δημιουργός
-
-
-
+\Δημιουργός
 Δρ. Μάριος Μ. Γιακαλάρας
-
 Εκπαιδευτικός Πληροφορικής ΠΕ86
 
-
-
 Έκδοση
-
-
-
 v1.0.0
 
-
-
 Copyright
-
-
-
 © 2026 - School Network Manager
-
-
-
-
-
 
 
