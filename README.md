@@ -1,6 +1,6 @@
 # School Network Manager
 
-<img width="1870" height="1480" alt="School Network Manager" src="https://github.com/user-attachments/assets/677c8799-eb1a-4cfd-8dca-4864caf566f9" />
+<img width="1869" height="2065" alt="image" src="https://github.com/user-attachments/assets/76d5ecbf-1a73-4b96-9f01-eddc591289a4" />
 
 Το **School Network Manager** είναι εφαρμογή καταγραφής, οργάνωσης και διαχείρισης του σχολικού δικτύου
 και του εξοπλισμού των εργαστηρίων πληροφορικής. Τρέχει σε έναν server του σχολείου (π.χ. ZimaOS / Docker)
@@ -24,6 +24,8 @@
 - Χώροι με γρήγορη εικόνα, δημιουργία χώρου και προσθήκη συσκευών
 - Κάτοψη χώρου και πλάνο θέσεων μαθητών ανά τμήμα
 - Εκτυπώσεις λιστών ανά χώρο
+  <img width="1869" height="1303" alt="image" src="https://github.com/user-attachments/assets/3d66f232-3c6d-4e21-bb3c-272f5327d847" />
+
 
 **Καθημερινή λειτουργία**
 - Βιβλίο βλαβών και **δημόσια σελίδα** όπου μαθητές / εκπαιδευτικοί δηλώνουν βλάβη χωρίς κωδικό
