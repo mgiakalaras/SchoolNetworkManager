@@ -1,0 +1,50 @@
+@page
+@model SchoolNetworkManager.Pages.LoginModel
+
+@{
+    ViewData["Title"] = "Σύνδεση";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-12 col-sm-8 col-md-6 col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <img src="~/favicon.ico" alt="School Network Manager" class="navbar-logo mb-2" />
+                    <h1 class="h4 mb-1">Σύνδεση</h1>
+                    <p class="text-muted mb-0">
+                        @(Model.HasUsers ? "Με το όνομα χρήστη και τον κωδικό σου" : "Δώσε τον κωδικό διαχειριστή")
+                    </p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                {
+                    <div class="alert alert-danger py-2">@Model.ErrorMessage</div>
+                }
+
+                <form method="post">
+                    <input type="hidden" asp-for="ReturnUrl" />
+
+                    <div class="mb-3">
+                        <label asp-for="UserName" class="form-label">Όνομα χρήστη</label>
+                        <input asp-for="UserName" class="form-control" autocomplete="username"
+                               autocapitalize="none" spellcheck="false"
+                               placeholder="@(Model.HasUsers ? "π.χ. mgiakalaras" : "admin")" autofocus="@(Model.HasUsers)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label">Κωδικός</label>
+                        <input asp-for="Password" type="password" class="form-control"
+                               autocomplete="current-password" autofocus="@(!Model.HasUsers)" required />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">Είσοδος</button>
+                </form>
+
+                <p class="small text-muted text-center mt-3 mb-0">
+                    Ο κοινός λογαριασμός: όνομα <code>admin</code> (ή κενό) με τον κωδικό του server.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

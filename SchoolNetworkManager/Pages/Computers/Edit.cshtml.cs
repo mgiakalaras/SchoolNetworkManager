@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SchoolNetworkManager.Data;
@@ -17,6 +17,15 @@ public class EditModel : PageModel
 
     [BindProperty]
     public Computer Computer { get; set; } = new();
+
+    [BindProperty]
+    public Dictionary<string, string?> SpecInput { get; set; } = new();
+
+    /// <summary>Τιμές για την ενότητα «Χαρακτηριστικά» της φόρμας.</summary>
+    public Dictionary<string, string> SpecInputView =>
+        SpecInput.Count > 0
+            ? SpecInput.Where(x => x.Value != null).ToDictionary(x => x.Key, x => x.Value!)
+            : Computer.SpecValues;
     [BindProperty(SupportsGet = true)]
     public string? ReturnUrl { get; set; }
 
@@ -65,16 +74,21 @@ public class EditModel : PageModel
             : Computer.MachineType;
 
         existingComputer.Name = Computer.Name;
-        existingComputer.MacAddress = Computer.MacAddress;
+        existingComputer.MacAddress = SchoolNetworkManager.Services.NetworkTools.NormalizeMac(Computer.MacAddress);
+        existingComputer.Vendor = Computer.Vendor;
+        existingComputer.OpenPorts = Computer.OpenPorts;
         existingComputer.Location = Computer.Location;
         existingComputer.Username = Computer.Username;
         existingComputer.Password = Computer.Password;
         existingComputer.Extras = Computer.Extras;
         existingComputer.Notes = Computer.Notes;
-        existingComputer.Comments = Computer.Comments;
+        existingComputer.Comments = null;
+        existingComputer.Specs = DeviceSpecs.Serialize(SpecInput, existingComputer.MachineType, existingComputer.Specs);
         existingComputer.HasLanMessenger = Computer.HasLanMessenger;
         existingComputer.HasVeyon = Computer.HasVeyon;
+        existingComputer.IsDynamic = Computer.IsDynamic;
         existingComputer.UpdatedAt = DateTime.Now;
+        existingComputer.UpdatedBy = SchoolNetworkManager.Services.UserPasswords.ActorName(User);
 
         await _context.SaveChangesAsync();
 

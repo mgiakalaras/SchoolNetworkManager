@@ -1,0 +1,238 @@
+@page
+@model SchoolNetworkManager.Pages.Locations.PlanModel
+
+@{
+    ViewData["Title"] = "Κάτοψη · " + Model.LocationName;
+
+    var data = new
+    {
+        aspect = Model.Room.AspectRatio <= 0 ? 1.6 : Model.Room.AspectRatio,
+        background = Model.Room.BackgroundPath,
+        classId = Model.SelectedClass?.Id,
+        startMode = Request.Query.ContainsKey("edit") ? "layout" : Request.Query.ContainsKey("seats") && Model.SelectedClass != null ? "seats" : "view",
+        layoutUrl = Url.Page("/Locations/Plan", "Layout", new { location = Model.Location }),
+        seatsUrl = Url.Page("/Locations/Plan", "Seats", new { location = Model.Location }),
+        detailsUrl = Url.Page("/Computers/Details", new { id = 0 })?.TrimEnd('0'),
+        devices = Model.Devices.Select(d => new
+        {
+            id = d.Id,
+            name = string.IsNullOrWhiteSpace(d.Name) ? d.IpAddress : d.Name,
+            ip = d.IpAddress,
+            last = d.IpAddress.Split('.').Last(),
+            icon = SchoolNetworkManager.Models.DeviceSpecs.TypeIcon(d.MachineType),
+            type = d.DisplayMachineType,
+            state = d.IsOnline == true ? "online" : d.IsOnline == false ? "offline" : "unknown",
+            fault = Model.OpenFaults.Contains(d.Id),
+            veyonDown = d.VeyonDown,
+            seat = Model.SeatNames.TryGetValue(d.Id, out var seatName) ? seatName : null
+        }),
+        items = Model.Items.Select(i => new { computerId = i.ComputerId, kind = i.Kind, label = i.Label, x = i.X, y = i.Y, w = i.W, h = i.H })
+    };
+}
+
+@Html.AntiForgeryToken()
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 d-print-none">
+    <div class="min-w-0">
+        <h1 class="mb-1">🗺️ @Model.LocationName</h1>
+        <p class="text-muted mb-0">
+            Κάτοψη και πλάνο θέσεων · @Model.Devices.Count συσκευές
+            @if (Model.SelectedClass != null)
+            {
+                <span>· τμήμα <strong class="chart-emph">@Model.SelectedClass.Name</strong></span>
+            }
+        </p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <div class="btn-group plan-modes" role="group" aria-label="Λειτουργία">
+            <button type="button" class="btn btn-outline-secondary" data-mode="view" data-hint="Προβολή: κατάσταση και ποιος κάθεται πού">👁️ Προβολή</button>
+            <button type="button" class="btn btn-outline-secondary" data-mode="layout" data-hint="Μετακίνηση συσκευών, πάγκοι, πόρτα, πίνακας">✏️ Διάταξη</button>
+            <button type="button" class="btn btn-outline-secondary" data-mode="seats" data-hint="Ποιος μαθητής κάθεται σε κάθε υπολογιστή">🪑 Θέσεις</button>
+        </div>
+        <button type="button" class="icon-action" onclick="window.print()" data-hint="Εκτύπωση" aria-label="Εκτύπωση">🖨️</button>
+        <a class="icon-action" asp-page="/Locations/Index" data-hint="Πίσω στους χώρους" aria-label="Πίσω">↩️</a>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-info shadow-sm d-print-none">@Model.StatusMessage</div>
+}
+
+<!-- Τίτλος εκτύπωσης -->
+<div class="d-none d-print-flex print-header plan-print-head mb-2">
+    @if (!string.IsNullOrWhiteSpace(Model.Settings.LogoPath))
+    {
+        <img src="@Model.Settings.LogoPath" alt="" class="print-logo" />
+    }
+    <div class="flex-grow-1">
+        <div class="print-school">@Model.Settings.SchoolTitle</div>
+        <h1 class="print-title">@Model.LocationName@(Model.SelectedClass != null ? " — " + Model.SelectedClass.Name : "")</h1>
+    </div>
+    <div class="text-end small">
+        @if (!string.IsNullOrWhiteSpace(Model.SelectedClass?.Teacher))
+        {
+            <div>Εκπαιδευτικός: <strong>@Model.SelectedClass!.Teacher</strong></div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.SelectedClass?.Schedule))
+        {
+            <div>@Model.SelectedClass!.Schedule</div>
+        }
+        <div>@DateTime.Now.ToString("dd/MM/yyyy")</div>
+    </div>
+</div>
+
+<div class="plan-layout">
+    <!-- ====================== Κάτοψη ====================== -->
+    <div class="plan-main">
+        <div class="card shadow-sm plan-card">
+            <div class="card-body p-2">
+                <div class="plan-canvas" id="planCanvas" tabindex="0" aria-label="Κάτοψη χώρου">
+                    @if (!string.IsNullOrWhiteSpace(Model.Room.BackgroundPath))
+                    {
+                        <img src="@Model.Room.BackgroundPath" alt="" class="plan-bg" id="planBg" />
+                    }
+                    <div class="plan-empty" id="planEmpty" hidden>
+                        Δεν έχει στηθεί ακόμα κάτοψη. Πάτα <strong>✏️ Διάταξη</strong> → <strong>✨ Αυτόματη τοποθέτηση</strong>,
+                        και μετά σύρε τις συσκευές στις θέσεις τους.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Πίνακας θέσεων (φαίνεται και στην εκτύπωση) -->
+        @if (Model.SelectedClass != null)
+        {
+            <div class="card shadow-sm mt-3 seat-list-card">
+                <div class="card-header fw-semibold">🪑 @Model.SelectedClass.Name — ποιος κάθεται πού</div>
+                <div class="card-body">
+                    <div class="seat-list" id="seatList"></div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- ====================== Πλαϊνή στήλη ====================== -->
+    <aside class="plan-side d-print-none">
+        <!-- Τμήματα -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-header fw-semibold">👥 Τμήματα</div>
+            <div class="card-body">
+                @if (!Model.Classes.Any())
+                {
+                    <div class="empty-hint small mb-2">Κανένα τμήμα. Πρόσθεσε τα τμήματα που μπαίνουν σε αυτόν τον χώρο.</div>
+                }
+                <div class="class-list">
+                    <a class="class-item @(Model.SelectedClass == null ? "active" : "")" asp-page="/Locations/Plan" asp-route-Location="@Model.Location">
+                        <span>— Χωρίς τμήμα —</span>
+                    </a>
+                    @foreach (var cls in Model.Classes)
+                    {
+                        <div class="class-row">
+                            <a class="class-item @(Model.SelectedClass?.Id == cls.Id ? "active" : "")"
+                               asp-page="/Locations/Plan" asp-route-Location="@Model.Location" asp-route-ClassId="@cls.Id">
+                                <span class="fw-semibold">@cls.Name</span>
+                                @if (!string.IsNullOrWhiteSpace(cls.Teacher) || !string.IsNullOrWhiteSpace(cls.Schedule))
+                                {
+                                    <span class="text-muted small d-block">@cls.Teacher@(string.IsNullOrWhiteSpace(cls.Teacher) || string.IsNullOrWhiteSpace(cls.Schedule) ? "" : " · ")@cls.Schedule</span>
+                                }
+                            </a>
+                            <form method="post" asp-page-handler="DeleteClass" asp-route-Location="@Model.Location" asp-route-id="@cls.Id"
+                                  onsubmit="return confirm('Διαγραφή του τμήματος και των θέσεών του;');">
+                                <button type="submit" class="copy-btn" title="Διαγραφή τμήματος">🗑️</button>
+                            </form>
+                        </div>
+                    }
+                </div>
+
+                <details class="mt-2">
+                    <summary class="small fw-semibold">＋ Νέο τμήμα</summary>
+                    <form method="post" asp-page-handler="AddClass" asp-route-Location="@Model.Location" class="mt-2 d-grid gap-2">
+                        <input name="name" class="form-control form-control-sm" placeholder="π.χ. Β1 Πληροφορικής" required />
+                        <input name="teacher" class="form-control form-control-sm" placeholder="Εκπαιδευτικός (προαιρετικά)" />
+                        <input name="schedule" class="form-control form-control-sm" placeholder="Ώρες, π.χ. Τρί 3η-4η (προαιρετικά)" />
+                        <button type="submit" class="btn btn-sm btn-primary">Προσθήκη</button>
+                    </form>
+                </details>
+            </div>
+        </div>
+
+        <!-- Εργαλεία διάταξης -->
+        <div class="card shadow-sm mb-3 side-layout" hidden>
+            <div class="card-header fw-semibold">✏️ Διάταξη</div>
+            <div class="card-body d-grid gap-2">
+                <div class="small text-muted">Σύρε τις συσκευές. Τα σχήματα αλλάζουν μέγεθος από τη γωνία κάτω δεξιά. Επιλογή + <kbd>Del</kbd> = αφαίρεση.</div>
+
+                <div class="shape-palette">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-add="desk">⬛ Πάγκος</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-add="teacher">🧑‍🏫 Έδρα</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-add="board">📋 Πίνακας</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-add="door">🚪 Πόρτα</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-add="window">🪟 Παράθυρο</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-add="label">🏷️ Ετικέτα</button>
+                </div>
+
+                <button type="button" class="btn btn-sm btn-outline-primary" id="autoArrange">✨ Αυτόματη τοποθέτηση (σε σειρές)</button>
+
+                <div>
+                    <div class="small fw-semibold mb-1">Εκτός κάτοψης <span class="text-muted" id="unplacedCount"></span></div>
+                    <div class="unplaced" id="unplaced"></div>
+                </div>
+
+                <label class="small">
+                    Αναλογία σχεδίου (πλάτος : ύψος)
+                    <input type="range" min="0.6" max="3" step="0.05" id="aspectRange" class="form-range" />
+                </label>
+
+                <form method="post" asp-page-handler="Background" asp-route-Location="@Model.Location" asp-route-ClassId="@Model.ClassId"
+                      enctype="multipart/form-data" class="d-grid gap-1">
+                    <label class="small">🖼️ Φόντο: φωτογραφία ή σκίτσο της αίθουσας (προαιρετικά)</label>
+                    <input type="file" name="file" accept=".png,.jpg,.jpeg,.webp" class="form-control form-control-sm" onchange="this.form.submit()" />
+                    @if (!string.IsNullOrWhiteSpace(Model.Room.BackgroundPath))
+                    {
+                        <button type="submit" name="remove" value="true" class="btn btn-sm btn-link text-danger p-0 text-start">Αφαίρεση φόντου</button>
+                    }
+                </form>
+
+                <button type="button" class="btn btn-primary" id="saveLayout">💾 Αποθήκευση διάταξης</button>
+                <div class="small text-muted" id="layoutStatus"></div>
+            </div>
+        </div>
+
+        <!-- Θέσεις -->
+        <div class="card shadow-sm mb-3 side-seats" hidden>
+            <div class="card-header fw-semibold">🪑 Θέσεις μαθητών</div>
+            <div class="card-body d-grid gap-2">
+                @if (Model.SelectedClass == null)
+                {
+                    <div class="empty-hint small">Διάλεξε ή πρόσθεσε πρώτα ένα <strong>τμήμα</strong> από πάνω.</div>
+                }
+                else
+                {
+                    <div class="small text-muted">Πάτα πάνω σε έναν υπολογιστή στην κάτοψη και γράψε το όνομα. <kbd>Enter</kbd> = επόμενος.</div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="clearSeats">Καθαρισμός όλων</button>
+                    <button type="button" class="btn btn-primary" id="saveSeats">💾 Αποθήκευση θέσεων</button>
+                    <div class="small text-muted" id="seatsStatus"></div>
+                }
+            </div>
+        </div>
+
+        <!-- Υπόμνημα -->
+        <div class="card shadow-sm side-view">
+            <div class="card-body small d-grid gap-1">
+                <span><span class="dev-dot online"></span> Online</span>
+                <span><span class="dev-dot offline"></span> Offline</span>
+                <span><span class="dev-dot unknown"></span> Άγνωστο</span>
+                <span>🔧 ανοιχτή βλάβη · 🛑 Veyon σταμάτησε</span>
+                <span class="text-muted">Κλικ σε συσκευή (Προβολή) → καρτέλα της.</span>
+            </div>
+        </div>
+    </aside>
+</div>
+
+<script type="application/json" id="planData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(data))</script>
+
+@section Scripts {
+    <script src="~/js/plan.js" asp-append-version="true"></script>
+}

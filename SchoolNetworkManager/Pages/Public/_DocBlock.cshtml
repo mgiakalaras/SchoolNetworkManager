@@ -1,0 +1,37 @@
+@model SchoolNetworkManager.Services.DocText.DocBlock
+
+@if (Model.Type == "p")
+{
+    <p>@Html.Raw(Model.Html)</p>
+}
+else if (Model.Type == "note")
+{
+    <div class="doc-note">@Html.Raw(Model.Html)</div>
+}
+else if (Model.Type == "fields")
+{
+    <div class="doc-fields">
+        @foreach (var item in Model.Items)
+        {
+            <div class="doc-field"><span>@Html.Raw(item)</span><i></i></div>
+        }
+    </div>
+}
+else if (Model.Type == "ol")
+{
+    <ol start="@Model.Start">
+        @foreach (var item in Model.Items)
+        {
+            <li>@Html.Raw(item)</li>
+        }
+    </ol>
+}
+else
+{
+    <ul>
+        @foreach (var item in Model.Items)
+        {
+            <li>@Html.Raw(item)</li>
+        }
+    </ul>
+}

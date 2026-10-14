@@ -82,21 +82,12 @@
             </div>
         </div>
 
-        @if (!string.IsNullOrWhiteSpace(Model.Computer.Notes) || !string.IsNullOrWhiteSpace(Model.Computer.Comments))
+        @if (!string.IsNullOrWhiteSpace(Model.Computer.Notes))
         {
             <hr />
 
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="text-muted small">NOTES</div>
-                    <div>@Model.Computer.Notes</div>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="text-muted small">Σημειώσεις</div>
-                    <div>@Model.Computer.Comments</div>
-                </div>
-            </div>
+            <div class="text-muted small">Σημειώσεις</div>
+            <div style="white-space: pre-line;">@Model.Computer.Notes</div>
         }
     </div>
 </div>

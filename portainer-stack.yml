@@ -1,0 +1,20 @@
+# Stack για Portainer (Stacks → schoolnetworkmanager → Editor)
+# Αν αλλάξεις κάτι, πάτα «Update the stack».
+
+services:
+  schoolnetworkmanager:
+    image: schoolnetworkmanager:latest
+    container_name: schoolnetworkmanager
+    restart: unless-stopped
+
+    # Απαραίτητο για MAC, σάρωση δικτύου και Wake-on-LAN.
+    # Με host network η εφαρμογή ακούει απευθείας στο port 5055 του Zima.
+    network_mode: host
+
+    environment:
+      TZ: Europe/Athens
+      ADMIN_PASSWORD: "ΑΛΛΑΞΕ-ΜΕ"
+
+    volumes:
+      - /DATA/AppData/schoolnetworkmanager/data:/app/data
+      - /DATA/AppData/schoolnetworkmanager/uploads:/app/wwwroot/uploads

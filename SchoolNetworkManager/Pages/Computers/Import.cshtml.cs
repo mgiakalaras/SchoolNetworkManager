@@ -1,4 +1,4 @@
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -121,14 +121,23 @@ public class ImportModel : PageModel
             existingComputer.Name = GetValue(headers, row, "name", "computername", "pcname", "hostname");
             existingComputer.MacAddress = GetValue(headers, row, "macaddress", "mac");
             existingComputer.Location = GetValue(headers, row, "location", "room", "place");
-            existingComputer.Notes = GetValue(headers, row, "notes", "note");
+            existingComputer.Notes = Computer.MergeNotes(
+                GetValue(headers, row, "notes", "note"),
+                GetValue(headers, row, "σημειωσεις", "comments", "comment"));
             existingComputer.Username = GetValue(headers, row, "username", "user");
             existingComputer.Password = GetValue(headers, row, "password", "pass");
             existingComputer.Extras = GetValue(headers, row, "extras", "extra");
-            existingComputer.Comments = GetValue(headers, row, "σημειωσεις", "comments", "comment");
+            existingComputer.Comments = null;
 
             existingComputer.HasLanMessenger = GetBoolValue(headers, row, "lanmessenger", "lan");
             existingComputer.HasVeyon = GetBoolValue(headers, row, "veyon");
+
+            var addressMode = GetValue(headers, row, "διευθυνση", "addressmode", "dhcp");
+            if (!string.IsNullOrWhiteSpace(addressMode))
+            {
+                existingComputer.IsDynamic = addressMode.Trim().StartsWith("dyn", StringComparison.OrdinalIgnoreCase) ||
+                                             addressMode.Trim().Equals("dhcp", StringComparison.OrdinalIgnoreCase);
+            }
         }
 
         await _context.SaveChangesAsync();

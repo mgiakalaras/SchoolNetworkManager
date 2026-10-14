@@ -1,0 +1,363 @@
+﻿@page
+@model SchoolNetworkManager.Pages.Locations.IndexModel
+@inject SchoolNetworkManager.Services.SettingsService SettingsSvc
+
+@{
+    ViewData["Title"] = "Χώροι";
+
+    var allTotal = Model.Groups.Sum(g => g.Total);
+    var allOnline = Model.Groups.Sum(g => g.Online);
+    var namedLocations = Model.Groups.Where(g => g.Key != SchoolNetworkManager.Pages.Locations.IndexModel.NoLocationKey).Select(g => g.Name).ToList();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h1 class="mb-1">Χώροι</h1>
+        <p class="text-muted mb-0">
+            @Model.Groups.Count χώροι · @allTotal συσκευές · <span class="text-success fw-semibold">@allOnline online</span>
+            @if (Model.DynamicCount > 0)
+            {
+                <a class="text-muted text-decoration-none" asp-page="/Computers/Index" asp-route-AddressFilter="dynamic" data-hint="Διευθύνσεις DHCP: δεν ανήκουν σε χώρο">· 🔄 @Model.DynamicCount dynamic</a>
+            }
+        </p>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#newRoom" aria-expanded="false">＋ Νέος χώρος</button>
+        <input type="search" id="locationSearch" class="form-control form-control-sm" style="width: 220px;"
+               placeholder="🔎 Αναζήτηση χώρου ή συσκευής" />
+        <a class="btn btn-sm btn-outline-primary" asp-page="/Print/Index" target="_blank">🖨 Εκτύπωση όλων</a>
+        <a class="btn btn-sm btn-outline-primary" asp-page-handler="Veyon"
+           title="Αρχείο για εισαγωγή όλων των χώρων και υπολογιστών στο Veyon">⬇ Εξαγωγή για Veyon</a>
+    </div>
+</div>
+
+<div class="collapse" id="newRoom">
+    <form method="post" asp-page-handler="CreateRoom" class="card shadow-sm mb-3 new-room-card">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label" for="roomName">Όνομα χώρου</label>
+                <input id="roomName" name="name" class="form-control" maxlength="80" required placeholder="π.χ. ΕΡΓΑΣΤΗΡΙΟ ΠΛΗΡΟΦΟΡΙΚΗΣ Δ" />
+            </div>
+            <div class="col-md-5">
+                <label class="form-label" for="roomDescription">Περιγραφή <span class="text-muted small">(προαιρετικά)</span></label>
+                <input id="roomDescription" name="description" class="form-control" maxlength="200" placeholder="π.χ. 2ος όροφος, δίπλα στη βιβλιοθήκη" />
+            </div>
+            <div class="col-md-3 d-grid">
+                <button type="submit" class="btn btn-primary">Δημιουργία → προσθήκη συσκευών</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-@(Model.StatusKind ?? "success") shadow-sm">
+        @Model.StatusMessage
+    </div>
+}
+
+@if (!Model.Groups.Any())
+{
+    <div class="alert alert-info">
+        Δεν υπάρχουν ακόμα συσκευές. Ξεκίνα από τη <a asp-page="/Network/Scan">Σάρωση δικτύου</a>.
+    </div>
+}
+
+<div class="legend-row mb-3">
+    <span><span class="dev-dot online"></span>Online</span>
+    <span><span class="dev-dot offline"></span>Offline</span>
+    <span><span class="dev-dot unknown"></span>Άγνωστο</span>
+    <span><span class="dev-dot empty"></span>Κενή θέση</span>
+    <span><span class="change-badge is-new">ΝΕΟ</span> / <span class="change-badge is-updated">ΕΝΗΜ.</span> πρόσφατες αλλαγές</span>
+    <span>🔧 βλάβη · ⛔ εκτός λειτουργίας · 🛑 Veyon σταμάτησε</span>
+    <span class="text-muted">· κλικ σε συσκευή για στοιχεία</span>
+</div>
+
+<datalist id="locationNames">
+    @foreach (var name in namedLocations)
+    {
+        <option value="@name"></option>
+    }
+</datalist>
+
+<div class="location-grid">
+    @foreach (var place in Model.Groups)
+    {
+        var isNoLocation = place.Key == SchoolNetworkManager.Pages.Locations.IndexModel.NoLocationKey;
+        var searchText = (place.Name + " " + string.Join(" ", place.Computers.Select(x => x.Name + " " + x.IpAddress))).ToLowerInvariant();
+
+        <section class="card shadow-sm location-card @(isNoLocation ? "is-unassigned" : "")" data-search="@searchText">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <div class="min-w-0">
+                        <h2 class="location-title" title="@place.Name">@place.Name</h2>
+                        @if (!string.IsNullOrWhiteSpace(place.Description))
+                        {
+                            <div class="small text-muted text-truncate" title="@place.Description">@place.Description</div>
+                        }
+                        <div class="text-muted small">
+                            @place.Total συσκευές
+                            @if (place.Offline > 0)
+                            {
+                                <span>· @place.Offline offline</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="online-count @(place.Online > 0 ? "has-online" : "")" title="Ανοιχτές τώρα / σύνολο">
+                            @place.Online<span>/@place.Total</span>
+                        </span>
+
+                        @if (!isNoLocation)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary icon-btn" data-add-room="@place.Name"
+                                    data-hint="Προσθήκη συσκευών σε αυτόν τον χώρο" aria-label="Προσθήκη συσκευών">＋</button>
+                            if (!place.IsEmpty)
+                            {
+                                <a class="btn btn-sm btn-outline-secondary icon-btn" asp-page="/Locations/Plan" asp-route-Location="@place.Key"
+                                   data-hint="Κάτοψη & θέσεις μαθητών" aria-label="Κάτοψη">🗺️</a>
+                            }
+                        }
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary icon-btn" type="button" data-bs-toggle="dropdown" aria-label="Ενέργειες">⋯</button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow">
+                                <li>
+                                    <form method="post" asp-page-handler="Check" asp-route-location="@place.Key" class="busy-form">
+                                        <button type="submit" class="dropdown-item">🔄 Έλεγχος online</button>
+                                    </form>
+                                </li>
+                                <li>
+                                    <form method="post" asp-page-handler="Wake" asp-route-location="@place.Key"
+                                          onsubmit="return confirm('Να ανάψουν όλες οι συσκευές αυτού του χώρου;');">
+                                        <button type="submit" class="dropdown-item" disabled="@(place.WithMac == 0)">⚡ Άναμμα όλων (@place.WithMac με MAC)</button>
+                                    </form>
+                                </li>
+                                <li><hr class="dropdown-divider" /></li>
+                                @if (!isNoLocation)
+                                {
+                                    <li><button type="button" class="dropdown-item" data-add-room="@place.Name">➕ Προσθήκη συσκευών…</button></li>
+                                    <li><a class="dropdown-item" asp-page="/Computers/Create" asp-route-location="@place.Key">🆕 Νέα καταχώρηση σε αυτόν τον χώρο</a></li>
+                                }
+                                <li><button type="button" class="dropdown-item" data-select-mode disabled="@place.IsEmpty">☑️ Μετακίνηση συσκευών σε χώρο…</button></li>
+                                @if (!isNoLocation)
+                                {
+                                    <li><button type="button" class="dropdown-item" data-rename-toggle>✏️ Μετονομασία χώρου…</button></li>
+                                }
+                                <li><hr class="dropdown-divider" /></li>
+                                @if (!isNoLocation)
+                                {
+                                    <li><a class="dropdown-item" asp-page="/Locations/Plan" asp-route-Location="@place.Key">🗺️ Κάτοψη & θέσεις μαθητών</a></li>
+                                }
+                                <li><a class="dropdown-item" asp-page="/Computers/Index" asp-route-LocationFilter="@place.Key">📋 Λίστα συσκευών</a></li>
+                                <li><a class="dropdown-item" asp-page="/Print/Index" asp-route-location="@place.Key" target="_blank">🖨 Εκτύπωση χώρου</a></li>
+                                <li><a class="dropdown-item" asp-page="/Report/Index" asp-route-Location="@place.Key" target="_blank">📑 Ετήσια αναφορά χώρου</a></li>
+                                @if (!isNoLocation)
+                                {
+                                    <li><a class="dropdown-item" asp-page="/Public/Index" asp-route-Location="@place.Key" target="_blank">📨 Φόρμα δήλωσης βλάβης χώρου</a></li>
+                                }
+                                <li><a class="dropdown-item" asp-page-handler="Veyon" asp-route-location="@place.Key">⬇ Εξαγωγή χώρου για Veyon</a></li>
+                                @if (place.IsEmpty && !isNoLocation)
+                                {
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li>
+                                        <form method="post" asp-page-handler="DeleteRoom" asp-route-location="@place.Key"
+                                              onsubmit="return confirm('Διαγραφή του άδειου χώρου;');">
+                                            <button type="submit" class="dropdown-item text-danger">🗑️ Διαγραφή χώρου</button>
+                                        </form>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="location-progress" title="@place.OnlinePercent% ανοιχτές">
+                    <div style="width: @(place.OnlinePercent)%;"></div>
+                </div>
+
+                @if (place.TypeCounts.Any())
+                {
+                    <div class="type-chips">
+                        @foreach (var (type, count) in place.TypeCounts.Take(5))
+                        {
+                            <span class="type-chip" title="@type">@SchoolNetworkManager.Models.DeviceSpecs.TypeIcon(type) @count</span>
+                        }
+                        @if (place.TypeCounts.Count > 5)
+                        {
+                            <span class="type-chip">+@(place.TypeCounts.Count - 5)</span>
+                        }
+                    </div>
+                }
+
+                @if (!isNoLocation)
+                {
+                    <form method="post" asp-page-handler="Rename" asp-route-location="@place.Key" class="rename-form" hidden>
+                        <div class="input-group input-group-sm mt-2">
+                            <input name="newName" class="form-control" value="@place.Name" required />
+                            <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+                            <button type="button" class="btn btn-outline-secondary" data-rename-cancel>Άκυρο</button>
+                        </div>
+                    </form>
+                }
+
+                @if (place.IsEmpty)
+                {
+                    <div class="room-empty">
+                        <div class="fs-2">🏫</div>
+                        <div class="fw-semibold">Άδειος χώρος</div>
+                        <div class="small text-muted mb-2">Πρόσθεσε συσκευές που υπάρχουν ήδη ή κάνε νέα καταχώρηση.</div>
+                        <div class="d-flex flex-wrap gap-2 justify-content-center">
+                            <button type="button" class="btn btn-sm btn-primary" data-add-room="@place.Name">➕ Προσθήκη συσκευών</button>
+                            <a class="btn btn-sm btn-outline-primary" asp-page="/Computers/Create" asp-route-location="@place.Key">🆕 Νέα καταχώρηση</a>
+                        </div>
+                    </div>
+                }
+
+                <!-- Συσκευές: ονόματα για μικρούς χώρους, «χάρτης» κουκκίδων για μεγάλους -->
+                <div class="device-area @(place.IsLarge ? "is-dots" : "is-chips")">
+                    @foreach (var device in place.Computers)
+                    {
+                        var state = device.IsEmptySlot ? "empty"
+                            : device.IsOnline == true ? "online"
+                            : device.IsOnline == false ? "offline"
+                            : "unknown";
+                        var label = string.IsNullOrWhiteSpace(device.Name) ? device.IpAddress : device.Name;
+                        var lastOctet = device.IpAddress.Split('.').Last();
+                        var change = SchoolNetworkManager.Services.ChangeBadge.For(device, SettingsSvc.Current);
+                        var changeClass = change == SchoolNetworkManager.Services.ChangeKind.New ? "is-new"
+                            : change == SchoolNetworkManager.Services.ChangeKind.Updated ? "is-updated" : "";
+                        var tip = $"{label} · {device.IpAddress} · {device.DisplayMachineType}"
+                                  + (device.HasMacMismatch ? " · ⚠️ άλλαξε η MAC" : "")
+                                  + (change == SchoolNetworkManager.Services.ChangeKind.New ? " · ΝΕΟ"
+                                     : change == SchoolNetworkManager.Services.ChangeKind.Updated ? " · ΕΝΗΜ." : "");
+
+                        var hasFault = Model.OpenFaults.TryGetValue(device.Id, out var isOut);
+                        var faultClass = (!hasFault ? "" : isOut ? "has-fault is-out" : "has-fault") + (device.VeyonDown ? " veyon-down" : "");
+                        if (device.VeyonDown)
+                        {
+                            tip += " · 🛑 Veyon σταμάτησε";
+                        }
+                        if (hasFault)
+                        {
+                            tip += isOut ? " · ⛔ εκτός λειτουργίας" : " · 🔧 βλάβη";
+                        }
+
+                        <a class="dev @state @changeClass @faultClass @(device.HasMacMismatch ? "warn" : "") @(string.IsNullOrWhiteSpace(device.Name) ? "unnamed" : "")"
+                           asp-page="/Computers/Details" asp-route-id="@device.Id"
+                           data-id="@device.Id" data-tip="@tip" aria-label="@tip">
+                            @if (place.IsLarge)
+                            {
+                                <span class="dev-num">@lastOctet</span>
+                                @if (hasFault)
+                                {
+                                    <span class="fault-mark">@(isOut ? "⛔" : "🔧")</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="dev-dot @state"></span>
+                                <span class="dev-name">@label</span>
+                                @if (device.VeyonDown)
+                                {
+                                    <span class="fault-mark" title="Veyon σταμάτησε">🛑</span>
+                                }
+                                @if (hasFault)
+                                {
+                                    <span class="fault-mark" title="@(isOut ? "Εκτός λειτουργίας" : "Βλάβη")">@(isOut ? "⛔" : "🔧")</span>
+                                }
+                                <partial name="_ChangeBadge" model="device" />
+                                <span class="dev-ip">.@lastOctet</span>
+                            }
+                        </a>
+                    }
+                </div>
+
+                @if (place.IsLarge && place.Unnamed > 0)
+                {
+                    <div class="text-muted small mt-2">
+                        💡 @place.Unnamed χωρίς όνομα. Επίλεξέ τες από το ⋯ → «Μετακίνηση συσκευών σε χώρο» για να τις οργανώσεις.
+                    </div>
+                }
+
+                <!-- Μαζική μετακίνηση -->
+                <form method="post" asp-page-handler="Assign" class="assign-bar" hidden>
+                    <div class="assign-inner">
+                        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                            <strong class="assign-count">0 επιλεγμένες</strong>
+                            <button type="button" class="btn btn-sm btn-link p-0" data-select="online">online</button>
+                            <button type="button" class="btn btn-sm btn-link p-0" data-select="named">με όνομα</button>
+                            <button type="button" class="btn btn-sm btn-link p-0" data-select="all">όλες</button>
+                            <button type="button" class="btn btn-sm btn-link p-0" data-select="none">καμία</button>
+                        </div>
+                        <div class="input-group input-group-sm">
+                            <input name="newLocation" class="form-control" list="locationNames" placeholder="Νέος ή υπάρχων χώρος" />
+                            <button type="submit" class="btn btn-primary">Μετακίνηση</button>
+                            <button type="button" class="btn btn-outline-secondary" data-select-cancel>Άκυρο</button>
+                        </div>
+                        <div class="form-text">Πάτα πάνω στις συσκευές για να τις επιλέξεις. Κενό = «Χωρίς χώρο».</div>
+                    </div>
+                    <div class="assign-ids"></div>
+                </form>
+            </div>
+        </section>
+    }
+</div>
+
+<!-- ＋ Προσθήκη συσκευών σε χώρο -->
+<div class="modal fade" id="addDevicesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <form method="post" asp-page-handler="AddToRoom" class="modal-content">
+            <input type="hidden" name="room" id="addRoomName" />
+            <div class="modal-header">
+                <h2 class="modal-title h5">➕ Προσθήκη συσκευών στο «<span id="addRoomTitle"></span>»</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Κλείσιμο"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <input type="search" id="addSearch" class="form-control form-control-sm flex-grow-1" placeholder="🔎 Όνομα, IP, MAC, κατασκευαστής…" />
+                    <select id="addFilter" class="form-select form-select-sm w-auto">
+                        <option value="none">Χωρίς χώρο</option>
+                        <option value="other">Από άλλους χώρους</option>
+                        <option value="dynamic">Dynamic διευθύνσεις</option>
+                        <option value="all">Όλες</option>
+                    </select>
+                </div>
+                <div id="addList" class="add-list"></div>
+                <div class="form-text mt-2">Οι dynamic διευθύνσεις που θα προσθέσεις γίνονται σταθερές (📌 static) συσκευές του χώρου.</div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <a class="btn btn-outline-secondary btn-sm" id="addCreateLink" href="#">🆕 Νέα καταχώρηση εδώ</a>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="small text-muted"><b id="addCount">0</b> επιλεγμένες</span>
+                    <button type="submit" class="btn btn-primary" id="addSubmit" disabled>Προσθήκη</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@{
+    var addData = Model.AllDevices.Select(c => new
+    {
+        id = c.Id,
+        name = string.IsNullOrWhiteSpace(c.Name) ? null : c.Name,
+        ip = c.IpAddress,
+        mac = c.MacAddress,
+        vendor = c.Vendor,
+        loc = string.IsNullOrWhiteSpace(c.Location) ? null : c.Location.Trim(),
+        dyn = c.IsDynamic,
+        online = c.IsOnline == true,
+        icon = SchoolNetworkManager.Models.DeviceSpecs.TypeIcon(c.MachineType)
+    });
+}
+<script type="application/json" id="addDevicesData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(addData))</script>
+<script type="application/json" id="addDevicesOpen">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Add))</script>
+
+<div class="dev-tooltip" hidden></div>
+
+@section Scripts {
+    <script src="~/js/locations.js" asp-append-version="true"></script>
+}

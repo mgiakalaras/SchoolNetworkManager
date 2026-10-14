@@ -1,0 +1,312 @@
+@model SchoolNetworkManager.Pages.IndexModel
+@using System.Globalization
+@using SchoolNetworkManager.Pages
+@using SchoolNetworkManager.Services
+@inject SettingsService SettingsSvc
+
+@{
+    var week = Model.Week;
+    var speed = Model.Speed;
+    var greek = new CultureInfo("el-GR");
+
+    // ---- Γεωμετρία κοινή για τα δύο γραφήματα (μονάδες viewBox) ----
+    const double W = 640, H = 236, L = 40, R = 14, T = 22, B = 40;
+    var plotW = W - L - R;
+    var plotH = H - T - B;
+    var baseY = T + plotH;
+
+    string N(double v) => IndexModel.Num(v, "0.##");
+    string G(double v, string f = "0.#") => v.ToString(f, greek);
+
+    // Μπάρα με στρογγυλεμένη κορυφή 4px και ίσια βάση
+    string BarPath(double x, double w, double h)
+    {
+        if (h <= 0) return "";
+        var r = Math.Min(4, Math.Min(w / 2, h));
+        var y = baseY - h;
+        return $"M{N(x)},{N(baseY)} V{N(y + r)} Q{N(x)},{N(y)} {N(x + r)},{N(y)} H{N(x + w - r)} Q{N(x + w)},{N(y)} {N(x + w)},{N(y + r)} V{N(baseY)} Z";
+    }
+
+    // ---- Μπάρες ----
+    var slotW = plotW / Math.Max(1, week.Days.Count);
+    var barW = 24.0;
+
+    // ---- Γραμμές ταχύτητας ----
+    var spanTicks = (speed.To - speed.From).Ticks;
+    double SX(DateTime t) => L + plotW * (spanTicks == 0 ? 0 : (double)(t - speed.From).Ticks / spanTicks);
+    double SY(double v) => baseY - plotH * Math.Min(1, v / speed.AxisMax);
+
+    string LinePath(Func<SpeedTest, double?> pick)
+    {
+        var sb = new System.Text.StringBuilder();
+        DateTime? previous = null;
+
+        foreach (var test in speed.Tests)
+        {
+            var value = pick(test);
+            if (value == null) { previous = null; continue; }
+
+            var gap = previous == null || (test.Time - previous.Value).TotalHours > 6;
+            sb.Append(gap ? " M" : " L").Append(N(SX(test.Time))).Append(',').Append(N(SY(value.Value)));
+            previous = test.Time;
+        }
+
+        return sb.ToString().Trim();
+    }
+
+    var points = speed.Tests.Select(t => new
+    {
+        x = Math.Round(SX(t.Time), 2),
+        yd = t.Download == null ? (double?)null : Math.Round(SY(t.Download.Value), 2),
+        yu = t.Upload == null ? (double?)null : Math.Round(SY(t.Upload.Value), 2),
+        when = t.Time.ToString("ddd d/M · HH:mm", greek),
+        d = t.Download == null ? null : t.Download.Value.ToString("0.#", greek),
+        u = t.Upload == null ? null : t.Upload.Value.ToString("0.#", greek),
+        p = t.Ping == null ? null : t.Ping.Value.ToString("0", greek)
+    });
+}
+
+<div class="row g-4 mb-4 week-charts">
+    <!-- ====================== Online συσκευές ανά ημέρα ====================== -->
+    <div class="col-xl-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span class="fw-semibold">Μέγιστες online συσκευές ανά ημέρα</span>
+                <span class="text-muted small">τελευταίες 7 ημέρες</span>
+            </div>
+            <div class="card-body">
+                @if (!week.HasData)
+                {
+                    <div class="empty-hint py-4 text-center">
+                        Δεν υπάρχουν ακόμα μετρήσεις. Το γράφημα γεμίζει μόνο του από τον αυτόματο έλεγχο
+                        @if (SettingsSvc.Current.MonitorIntervalMinutes > 0)
+                        {
+                            <span>(κάθε @SettingsSvc.Current.MonitorIntervalMinutes λεπτά).</span>
+                        }
+                        else
+                        {
+                            <span>— ενεργοποίησέ τον στις <a asp-page="/Settings/Index" asp-route-tab="network">Ρυθμίσεις → Δίκτυο</a>.</span>
+                        }
+                    </div>
+                }
+                else
+                {
+                    @if (week.Best != null)
+                    {
+                        <div class="chart-headline">
+                            <div class="chart-hero-number">@week.Best.Peak<span class="chart-hero-unit">/@week.Best.Total</span></div>
+                            <div class="text-muted small">
+                                peak εβδομάδας:
+                                <strong class="chart-emph">@week.Best.Date.ToString("dddd d/M", greek)</strong>
+                                @if (week.Best.PeakTime != null)
+                                {
+                                    <span>στις @week.Best.PeakTime.Value.ToString("HH:mm")</span>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <div class="chart-wrap" data-chart="bars">
+                        <svg viewBox="0 0 @N(W) @N(H)" class="chart-svg" role="img"
+                             aria-label="Μέγιστος αριθμός online συσκευών ανά ημέρα για τις τελευταίες 7 ημέρες">
+                            @for (var value = 0.0; value <= week.AxisMax + 0.001; value += week.AxisStep)
+                            {
+                                var y = baseY - plotH * value / week.AxisMax;
+                                var i = value == 0 ? 0 : 1;
+                                <g>
+                                    <line x1="@N(L)" x2="@N(W - R)" y1="@N(y)" y2="@N(y)" class="@(i == 0 ? "chart-baseline" : "chart-grid")" />
+                                    <text x="@N(L - 8)" y="@N(y + 4)" class="chart-axis" text-anchor="end">@G(value, "0")</text>
+                                </g>
+                            }
+
+                            @for (var i = 0; i < week.Days.Count; i++)
+                            {
+                                var day = week.Days[i];
+                                var cx = L + slotW * i + slotW / 2;
+                                var h = day.Peak == null ? 0 : plotH * Math.Min(1, day.Peak.Value / week.AxisMax);
+                                var tip = day.Peak == null
+                                    ? $"{day.Date.ToString("dddd d/M", greek)}: χωρίς μετρήσεις"
+                                    : $"{day.Date.ToString("dddd d/M", greek)}|Peak: {day.Peak} από {day.Total} συσκευές"
+                                      + (day.PeakTime != null ? $" ({day.PeakTime.Value:HH:mm})" : "")
+                                      + (day.Average != null ? $"|Μέσος όρος: {G(day.Average.Value)}" : "");
+
+                                <g class="bar-group @(day.IsPeak ? "is-peak" : "")" data-tip="@tip">
+                                    <rect class="hit" x="@N(cx - slotW / 2)" y="@N(T)" width="@N(slotW)" height="@N(plotH)" />
+
+                                    @if (day.Peak != null && h > 0)
+                                    {
+                                        <path class="bar" d="@BarPath(cx - barW / 2, barW, h)" />
+                                    }
+                                    else
+                                    {
+                                        <line class="chart-empty-mark" x1="@N(cx - 6)" x2="@N(cx + 6)" y1="@N(baseY - 3)" y2="@N(baseY - 3)" />
+                                    }
+
+                                    @if (day.IsPeak)
+                                    {
+                                        <g><text x="@N(cx)" y="@N(baseY - h - 7)" class="chart-value" text-anchor="middle">@day.Peak</text></g>
+                                    }
+
+                                    <text x="@N(cx)" y="@N(baseY + 17)" class="chart-axis @(day.Date == DateTime.Now.Date ? "is-today" : "")" text-anchor="middle">@day.Label</text>
+                                    <text x="@N(cx)" y="@N(baseY + 32)" class="chart-axis chart-axis-sub" text-anchor="middle">@day.ShortDate</text>
+                                </g>
+                            }
+                        </svg>
+                        <div class="chart-tooltip" hidden></div>
+                    </div>
+
+                    <details class="chart-table">
+                        <summary>Πίνακας τιμών</summary>
+                        <table class="table table-sm mb-0 mt-2">
+                            <thead><tr><th>Ημέρα</th><th class="text-end">Peak</th><th>Ώρα</th><th class="text-end">Μ.ό.</th><th class="text-end">Μετρήσεις</th></tr></thead>
+                            <tbody>
+                                @foreach (var day in week.Days)
+                                {
+                                    <tr>
+                                        <td>@day.Date.ToString("ddd d/M", greek)</td>
+                                        <td class="text-end">@(day.Peak?.ToString() ?? "—")@(day.Total != null ? $" / {day.Total}" : "")</td>
+                                        <td>@(day.PeakTime?.ToString("HH:mm") ?? "—")</td>
+                                        <td class="text-end">@(day.Average != null ? G(day.Average.Value) : "—")</td>
+                                        <td class="text-end">@day.Samples</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </details>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================== Ταχύτητα δικτύου (MySpeed) ====================== -->
+    <div class="col-xl-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span class="fw-semibold">Ταχύτητα δικτύου</span>
+                <span class="text-muted small">MySpeed · τελευταίες 7 ημέρες</span>
+            </div>
+            <div class="card-body">
+                @if (speed.Tests.Count == 0)
+                {
+                    <div class="empty-hint py-4 text-center">
+                        @if (!string.IsNullOrWhiteSpace(speed.Error))
+                        {
+                            <div>⚠️ @speed.Error</div>
+                            <div class="small mt-1">Έλεγξε τη διεύθυνση στις <a asp-page="/Settings/Index" asp-route-tab="network">Ρυθμίσεις → Δίκτυο</a>.</div>
+                        }
+                        else
+                        {
+                            <div>Δεν υπάρχουν μετρήσεις του MySpeed τις τελευταίες 7 ημέρες.</div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="speed-stats">
+                        <div>
+                            <div class="speed-stat-label"><span class="legend-swatch series-down"></span>Λήψη · μ.ό.</div>
+                            <div class="speed-stat-value">@(speed.AvgDownload != null ? G(speed.AvgDownload.Value) : "—") <span>Mbps</span></div>
+                        </div>
+                        <div>
+                            <div class="speed-stat-label"><span class="legend-swatch series-up"></span>Αποστολή · μ.ό.</div>
+                            <div class="speed-stat-value">@(speed.AvgUpload != null ? G(speed.AvgUpload.Value) : "—") <span>Mbps</span></div>
+                        </div>
+                        <div>
+                            <div class="speed-stat-label">Ping · μ.ό.</div>
+                            <div class="speed-stat-value">@(speed.AvgPing != null ? G(speed.AvgPing.Value, "0") : "—") <span>ms</span></div>
+                        </div>
+                        @if (speed.MinDownload?.Download != null)
+                        {
+                            <div>
+                                <div class="speed-stat-label">Χαμηλότερη λήψη</div>
+                                <div class="speed-stat-value">@G(speed.MinDownload.Download.Value) <span>Mbps</span></div>
+                                <div class="text-muted small">@speed.MinDownload.Time.ToString("ddd d/M HH:mm", greek)</div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="chart-wrap" data-chart="lines">
+                        <svg viewBox="0 0 @N(W) @N(H)" class="chart-svg" role="img"
+                             aria-label="Ταχύτητα λήψης και αποστολής σε Mbps για τις τελευταίες 7 ημέρες">
+                            @for (var value = 0.0; value <= speed.AxisMax + 0.001; value += speed.AxisStep)
+                            {
+                                var y = baseY - plotH * value / speed.AxisMax;
+                                var i = value == 0 ? 0 : 1;
+                                <g>
+                                    <line x1="@N(L)" x2="@N(W - R)" y1="@N(y)" y2="@N(y)" class="@(i == 0 ? "chart-baseline" : "chart-grid")" />
+                                    <text x="@N(L - 8)" y="@N(y + 4)" class="chart-axis" text-anchor="end">@G(value, "0")</text>
+                                </g>
+                            }
+                            <text x="@N(L - 8)" y="@N(T - 8)" class="chart-axis" text-anchor="end">Mbps</text>
+
+                            @for (var day = speed.From; day < speed.To; day = day.AddDays(1))
+                            {
+                                var x1 = SX(day);
+                                var x2 = SX(day.AddDays(1));
+                                <g>
+                                    @if (day > speed.From)
+                                    {
+                                        <line x1="@N(x1)" x2="@N(x1)" y1="@N(T)" y2="@N(baseY)" class="chart-day-divider" />
+                                    }
+                                    <text x="@N((x1 + x2) / 2)" y="@N(baseY + 17)" class="chart-axis @(day == DateTime.Now.Date ? "is-today" : "")" text-anchor="middle">@day.ToString("ddd", greek)</text>
+                                    <text x="@N((x1 + x2) / 2)" y="@N(baseY + 32)" class="chart-axis chart-axis-sub" text-anchor="middle">@day.ToString("d/M")</text>
+                                </g>
+                            }
+
+                            <path class="speed-line series-up" d="@LinePath(t => t.Upload)" />
+                            <path class="speed-line series-down" d="@LinePath(t => t.Download)" />
+
+                            @if (speed.Tests.Count <= 40)
+                            {
+                                foreach (var test in speed.Tests)
+                                {
+                                    if (test.Upload != null)
+                                    {
+                                        <circle class="speed-dot series-up" cx="@N(SX(test.Time))" cy="@N(SY(test.Upload.Value))" r="3" />
+                                    }
+                                    if (test.Download != null)
+                                    {
+                                        <circle class="speed-dot series-down" cx="@N(SX(test.Time))" cy="@N(SY(test.Download.Value))" r="3" />
+                                    }
+                                }
+                            }
+
+                            <line class="crosshair" x1="0" x2="0" y1="@N(T)" y2="@N(baseY)" style="display: none;" />
+                            <circle class="hover-dot series-up" r="5" style="display: none;" />
+                            <circle class="hover-dot series-down" r="5" style="display: none;" />
+                            <rect class="hit-area" x="@N(L)" y="@N(T)" width="@N(plotW)" height="@N(plotH)" />
+                        </svg>
+                        <div class="chart-tooltip" hidden></div>
+                        <script type="application/json" class="chart-data">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(points))</script>
+                    </div>
+
+                    <div class="chart-legend">
+                        <span><span class="legend-swatch series-down"></span>Λήψη (download)</span>
+                        <span><span class="legend-swatch series-up"></span>Αποστολή (upload)</span>
+                        <span class="text-muted">· @speed.Tests.Count μετρήσεις</span>
+                    </div>
+
+                    <details class="chart-table">
+                        <summary>Πίνακας τιμών</summary>
+                        <div class="table-responsive" style="max-height: 260px;">
+                            <table class="table table-sm mb-0 mt-2">
+                                <thead><tr><th>Ώρα</th><th class="text-end">Λήψη</th><th class="text-end">Αποστολή</th><th class="text-end">Ping</th></tr></thead>
+                                <tbody>
+                                    @foreach (var test in Enumerable.Reverse(speed.Tests))
+                                    {
+                                        <tr>
+                                            <td>@test.Time.ToString("ddd d/M HH:mm", greek)</td>
+                                            <td class="text-end">@(test.Download != null ? G(test.Download.Value) + " Mbps" : "—")</td>
+                                            <td class="text-end">@(test.Upload != null ? G(test.Upload.Value) + " Mbps" : "—")</td>
+                                            <td class="text-end">@(test.Ping != null ? G(test.Ping.Value, "0") + " ms" : "—")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                }
+            </div>
+        </div>
+    </div>
+</div>

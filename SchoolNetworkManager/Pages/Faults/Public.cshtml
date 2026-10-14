@@ -1,0 +1,91 @@
+@page
+@model SchoolNetworkManager.Pages.Faults.PublicModel
+
+@{
+    Layout = null;
+    var greek = new System.Globalization.CultureInfo("el-GR");
+    var down = Model.Open.Count(r => r.Fault.IsDown);
+}
+
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    @if (!Model.Print)
+    {
+        <meta http-equiv="refresh" content="300" />
+    }
+    <title>Βλάβες εξοπλισμού - @Model.Settings.SchoolTitle</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/print.css" asp-append-version="true" />
+    <style>
+        .fault-row-down td { background: #fef2f2 !important; }
+        .sev { font-weight: 700; white-space: nowrap; }
+        .sev.down { color: #b91c1c; }
+        .sev.minor { color: #b45309; }
+        .ok-box { text-align: center; padding: 3rem 1rem; font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+    @if (Model.Print)
+    {
+        <div class="print-toolbar d-print-none">
+            <button type="button" class="btn btn-sm btn-primary" onclick="window.print()">🖨 Εκτύπωση</button>
+        </div>
+    }
+
+    <section class="print-page">
+        <header class="print-header">
+            @if (!string.IsNullOrWhiteSpace(Model.Settings.LogoPath))
+            {
+                <img src="@Model.Settings.LogoPath" alt="" class="print-logo" />
+            }
+            <div class="flex-grow-1">
+                <div class="print-school">@Model.Settings.SchoolTitle</div>
+                <h1 class="print-title">Εξοπλισμός με βλάβη</h1>
+            </div>
+            <div class="text-end small">
+                <div>Ενημέρωση: <strong>@DateTime.Now.ToString("dd/MM/yyyy HH:mm")</strong></div>
+                <div>Βλάβες: <strong>@Model.Open.Count</strong> · εκτός λειτουργίας: <strong>@down</strong></div>
+            </div>
+        </header>
+
+        @if (!Model.Open.Any())
+        {
+            <div class="ok-box">👍 Όλος ο εξοπλισμός λειτουργεί κανονικά.</div>
+        }
+        else
+        {
+            <table class="table table-sm table-bordered print-table">
+                <thead>
+                    <tr>
+                        <th>Χώρος</th>
+                        <th>Συσκευή</th>
+                        <th>Κατάσταση</th>
+                        <th>Πρόβλημα</th>
+                        <th class="text-nowrap">Από</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Open)
+                    {
+                        <tr class="@(row.Fault.IsDown ? "fault-row-down" : "")">
+                            <td class="text-nowrap">@row.LocationLabel</td>
+                            <td class="fw-semibold">@row.DeviceLabel</td>
+                            <td class="sev @(row.Fault.IsDown ? "down" : "minor")">@(row.Fault.IsDown ? "⛔ Εκτός λειτουργίας" : "🔧 Με πρόβλημα")</td>
+                            <td>@row.Fault.Description</td>
+                            <td class="text-nowrap">@row.Fault.CreatedAt.ToString("d/M", greek)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        <footer class="print-footer">
+            <span>Παρακαλούμε μη χρησιμοποιείτε τα μηχανήματα «εκτός λειτουργίας».</span>
+            <span>Νέα βλάβη; Ενημερώστε τον υπεύθυνο εργαστηρίου.</span>
+        </footer>
+    </section>
+</body>
+</html>

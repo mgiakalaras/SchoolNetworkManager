@@ -1,0 +1,117 @@
+@page
+@model SchoolNetworkManager.Pages.Backups.IndexModel
+@using SchoolNetworkManager.Services
+
+@{
+    ViewData["Title"] = "Αντίγραφα ασφαλείας";
+    var autoCount = Model.Items.Count(i => i.Kind == BackupService.KindAuto);
+    var lastAuto = Model.Items.FirstOrDefault(i => i.Kind == BackupService.KindAuto);
+}
+
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+        <h1 class="mb-1">🗄️ Αντίγραφα ασφαλείας</h1>
+        <p class="text-muted mb-0">Βάση, κλειδιά κωδικών, λογότυπο, κατόψεις και έγγραφα — όλα σε ένα zip.</p>
+    </div>
+    <div class="page-actions">
+        <form method="post" asp-page-handler="Create" class="busy-form">
+            <button type="submit" class="icon-action is-primary" data-busy-text="⏳" data-hint="Νέο αντίγραφο τώρα" aria-label="Νέο αντίγραφο">💾</button>
+        </form>
+        <a class="icon-action" asp-page="/Settings/Index" asp-route-tab="backup" data-hint="Ρυθμίσεις αυτόματου αντιγράφου" aria-label="Ρυθμίσεις">⚙️</a>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-@(Model.StatusKind ?? "info") shadow-sm">@Model.StatusMessage</div>
+}
+
+<div class="cleanup-stats mb-4">
+    <div class="cleanup-stat">
+        <div class="cleanup-count">@(Model.Settings.AutoBackup ? $"{Model.Settings.AutoBackupHour:00}:00" : "—")</div>
+        <small>@(Model.Settings.AutoBackup ? "αυτόματο αντίγραφο κάθε μέρα" : "το αυτόματο αντίγραφο είναι κλειστό")</small>
+    </div>
+    <div class="cleanup-stat">
+        <div class="cleanup-count">@autoCount / @Model.Settings.BackupKeep</div>
+        <small>αυτόματα (τα παλαιότερα σβήνονται)</small>
+    </div>
+    <div class="cleanup-stat">
+        <div class="cleanup-count">@BackupService.FormatSize(Model.TotalSize)</div>
+        <small>χώρος όλων των αντιγράφων · βάση @BackupService.FormatSize(Model.DatabaseSize)</small>
+    </div>
+    <div class="cleanup-stat">
+        <div class="cleanup-count">@(lastAuto == null ? "—" : lastAuto.CreatedAt.ToString("dd/MM HH:mm"))</div>
+        <small>τελευταίο αυτόματο</small>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                @if (!Model.Items.Any())
+                {
+                    <div class="text-center text-muted py-4">
+                        Δεν υπάρχουν ακόμη αντίγραφα. Το πρώτο αυτόματο θα γίνει μέσα στα επόμενα λεπτά — ή πάτα 💾.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr><th>Πότε</th><th>Είδος</th><th>Μέγεθος</th><th class="text-end"></th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var b in Model.Items)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold text-nowrap">@b.CreatedAt.ToString("ddd dd/MM/yyyy HH:mm", new System.Globalization.CultureInfo("el-GR"))</td>
+                                        <td>@b.KindLabel</td>
+                                        <td class="text-nowrap">@BackupService.FormatSize(b.Size)</td>
+                                        <td class="text-end row-actions">
+                                            <a class="row-action" asp-page-handler="Download" asp-route-name="@b.Name" data-hint="Λήψη στον υπολογιστή σου" aria-label="Λήψη">⬇️</a>
+                                            <form method="post" asp-page-handler="Restore" asp-route-name="@b.Name" class="busy-form"
+                                                  onsubmit="return confirm('Επαναφορά στο αντίγραφο της @b.CreatedAt.ToString("dd/MM HH:mm");\n\nΌ,τι άλλαξε μετά από τότε θα χαθεί (κρατιέται όμως αντίγραφο της τωρινής κατάστασης).');">
+                                                <button type="submit" class="row-action is-warning" data-busy-text="⏳" data-hint="Επαναφορά σε αυτό" aria-label="Επαναφορά">↩️</button>
+                                            </form>
+                                            <form method="post" asp-page-handler="Delete" asp-route-name="@b.Name"
+                                                  onsubmit="return confirm('Να σβηστεί αυτό το αντίγραφο;');">
+                                                <button type="submit" class="row-action is-danger" data-hint="Διαγραφή" aria-label="Διαγραφή">🗑️</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header fw-semibold">⬆️ Επαναφορά από αρχείο</div>
+            <div class="card-body">
+                <p class="small text-muted">Ένα zip που είχες κατεβάσει (και από παλιότερη έκδοση).</p>
+                <form method="post" asp-page-handler="Upload" enctype="multipart/form-data" class="d-grid gap-2 busy-form"
+                      onsubmit="return confirm('Επαναφορά από αυτό το αρχείο; Ό,τι υπάρχει τώρα θα αντικατασταθεί (κρατιέται αντίγραφο).');">
+                    <input type="file" name="file" class="form-control form-control-sm" accept=".zip" required />
+                    <button type="submit" class="btn btn-outline-warning btn-sm" data-busy-text="⏳ Επαναφορά...">↩️ Επαναφορά</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body small">
+                <h2 class="h6">Καλό να ξέρεις</h2>
+                <ul class="ps-3 mb-0">
+                    <li>Πριν από κάθε επαναφορά φτιάχνεται αυτόματα αντίγραφο «↩️ Πριν από επαναφορά» — αν μετανιώσεις, επαναφέρεις αυτό.</li>
+                    <li>Η επαναφορά γυρίζει πίσω και τους <strong>χρήστες</strong>. Ο κοινός λογαριασμός <code>admin</code> δουλεύει πάντα.</li>
+                    <li>Τα αντίγραφα είναι στον ίδιο δίσκο με την εφαρμογή (<code>data/backups</code>). Αν χαλάσει ο δίσκος χάνονται κι αυτά — κατέβαζε πού και πού ένα ⬇️ σε USB ή στο cloud.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,199 @@
+@page
+@model SchoolNetworkManager.Pages.Consumables.IndexModel
+
+@{
+    ViewData["Title"] = "Αναλώσιμα";
+    var greek = new System.Globalization.CultureInfo("el-GR");
+    var low = Model.Items.Count(i => i.IsLow);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h1 class="mb-1">📦 Αναλώσιμα</h1>
+        <p class="text-muted mb-0">
+            @Model.Items.Count είδη
+            @if (low > 0)
+            {
+                <span>· <strong class="text-danger">@low χρειάζονται παραγγελία</strong></span>
+            }
+        </p>
+    </div>
+    <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#newItem">＋ Νέο είδος</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-info shadow-sm">@Model.StatusMessage</div>
+}
+
+<!-- Νέο είδος -->
+<div class="collapse mb-3" id="newItem">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post" asp-page-handler="Save" asp-route-Category="@Model.Category" class="row g-3 align-items-end">
+                <input type="hidden" name="by" class="who-field" />
+                <div class="col-md-4">
+                    <label class="form-label">Όνομα</label>
+                    <input name="Edit.Name" class="form-control" placeholder="π.χ. Toner HP 26A (CF226A)" required />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Κατηγορία</label>
+                    <select name="Edit.Category" class="form-select">
+                        @foreach (var cat in SchoolNetworkManager.Models.Consumable.Categories)
+                        {
+                            <option value="@cat">@cat</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Για (συμβατότητα)</label>
+                    <input name="Edit.CompatibleWith" class="form-control" placeholder="π.χ. HP LaserJet M402 — Γραφείο καθηγητών" />
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label">Απόθεμα</label>
+                    <input name="Edit.Quantity" type="number" min="0" value="1" class="form-control" />
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label">Ειδοποίηση στα</label>
+                    <input name="Edit.MinQuantity" type="number" min="0" value="1" class="form-control" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Πού φυλάσσεται</label>
+                    <input name="Edit.StoredAt" class="form-control" placeholder="π.χ. Ντουλάπι εργαστηρίου, ράφι 2" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Σημειώσεις</label>
+                    <input name="Edit.Notes" class="form-control" placeholder="π.χ. προμηθευτής, τιμή" />
+                </div>
+                <div class="col-12 text-end">
+                    <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Φίλτρο κατηγορίας -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <a class="btn btn-sm @(string.IsNullOrEmpty(Model.Category) ? "btn-primary" : "btn-outline-secondary")" asp-page="./Index">Όλα</a>
+    @foreach (var cat in SchoolNetworkManager.Models.Consumable.Categories)
+    {
+        <a class="btn btn-sm @(Model.Category == cat ? "btn-primary" : "btn-outline-secondary")" asp-page="./Index" asp-route-Category="@cat">@cat</a>
+    }
+</div>
+
+@if (!Model.Items.Any())
+{
+    <div class="card shadow-sm"><div class="card-body text-center py-5 text-muted">Δεν υπάρχουν ακόμα αναλώσιμα. Πάτα «＋ Νέο είδος».</div></div>
+}
+
+<div class="consumable-grid">
+    @foreach (var item in Model.Items)
+    {
+        var stateClass = item.IsOut ? "is-out" : item.IsLow ? "is-low" : "";
+        var max = Math.Max(item.Quantity, Math.Max(item.MinQuantity * 3, 1));
+        var pct = Math.Min(100, item.Quantity * 100 / max);
+
+        <div class="card shadow-sm consumable-card @stateClass">
+            <div class="card-body">
+                <div class="d-flex justify-content-between gap-2">
+                    <div class="min-w-0">
+                        <div class="fw-semibold">@item.Name</div>
+                        <div class="text-muted small">@item.Category@(string.IsNullOrWhiteSpace(item.CompatibleWith) ? "" : " · για " + item.CompatibleWith)</div>
+                    </div>
+                    <div class="stock-number" title="Απόθεμα">@item.Quantity</div>
+                </div>
+
+                <div class="stock-bar" title="Ειδοποίηση όταν φτάσει τα @item.MinQuantity">
+                    <div style="width: @(pct)%;"></div>
+                </div>
+
+                <div class="small mb-2">
+                    @if (item.IsOut)
+                    {
+                        <span class="stock-flag is-out">⛔ Τελείωσε</span>
+                    }
+                    else if (item.IsLow)
+                    {
+                        <span class="stock-flag is-low">⚠️ Χρειάζεται παραγγελία</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">ειδοποίηση στα @item.MinQuantity</span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(item.StoredAt))
+                    {
+                        <span class="text-muted">· 📍 @item.StoredAt</span>
+                    }
+                </div>
+
+                <div class="d-flex gap-2 align-items-center">
+                    <form method="post" asp-page-handler="Move" asp-route-id="@item.Id" asp-route-change="-1" asp-route-Category="@Model.Category">
+                        <input type="hidden" name="by" class="who-field" />
+                        <button type="submit" class="icon-action" data-hint="Χρησιμοποιήθηκε 1" aria-label="Χρησιμοποιήθηκε 1" disabled="@(item.Quantity <= 0)">➖</button>
+                    </form>
+                    <form method="post" asp-page-handler="Move" asp-route-id="@item.Id" asp-route-change="1" asp-route-Category="@Model.Category">
+                        <input type="hidden" name="by" class="who-field" />
+                        <button type="submit" class="icon-action" data-hint="Παραλαβή 1" aria-label="Παραλαβή 1">➕</button>
+                    </form>
+                    <button type="button" class="icon-action ms-auto" data-bs-toggle="collapse" data-bs-target="#edit-@item.Id" data-hint="Επεξεργασία" aria-label="Επεξεργασία">✏️</button>
+                    <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" asp-route-Category="@Model.Category"
+                          onsubmit="return confirm('Διαγραφή του είδους;');">
+                        <button type="submit" class="icon-action is-danger" data-hint="Διαγραφή" aria-label="Διαγραφή">🗑️</button>
+                    </form>
+                </div>
+
+                <form method="post" asp-page-handler="Save" asp-route-Category="@Model.Category" class="collapse mt-3" id="edit-@item.Id">
+                    <input type="hidden" name="Edit.Id" value="@item.Id" />
+                    <input type="hidden" name="by" class="who-field" />
+                    <div class="row g-2">
+                        <div class="col-12"><input name="Edit.Name" value="@item.Name" class="form-control form-control-sm" required /></div>
+                        <div class="col-6">
+                            <select name="Edit.Category" class="form-select form-select-sm">
+                                @foreach (var cat in SchoolNetworkManager.Models.Consumable.Categories)
+                                {
+                                    <option value="@cat" selected="@(cat == item.Category)">@cat</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-3"><input name="Edit.Quantity" type="number" min="0" value="@item.Quantity" class="form-control form-control-sm" title="Απόθεμα" /></div>
+                        <div class="col-3"><input name="Edit.MinQuantity" type="number" min="0" value="@item.MinQuantity" class="form-control form-control-sm" title="Ειδοποίηση στα" /></div>
+                        <div class="col-12"><input name="Edit.CompatibleWith" value="@item.CompatibleWith" class="form-control form-control-sm" placeholder="Για (συμβατότητα)" /></div>
+                        <div class="col-12"><input name="Edit.StoredAt" value="@item.StoredAt" class="form-control form-control-sm" placeholder="Πού φυλάσσεται" /></div>
+                        <div class="col-12"><input name="Edit.Notes" value="@item.Notes" class="form-control form-control-sm" placeholder="Σημειώσεις" /></div>
+                        <div class="col-12 text-end"><button type="submit" class="btn btn-sm btn-primary">Αποθήκευση</button></div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+</div>
+
+@if (Model.RecentLogs.Any())
+{
+    <details class="mt-4">
+        <summary class="fw-semibold mb-2">🕘 Τελευταίες κινήσεις</summary>
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Πότε</th><th>Είδος</th><th class="text-end">Κίνηση</th><th class="text-end">Υπόλοιπο</th><th>Σημείωση</th><th>Από</th></tr></thead>
+                    <tbody>
+                        @foreach (var log in Model.RecentLogs)
+                        {
+                            <tr>
+                                <td class="text-nowrap">@log.At.ToString("ddd d/M HH:mm", greek)</td>
+                                <td>@(Model.NamesById.TryGetValue(log.ConsumableId, out var n) ? n : "—")</td>
+                                <td class="text-end fw-semibold @(log.Change > 0 ? "text-success" : "text-danger")">@(log.Change > 0 ? "+" : "")@log.Change</td>
+                                <td class="text-end">@log.QuantityAfter</td>
+                                <td>@log.Note</td>
+                                <td>@log.By</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </details>
+}
+
+<partial name="_WhoAmI" />

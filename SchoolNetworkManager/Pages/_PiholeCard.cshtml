@@ -1,0 +1,101 @@
+@model SchoolNetworkManager.Pages.IndexModel
+@{
+    var p = Model.Pihole;
+    var greek = new System.Globalization.CultureInfo("el-GR");
+    var maxClient = p?.TopBlockedClients.Select(c => c.Count).DefaultIfEmpty(1).Max() ?? 1;
+    var maxDomain = p?.TopBlockedDomains.Select(c => c.Count).DefaultIfEmpty(1).Max() ?? 1;
+}
+
+<div class="card shadow-sm mb-4 pihole-card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span class="fw-semibold">🛡️ Pi-hole · τι μπλοκαρίστηκε</span>
+        <span class="text-muted small">τελευταίο 24ωρο@(p?.Version > 0 ? $" · v{p.Version}" : "")</span>
+    </div>
+    <div class="card-body">
+        @if (p == null)
+        {
+            <div class="empty-hint">
+                Σύνδεσε το Pi-hole στις <a asp-page="/Settings/Index" asp-route-tab="network">Ρυθμίσεις → Δίκτυο</a>
+                για να βλέπεις εδώ ποιοι υπολογιστές ζητούν μπλοκαρισμένα sites.
+            </div>
+        }
+        else if (!p.Ok)
+        {
+            <div class="empty-hint">
+                ⚠️ @p.Error
+                <a asp-page="/Settings/Index" asp-route-tab="network">Ρυθμίσεις → Δίκτυο</a>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4">
+                <div class="col-lg-3">
+                    <div class="speed-stat-label">Μπλοκαρίστηκαν</div>
+                    <div class="chart-hero-number">@p.BlockedQueries.ToString("N0", greek)</div>
+                    <div class="text-muted small">
+                        από @p.TotalQueries.ToString("N0", greek) αιτήματα
+                        (@p.PercentBlocked.ToString("0.#", greek)%)
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(p.Error))
+                    {
+                        <div class="small text-warning mt-2">@p.Error</div>
+                    }
+                </div>
+
+                <div class="col-lg-5">
+                    <div class="speed-stat-label mb-2">Ποιος ζήτησε τα περισσότερα μπλοκαρισμένα</div>
+                    @if (!p.TopBlockedClients.Any())
+                    {
+                        <div class="empty-hint">Κανένα.</div>
+                    }
+                    @foreach (var item in p.TopBlockedClients)
+                    {
+                        Model.DevicesByIp.TryGetValue(item.Key, out var device);
+                        var label = device != null && !string.IsNullOrWhiteSpace(device.Name) ? device.Name
+                            : !string.IsNullOrWhiteSpace(item.Name) ? item.Name
+                            : item.Key;
+                        var width = Math.Max(3, item.Count * 100.0 / Math.Max(1, maxClient));
+
+                        <div class="hbar-row">
+                            <div class="hbar-label">
+                                @if (device != null)
+                                {
+                                    <a asp-page="/Computers/Details" asp-route-id="@device.Id">@label</a>
+                                    <span class="text-muted small">@(string.IsNullOrWhiteSpace(device.Location) ? "" : "· " + device.Location)</span>
+                                }
+                                else
+                                {
+                                    <span>@label</span>
+                                    @if (label != item.Key)
+                                    {
+                                        <span class="text-muted small">· @item.Key</span>
+                                    }
+                                }
+                            </div>
+                            <div class="hbar-track"><div class="hbar-fill" style="width: @(width.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%;"></div></div>
+                            <div class="hbar-value">@item.Count.ToString("N0", greek)</div>
+                        </div>
+                    }
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="speed-stat-label mb-2">Πιο συχνά μπλοκαρισμένα sites</div>
+                    @if (!p.TopBlockedDomains.Any())
+                    {
+                        <div class="empty-hint">Κανένα.</div>
+                    }
+                    @foreach (var item in p.TopBlockedDomains)
+                    {
+                        var width = Math.Max(3, item.Count * 100.0 / Math.Max(1, maxDomain));
+
+                        <div class="hbar-row">
+                            <div class="hbar-label font-monospace small" title="@item.Key">@item.Key</div>
+                            <div class="hbar-track"><div class="hbar-fill is-domain" style="width: @(width.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%;"></div></div>
+                            <div class="hbar-value">@item.Count.ToString("N0", greek)</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

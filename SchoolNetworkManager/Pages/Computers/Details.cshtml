@@ -2,194 +2,505 @@
 @model SchoolNetworkManager.Pages.Computers.DetailsModel
 
 @{
-    ViewData["Title"] = "Στοιχεία Υπολογιστή";
+    var c = Model.Computer;
+    var title = string.IsNullOrWhiteSpace(c.Name) ? c.IpAddress : c.Name;
+    ViewData["Title"] = title;
+
+    var specs = c.SpecValues;
+    var specGroups = DeviceSpecs.GroupsFor(c.MachineType);
+    var filledGroups = specGroups
+        .Select(g => new
+        {
+            Group = g,
+            Items = g.Fields
+                .Select(f => new { Field = f, Value = specs.TryGetValue(DeviceSpecs.FormKey(g, f), out var v) ? v : null })
+                .Where(x => !string.IsNullOrWhiteSpace(x.Value))
+                .ToList()
+        })
+        .Where(x => x.Items.Any())
+        .ToList();
+
+    var statusClass = c.IsOnline == true ? "online" : c.IsOnline == false ? "offline" : "unknown";
+    var statusText = c.IsOnline == true ? "Online" : c.IsOnline == false ? "Offline" : "Άγνωστο";
+
+    var openFaults = Model.Faults.Where(f => f.IsOpen).ToList();
+    var hist = Model.History;
+    var greek = new System.Globalization.CultureInfo("el-GR");
+
+    string When(DateTime? value) => value?.ToString("dd/MM/yyyy HH:mm") ?? "—";
+
+    string Ago(DateTime? value)
+    {
+        if (value == null) return "ποτέ";
+        var span = DateTime.Now - value.Value;
+        if (span.TotalMinutes < 2) return "μόλις τώρα";
+        if (span.TotalMinutes < 60) return $"πριν από {(int)span.TotalMinutes} λεπτά";
+        if (span.TotalHours < 24) return $"πριν από {(int)span.TotalHours} ώρες";
+        if (span.TotalDays < 2) return "χθες";
+        return $"πριν από {(int)span.TotalDays} ημέρες";
+    }
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="mb-1">Στοιχεία Υπολογιστή</h1>
-        <p class="text-muted mb-0">Αναλυτική προβολή καταχώρησης</p>
-    </div>
+<!-- ====================== Κεφαλίδα ====================== -->
+<div class="card shadow-sm device-hero mb-4">
+    <div class="card-body d-flex flex-wrap gap-4 align-items-center">
+        <div class="device-hero-icon" aria-hidden="true">@(c.IsDynamic ? "🔄" : DeviceSpecs.TypeIcon(c.MachineType))</div>
 
-    <div class="d-flex gap-2">
-        <a class="btn btn-outline-primary" asp-page="./Edit" asp-route-id="@Model.Computer.Id">
-            Επεξεργασία
-        </a>
-
-        <a class="btn btn-outline-secondary" asp-page="./Index">
-            Πίσω στη λίστα
-        </a>
-    </div>
-</div>
-
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <div class="row g-4">
-            <div class="col-md-3">
-                <div class="text-muted small">IP Address</div>
-                <div class="fs-5 fw-semibold">@Model.Computer.IpAddress</div>
+        <div class="flex-grow-1 min-w-0">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                <h1 class="device-hero-title mb-0">@title</h1>
+                <partial name="_ChangeBadge" model="c" />
+                @if (openFaults.Any(f => f.IsDown))
+                {
+                    <a href="#faults" class="fault-pill is-down">⛔ Εκτός λειτουργίας</a>
+                }
+                else if (openFaults.Any())
+                {
+                    <a href="#faults" class="fault-pill">🔧 Βλάβη</a>
+                }
+                @if (c.VeyonDown)
+                {
+                    <span class="fault-pill is-down" data-hint="Ανοιχτός, αλλά η υπηρεσία Veyon δεν απαντά από @(c.VeyonDownSince?.ToString("dd/MM HH:mm"))">🛑 Veyon σταμάτησε</span>
+                }
+                <span class="status-pill @statusClass">
+                    <span class="status-dot"></span>@statusText
+                </span>
             </div>
 
-            <div class="col-md-3">
-                <div class="text-muted small">Τύπος Μηχανήματος</div>
-
-                @if (Model.Computer.IsEmptySlot)
+            <div class="device-hero-meta">
+                <span class="meta-chip">@c.DisplayMachineType</span>
+                <span class="meta-chip font-monospace">@c.IpAddress</span>
+                @if (c.IsDynamic)
                 {
-                    <div class="text-muted">-</div>
+                    <span class="meta-chip addr-chip is-dynamic" data-hint="Διεύθυνση DHCP: δεν έχει σταθερή συσκευή. Αλλάζει από ✏️">🔄 Dynamic</span>
                 }
                 else
                 {
-                    <span class="badge bg-info text-dark">
-                        @Model.Computer.DisplayMachineType
-                    </span>
+                    <span class="meta-chip addr-chip is-static" data-hint="Σταθερή συσκευή σε αυτή την IP">📌 Static</span>
                 }
-            </div>
-
-            <div class="col-md-3">
-                <div class="text-muted small">Name</div>
-                <div class="fs-5 fw-semibold">@Model.Computer.Name</div>
-            </div>
-
-            <div class="col-md-3">
-                <div class="text-muted small">MAC Address</div>
-                <div class="fs-6">@Model.Computer.MacAddress</div>
-            </div>
-
-            <div class="col-md-3">
-                <div class="text-muted small">Location</div>
-                <div class="fs-6">@Model.Computer.Location</div>
-            </div>
-
-            <div class="col-md-3">
-                <div class="text-muted small">Username</div>
-                <div class="fs-6">@Model.Computer.Username</div>
-            </div>
-
-            <div class="col-md-3">
-                <div class="text-muted small">Password</div>
-
-                @if (!string.IsNullOrWhiteSpace(Model.Computer.Password))
+                @if (!string.IsNullOrWhiteSpace(c.Location))
                 {
-                    <div class="d-flex align-items-center gap-2">
-                        <span id="passwordText">••••••••</span>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="togglePassword()">
-                            Εμφάνιση
-                        </button>
+                    <a class="meta-chip text-decoration-none" asp-page="./Index" asp-route-LocationFilter="@c.Location">📍 @c.Location</a>
+                }
+                <span class="text-muted small">
+                    @(c.IsOnline == true ? "Ανοιχτό τώρα" : "Τελευταία φορά online: " + Ago(c.LastSeenOnline))
+                </span>
+            </div>
+        </div>
+
+        <div class="device-hero-actions">
+            <form method="post" asp-page-handler="Probe" asp-route-id="@c.Id" class="busy-form">
+                <button type="submit" class="icon-action is-info" data-busy-text="⏳"
+                        data-hint="Ανίχνευση τώρα (όνομα, MAC, ports)" aria-label="Ανίχνευση">🔍</button>
+            </form>
+
+            <form method="post" asp-page-handler="Wake" asp-route-id="@c.Id">
+                <button type="submit" class="icon-action is-warning"
+                        data-hint="@(string.IsNullOrWhiteSpace(c.MacAddress) ? "Wake-on-LAN: χρειάζεται MAC" : "Wake-on-LAN: άναμμα από το δίκτυο")"
+                        aria-label="Wake-on-LAN" disabled="@(string.IsNullOrWhiteSpace(c.MacAddress))">⚡</button>
+            </form>
+
+            <a class="icon-action is-primary" asp-page="./Edit" asp-route-id="@c.Id" data-hint="Επεξεργασία" aria-label="Επεξεργασία">✏️</a>
+
+            <span class="icon-action-sep"></span>
+
+            <a class="icon-action" asp-page="./Index" data-hint="Πίσω στη λίστα" aria-label="Πίσω στη λίστα">↩️</a>
+
+            <a class="icon-action is-danger" asp-page="./Delete" asp-route-id="@c.Id" data-hint="Διαγραφή" aria-label="Διαγραφή">🗑️</a>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-@(Model.StatusKind ?? "success") shadow-sm">
+        @Model.StatusMessage
+    </div>
+}
+
+@if (c.HasMacMismatch)
+{
+    <div class="alert alert-warning shadow-sm d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            ⚠️ <strong>Άλλαξε η MAC σε αυτή την IP.</strong>
+            Καταχωρημένη: <code>@c.MacAddress</code> — στο δίκτυο: <code>@c.DetectedMac</code>.
+            Ίσως άλλαξε υπολογιστής ή κάποιος συνέδεσε δική του συσκευή.
+        </div>
+        <form method="post" asp-page-handler="AcceptMac" asp-route-id="@c.Id">
+            <button type="submit" class="btn btn-sm btn-warning">Αποδοχή νέας MAC</button>
+        </form>
+    </div>
+}
+
+<div class="row g-4">
+    <!-- ====================== Αριστερή στήλη ====================== -->
+    <div class="col-lg-8 d-flex flex-column gap-4">
+
+        <!-- Δίκτυο -->
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">🌐 Δίκτυο</div>
+            <div class="card-body">
+                <dl class="kv-grid">
+                    <div>
+                        <dt>IP Address</dt>
+                        <dd class="font-monospace">
+                            @c.IpAddress
+                            <button type="button" class="copy-btn" data-copy="@c.IpAddress" title="Αντιγραφή">⧉</button>
+                        </dd>
+                    </div>
+
+                    <div>
+                        <dt>MAC Address</dt>
+                        <dd class="font-monospace">
+                            @if (!string.IsNullOrWhiteSpace(c.MacAddress))
+                            {
+                                @c.MacAddress
+                                <button type="button" class="copy-btn" data-copy="@c.MacAddress" title="Αντιγραφή">⧉</button>
+                            }
+                            else
+                            {
+                                <span class="text-muted">— πάτα «Ανίχνευση»</span>
+                            }
+                        </dd>
+                    </div>
+
+                    <div>
+                        <dt>Κατασκευαστής κάρτας</dt>
+                        <dd>@(string.IsNullOrWhiteSpace(c.Vendor) ? "—" : c.Vendor)</dd>
+                    </div>
+
+                    <div>
+                        <dt>Τελευταίος έλεγχος</dt>
+                        <dd>@When(c.LastCheckedAt)</dd>
+                    </div>
+
+                    <div>
+                        <dt>Τελευταία φορά online</dt>
+                        <dd>@When(c.LastSeenOnline)</dd>
+                    </div>
+
+                    <div>
+                        <dt>Λογισμικό διαχείρισης</dt>
+                        <dd class="d-flex gap-2 flex-wrap">
+                            @if (c.VeyonDown)
+                            {
+                                <span class="flag-chip is-alert">🛑 Veyon σταμάτησε</span>
+                            }
+                            else
+                            {
+                                <span class="flag-chip @(c.HasVeyon ? "on" : "")">@(c.HasVeyon ? "✓" : "✕") Veyon</span>
+                            }
+                            <span class="flag-chip @(c.HasLanMessenger ? "on" : "")">@(c.HasLanMessenger ? "✓" : "✕") LAN Messenger</span>
+                        </dd>
+                    </div>
+
+                    <div class="kv-wide">
+                        <dt>Ανοιχτά ports</dt>
+                        <dd>
+                            @if (c.OpenPortList.Any())
+                            {
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var port in c.OpenPortList)
+                                    {
+                                        <span class="badge port-badge">@port</span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted">— πάτα «Ανίχνευση» όσο η συσκευή είναι ανοιχτή</span>
+                            }
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Ιστορικό λειτουργίας -->
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span class="fw-semibold">📈 Πότε ήταν ανοιχτή</span>
+                <span class="text-muted small">τελευταίες @hist.DayCount ημέρες · ανά ώρα</span>
+            </div>
+            <div class="card-body">
+                @if (!hist.HasData)
+                {
+                    <div class="empty-hint">
+                        Δεν υπάρχει ακόμα ιστορικό. Γεμίζει μόνο του από τον αυτόματο έλεγχο online/offline.
                     </div>
                 }
                 else
                 {
-                    <div class="text-muted">—</div>
+                    <div class="usage-stats">
+                        <div>
+                            <div class="speed-stat-label">Ανοιχτή</div>
+                            <div class="speed-stat-value">@hist.OnlinePercent.ToString("0", greek)<span>% των ελέγχων</span></div>
+                        </div>
+                        <div>
+                            <div class="speed-stat-label">Ημέρες χρήσης</div>
+                            <div class="speed-stat-value">@hist.UsedDays<span> / @hist.TrackedDays</span></div>
+                        </div>
+                        <div>
+                            <div class="speed-stat-label">Κλεισίματα / πτώσεις</div>
+                            <div class="speed-stat-value">@hist.Drops</div>
+                        </div>
+                    </div>
+
+                    @if (hist.NeverOn)
+                    {
+                        <div class="usage-insight is-warn">😴 Δεν άνοιξε καθόλου τις τελευταίες @hist.TrackedDays ημέρες. Δεν χρησιμοποιείται ή έχει πρόβλημα;</div>
+                    }
+                    else if (hist.IsFlapping)
+                    {
+                        <div class="usage-insight is-warn">⚠️ Ανοιγοκλείνει συχνά (@hist.Drops φορές σε @hist.UsedDays ημέρες). Έλεγξε ρεύμα, καλώδιο δικτύου ή κάρτα δικτύου.</div>
+                    }
+
+                    <div class="usage-heatmap" role="img" aria-label="Ποσοστό ώρας που ήταν ανοιχτή, ανά ημέρα και ώρα">
+                        <div class="uh-corner"></div>
+                        @for (var h = 0; h < 24; h++)
+                        {
+                            <div class="uh-hour">@(h % 3 == 0 ? h.ToString("00") : "")</div>
+                        }
+
+                        @foreach (var day in hist.Days)
+                        {
+                            <div class="uh-day @(day.Date == DateTime.Now.Date ? "is-today" : "") @(day.Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday ? "is-weekend" : "")">
+                                @day.Date.ToString("ddd d/M", greek)
+                            </div>
+                            @foreach (var cell in day.Cells)
+                            {
+                                var tip = $"{day.Date.ToString("ddd d/M", greek)} {cell.Hour:00}:00–{cell.Hour + 1:00}:00 · "
+                                          + (cell.Ratio == null ? "χωρίς έλεγχο"
+                                             : cell.Ratio <= 0 ? "κλειστή"
+                                             : $"ανοιχτή {cell.Ratio.Value * 100:0}%")
+                                          + (cell.Drops > 0 ? $" · {cell.Drops} πτώσεις" : "");
+                                <div class="uh-cell @cell.Css @(cell.Drops > 0 ? "has-drop" : "")" data-hint="@tip"></div>
+                            }
+                        }
+                    </div>
+
+                    <div class="legend-row mt-2 small">
+                        <span><span class="uh-swatch hn"></span>χωρίς έλεγχο</span>
+                        <span><span class="uh-swatch h0"></span>κλειστή</span>
+                        <span><span class="uh-swatch h1"></span><span class="uh-swatch h2"></span><span class="uh-swatch h3"></span><span class="uh-swatch h4"></span>λίγο → όλη την ώρα ανοιχτή</span>
+                        <span><span class="uh-swatch h2 has-drop"></span>πτώση</span>
+                    </div>
                 }
             </div>
+        </div>
 
-            <div class="col-md-3">
-                <div class="text-muted small">LAN Messenger</div>
-                @if (Model.Computer.HasLanMessenger)
+        <!-- Χαρακτηριστικά -->
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">🧩 Χαρακτηριστικά</span>
+                <a class="btn btn-sm btn-outline-primary" asp-page="./Edit" asp-route-id="@c.Id">Συμπλήρωση</a>
+            </div>
+            <div class="card-body">
+                @if (!filledGroups.Any() && string.IsNullOrWhiteSpace(c.Extras))
                 {
-                    <span class="badge bg-success">Ναι</span>
+                    <div class="empty-hint">
+                        Δεν έχουν καταχωρηθεί χαρακτηριστικά.
+                        Στην <a asp-page="./Edit" asp-route-id="@c.Id">Επεξεργασία</a> εμφανίζονται τα πεδία για
+                        «@c.DisplayMachineType» (@(string.Join(", ", specGroups.Select(g => g.Title.ToLower())))).
+                    </div>
                 }
-                else
+
+                @foreach (var block in filledGroups)
                 {
-                    <span class="badge bg-secondary">Όχι</span>
+                    <div class="spec-block">
+                        <div class="spec-block-title">@block.Group.Icon @block.Group.Title</div>
+                        <dl class="kv-grid">
+                            @foreach (var item in block.Items)
+                            {
+                                <div class="@(item.Field.Wide ? "kv-wide" : "")">
+                                    <dt>@item.Field.Label</dt>
+                                    <dd>@item.Value</dd>
+                                </div>
+                            }
+                        </dl>
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(c.Extras))
+                {
+                    <div class="spec-block">
+                        <div class="spec-block-title">➕ Επιπλέον πληροφορίες</div>
+                        <div class="prewrap">@c.Extras</div>
+                    </div>
                 }
             </div>
+        </div>
+    </div>
 
-            <div class="col-md-3">
-                <div class="text-muted small">Veyon</div>
-                @if (Model.Computer.HasVeyon)
-                {
-                    <span class="badge bg-success">Ναι</span>
-                }
-                else
-                {
-                    <span class="badge bg-secondary">Όχι</span>
-                }
+    <!-- ====================== Δεξιά στήλη ====================== -->
+    <div class="col-lg-4 d-flex flex-column gap-4">
+
+        <!-- Βλάβες -->
+        <div class="card shadow-sm @(openFaults.Any() ? "has-open-fault" : "")" id="faults">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">🔧 Βλάβες</span>
+                <button class="btn btn-sm @(openFaults.Any() ? "btn-outline-secondary" : "btn-outline-danger")" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#faultForm" aria-expanded="false">
+                    + Αναφορά βλάβης
+                </button>
             </div>
+            <div class="card-body">
+                <form method="post" asp-page-handler="ReportFault" asp-route-id="@c.Id" class="collapse mb-3" id="faultForm">
+                    <div class="fault-form">
+                        <label class="form-label" for="NewFault_Description">Τι πρόβλημα έχει;</label>
+                        <textarea asp-for="NewFault.Description" class="form-control mb-2" rows="2"
+                                  placeholder="π.χ. Δεν ανάβει η οθόνη / δεν έχει ίντερνετ / σπασμένο πληκτρολόγιο" required></textarea>
 
-            <div class="col-md-3">
-                <div class="text-muted small">Status</div>
-                @if (Model.Computer.IsOnline == true)
-                {
-                    <span class="badge bg-success">Online</span>
-                }
-                else if (Model.Computer.IsOnline == false)
-                {
-                    <span class="badge bg-danger">Offline</span>
-                }
-                else
-                {
-                    <span class="badge bg-warning text-dark">Άγνωστο</span>
-                }
-            </div>
+                        <div class="d-flex flex-wrap gap-3 mb-2">
+                            @foreach (var severity in Fault.Severities)
+                            {
+                                var sid = "sev_" + Array.IndexOf(Fault.Severities, severity);
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="NewFault.Severity" id="@sid"
+                                           value="@severity" checked="@(severity == Fault.SeverityMinor)" />
+                                    <label class="form-check-label" for="@sid">@(severity == Fault.SeverityDown ? "⛔ " : "🔧 ")@severity</label>
+                                </div>
+                            }
+                        </div>
 
-            <div class="col-md-3">
-                <div class="text-muted small">Τελευταίος έλεγχος</div>
-                <div>
-                    @(Model.Computer.LastCheckedAt?.ToString("dd/MM/yyyy HH:mm") ?? "—")
+                        <div class="input-group input-group-sm">
+                            <input asp-for="NewFault.ReportedBy" class="form-control" placeholder="Από ποιον (προαιρετικά)" />
+                            <button type="submit" class="btn btn-danger">Καταχώρηση</button>
+                        </div>
+                    </div>
+                </form>
+
+                @if (!Model.Faults.Any())
+                {
+                    <div class="empty-hint">Καμία βλάβη. 👍</div>
+                }
+
+                <div class="fault-list">
+                    @foreach (var fault in Model.Faults)
+                    {
+                        <div class="fault-item @(fault.IsOpen ? (fault.IsDown ? "is-down" : "is-open") : "is-closed")">
+                            <div class="d-flex justify-content-between gap-2">
+                                <strong>@(fault.IsOpen ? (fault.IsDown ? "⛔" : "🔧") : "✅") @fault.Severity</strong>
+                                <span class="text-muted small text-nowrap">@fault.CreatedAt.ToString("dd/MM/yy")</span>
+                            </div>
+                            <div class="prewrap">@fault.Description</div>
+                            @if (!string.IsNullOrWhiteSpace(fault.ReportedBy))
+                            {
+                                <div class="text-muted small">από @fault.ReportedBy</div>
+                            }
+
+                            @if (fault.IsOpen)
+                            {
+                                <form method="post" asp-page-handler="ResolveFault" asp-route-id="@c.Id" asp-route-faultId="@fault.Id" class="mt-2">
+                                    <div class="input-group input-group-sm">
+                                        <input name="ResolutionText" class="form-control" placeholder="Τι έγινε; (προαιρετικά)" />
+                                        <button type="submit" class="btn btn-success">✓ Κλείσιμο</button>
+                                    </div>
+                                </form>
+                            }
+                            else
+                            {
+                                <div class="small mt-1">
+                                    <span class="text-muted">Έκλεισε @fault.ResolvedAt?.ToString("dd/MM/yy")@(string.IsNullOrWhiteSpace(fault.ResolvedBy) ? "" : " από " + fault.ResolvedBy)</span>
+                                    @if (!string.IsNullOrWhiteSpace(fault.Resolution))
+                                    {
+                                        <span>— @fault.Resolution</span>
+                                    }
+                                    <form method="post" asp-page-handler="ReopenFault" asp-route-id="@c.Id" asp-route-faultId="@fault.Id" class="d-inline">
+                                        <button type="submit" class="btn btn-link btn-sm p-0 ms-1">άνοιγμα ξανά</button>
+                                    </form>
+                                </div>
+                            }
+                        </div>
+                    }
                 </div>
             </div>
+        </div>
 
-            <div class="col-md-3">
-                <div class="text-muted small">Δημιουργήθηκε</div>
-                <div>@Model.Computer.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
-            </div>
+        <!-- Πρόσβαση -->
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">🔑 Πρόσβαση</div>
+            <div class="card-body">
+                <dl class="kv-grid kv-single">
+                    <div>
+                        <dt>Username</dt>
+                        <dd>
+                            @if (!string.IsNullOrWhiteSpace(c.Username))
+                            {
+                                @c.Username
+                                <button type="button" class="copy-btn" data-copy="@c.Username" title="Αντιγραφή">⧉</button>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>Password</dt>
+                        <dd>
+                            @if (!string.IsNullOrWhiteSpace(c.Password))
+                            {
+                                <span id="passwordText" class="font-monospace" data-secret="@c.Password">••••••••</span>
+                                <button type="button" class="copy-btn" id="passwordToggle" title="Εμφάνιση / απόκρυψη">👁</button>
+                                <button type="button" class="copy-btn" data-copy="@c.Password" title="Αντιγραφή">⧉</button>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </dd>
+                    </div>
+                </dl>
 
-            <div class="col-md-3">
-                <div class="text-muted small">Τελευταία αλλαγή</div>
-                <div>
-                    @(Model.Computer.UpdatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "—")
+                <div class="d-flex justify-content-between align-items-center mt-3 mb-1">
+                    <span class="speed-stat-label">🔐 Ιστορικό κωδικών</span>
+                    <a class="btn btn-sm btn-outline-primary" asp-page="/Passwords/Index" asp-route-Device="@c.Id">Νέος κωδικός</a>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-4">
-    <div class="col-md-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-header fw-semibold">Extras</div>
-            <div class="card-body">
-                @if (!string.IsNullOrWhiteSpace(Model.Computer.Extras))
+                @if (!Model.PasswordHistory.Any())
                 {
-                    <p class="mb-0">@Model.Computer.Extras</p>
+                    <div class="empty-hint small">Δεν έχει καταχωρηθεί κωδικός από τη σελίδα «Κωδικοί».</div>
                 }
-                else
+                @foreach (var rec in Model.PasswordHistory)
                 {
-                    <span class="text-muted">Δεν υπάρχουν extras.</span>
-                }
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-header fw-semibold">NOTES</div>
-            <div class="card-body">
-                @if (!string.IsNullOrWhiteSpace(Model.Computer.Notes))
-                {
-                    <p class="mb-0">@Model.Computer.Notes</p>
-                }
-                else
-                {
-                    <span class="text-muted">Δεν υπάρχουν notes.</span>
+                    <div class="pw-mini @(rec.IsCurrent ? "" : "pw-old-mini")">
+                        <div class="min-w-0">
+                            <div class="fw-semibold small text-truncate">@rec.Record.Account @if (rec.IsCurrent) { <span class="badge bg-success">τρέχων</span> }</div>
+                            <div class="text-muted small">@rec.Record.SetAt.ToString("dd/MM/yy HH:mm") · @(rec.Record.SetBy ?? "—")</div>
+                        </div>
+                        <div class="text-nowrap">
+                            <span class="pw-mask font-monospace small" data-secret="@rec.Record.Secret">••••••</span>
+                            <button type="button" class="copy-btn pw-toggle" title="Εμφάνιση">👁</button>
+                            <button type="button" class="copy-btn" data-copy="@rec.Record.Secret" title="Αντιγραφή">⧉</button>
+                        </div>
+                    </div>
                 }
             </div>
         </div>
-    </div>
 
-    <div class="col-md-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-header fw-semibold">Σημειώσεις</div>
+        <!-- Σημειώσεις -->
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">📝 Σημειώσεις</div>
             <div class="card-body">
-                @if (!string.IsNullOrWhiteSpace(Model.Computer.Comments))
+                @if (!string.IsNullOrWhiteSpace(c.Notes))
                 {
-                    <p class="mb-0">@Model.Computer.Comments</p>
+                    <div class="prewrap">@c.Notes</div>
                 }
                 else
                 {
-                    <span class="text-muted">Δεν υπάρχουν σημειώσεις.</span>
+                    <div class="empty-hint">Καμία σημείωση.</div>
                 }
+            </div>
+        </div>
+
+        <!-- Ιστορικό -->
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">🕘 Ιστορικό</div>
+            <div class="card-body">
+                <dl class="kv-grid kv-single">
+                    <div><dt>Καταχωρήθηκε</dt><dd>@When(c.CreatedAt)</dd></div>
+                    <div><dt>Τελευταία αλλαγή</dt><dd>@When(c.UpdatedAt)@(string.IsNullOrWhiteSpace(c.UpdatedBy) ? "" : " · " + c.UpdatedBy)</dd></div>
+                </dl>
             </div>
         </div>
     </div>
@@ -197,13 +508,48 @@
 
 @section Scripts {
     <script>
-        let visible = false;
-        const realPassword = "@Model.Computer.Password";
+        (function () {
+            // Αντιγραφή στο πρόχειρο
+            document.querySelectorAll(".copy-btn[data-copy]").forEach(function (button) {
+                button.addEventListener("click", async function () {
+                    const text = button.dataset.copy;
+                    try {
+                        await navigator.clipboard.writeText(text);
+                    } catch (e) {
+                        // http χωρίς https: παλιός τρόπος
+                        const area = document.createElement("textarea");
+                        area.value = text;
+                        document.body.appendChild(area);
+                        area.select();
+                        document.execCommand("copy");
+                        area.remove();
+                    }
+                    const old = button.textContent;
+                    button.textContent = "✓";
+                    setTimeout(function () { button.textContent = old; }, 1200);
+                });
+            });
 
-        function togglePassword() {
-            const el = document.getElementById("passwordText");
-            visible = !visible;
-            el.textContent = visible ? realPassword : "••••••••";
-        }
+            // Εμφάνιση κωδικών ιστορικού
+            document.querySelectorAll(".pw-toggle").forEach(function (button) {
+                button.addEventListener("click", function () {
+                    const mask = button.parentElement.querySelector(".pw-mask");
+                    const shown = mask.dataset.shown === "1";
+                    mask.textContent = shown ? "••••••" : mask.dataset.secret;
+                    mask.dataset.shown = shown ? "0" : "1";
+                });
+            });
+
+            // Εμφάνιση κωδικού
+            const toggle = document.getElementById("passwordToggle");
+            if (toggle) {
+                let visible = false;
+                toggle.addEventListener("click", function () {
+                    const el = document.getElementById("passwordText");
+                    visible = !visible;
+                    el.textContent = visible ? el.dataset.secret : "••••••••";
+                });
+            }
+        })();
     </script>
 }

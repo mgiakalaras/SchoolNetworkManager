@@ -1,0 +1,2458 @@
+/* =========================================================
+   Θέματα (themes)
+   data-theme   = light | dark   (φωτεινό / σκοτεινό)
+   data-palette = blue | teal | green | orange | purple | rose | mono
+   ========================================================= */
+
+/* ---------- Χρώμα έμφασης ανά παλέτα ---------- */
+html { --accent: #0d6efd; --accent-rgb: 13, 110, 253; --accent-contrast: #ffffff; }
+html[data-theme="dark"] { --accent: #38bdf8; --accent-rgb: 56, 189, 248; --accent-contrast: #0b1020; }
+
+html[data-palette="teal"] { --accent: #0d9488; --accent-rgb: 13, 148, 136; }
+html[data-theme="dark"][data-palette="teal"] { --accent: #2dd4bf; --accent-rgb: 45, 212, 191; }
+
+html[data-palette="green"] { --accent: #4d7c0f; --accent-rgb: 77, 124, 15; }
+html[data-theme="dark"][data-palette="green"] { --accent: #4ade80; --accent-rgb: 74, 222, 128; }
+
+html[data-palette="orange"] { --accent: #ea580c; --accent-rgb: 234, 88, 12; }
+html[data-theme="dark"][data-palette="orange"] { --accent: #fb923c; --accent-rgb: 251, 146, 60; }
+
+html[data-palette="purple"] { --accent: #7c3aed; --accent-rgb: 124, 58, 237; }
+html[data-theme="dark"][data-palette="purple"] { --accent: #a78bfa; --accent-rgb: 167, 139, 250; }
+
+html[data-palette="rose"] { --accent: #e11d48; --accent-rgb: 225, 29, 72; }
+html[data-theme="dark"][data-palette="rose"] { --accent: #fb7185; --accent-rgb: 251, 113, 133; }
+
+html[data-palette="mono"] { --accent: #374151; --accent-rgb: 55, 65, 81; }
+html[data-theme="dark"][data-palette="mono"] { --accent: #d1d5db; --accent-rgb: 209, 213, 219; }
+
+/* ---------- Φόντα ανά παλέτα (φωτεινά) ---------- */
+html[data-theme="light"][data-palette="teal"]   { --body-bg: #eef8f7; --table-head-bg: #f2faf9; --table-hover-bg: #f0f9f8; }
+html[data-theme="light"][data-palette="green"]  { --body-bg: #f3f6ec; --table-head-bg: #f7f9f2; --table-hover-bg: #f5f8ef; }
+html[data-theme="light"][data-palette="orange"] { --body-bg: #fbf3ec; --table-head-bg: #fdf7f2; --table-hover-bg: #fcf5ef; }
+html[data-theme="light"][data-palette="purple"] { --body-bg: #f4f2fc; --table-head-bg: #f8f6fe; --table-hover-bg: #f6f4fd; }
+html[data-theme="light"][data-palette="rose"]   { --body-bg: #fbf1f3; --table-head-bg: #fdf6f7; --table-hover-bg: #fcf3f5; }
+html[data-theme="light"][data-palette="mono"]   { --body-bg: #f4f4f3; --table-head-bg: #f7f7f6; --table-hover-bg: #f2f2f1; --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.06); }
+
+/* ---------- Φόντα ανά παλέτα (σκοτεινά) ---------- */
+html[data-theme="dark"][data-palette="teal"] {
+    --body-bg: #061a1c; --card-bg: #0c2629; --card-header-bg: #0c2629; --navbar-bg: #082022;
+    --table-head-bg: #092124; --table-hover-bg: #12333a; --border-soft: #1b4148;
+}
+html[data-theme="dark"][data-palette="green"] {
+    --body-bg: #070d07; --card-bg: #0f1a10; --card-header-bg: #0f1a10; --navbar-bg: #0a130b;
+    --table-head-bg: #0b150c; --table-hover-bg: #16261a; --border-soft: #1f3a23;
+}
+html[data-theme="dark"][data-palette="orange"] {
+    --body-bg: #170e08; --card-bg: #22160e; --card-header-bg: #22160e; --navbar-bg: #1b110a;
+    --table-head-bg: #1c120b; --table-hover-bg: #2e1f14; --border-soft: #42301f;
+}
+html[data-theme="dark"][data-palette="purple"] {
+    --body-bg: #0e0a1c; --card-bg: #18132c; --card-header-bg: #18132c; --navbar-bg: #120e23;
+    --table-head-bg: #130f24; --table-hover-bg: #231c3d; --border-soft: #31284f;
+}
+html[data-theme="dark"][data-palette="rose"] {
+    --body-bg: #17090e; --card-bg: #241118; --card-header-bg: #241118; --navbar-bg: #1c0c12;
+    --table-head-bg: #1d0d13; --table-hover-bg: #331822; --border-soft: #4a2331;
+}
+html[data-theme="dark"][data-palette="mono"] {
+    --body-bg: #0f0f10; --card-bg: #1a1a1c; --card-header-bg: #1a1a1c; --navbar-bg: #141415;
+    --table-head-bg: #151516; --table-hover-bg: #242427; --border-soft: #2f2f33;
+}
+
+/* Οι σκοτεινοί πίνακες ακολουθούν το χρώμα της κάρτας */
+html[data-theme="dark"] .table {
+    --bs-table-bg: var(--card-bg);
+    --bs-table-hover-bg: var(--table-hover-bg);
+}
+
+/* ---------- Εφαρμογή χρώματος έμφασης σε Bootstrap ---------- */
+a { color: var(--accent); }
+html[data-theme="dark"] a { color: var(--accent); }
+
+.nav-link:hover,
+.nav-link.active { color: var(--accent) !important; }
+
+.btn-primary {
+    --bs-btn-bg: var(--accent);
+    --bs-btn-border-color: var(--accent);
+    --bs-btn-color: var(--accent-contrast);
+    --bs-btn-hover-bg: rgba(var(--accent-rgb), 0.85);
+    --bs-btn-hover-border-color: rgba(var(--accent-rgb), 0.85);
+    --bs-btn-hover-color: var(--accent-contrast);
+    --bs-btn-active-bg: rgba(var(--accent-rgb), 0.75);
+    --bs-btn-active-border-color: rgba(var(--accent-rgb), 0.75);
+    --bs-btn-active-color: var(--accent-contrast);
+    --bs-btn-disabled-bg: var(--accent);
+    --bs-btn-disabled-border-color: var(--accent);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--accent);
+    --bs-btn-border-color: var(--accent);
+    --bs-btn-hover-bg: var(--accent);
+    --bs-btn-hover-border-color: var(--accent);
+    --bs-btn-hover-color: var(--accent-contrast);
+    --bs-btn-active-bg: var(--accent);
+    --bs-btn-active-border-color: var(--accent);
+    --bs-btn-active-color: var(--accent-contrast);
+}
+
+.bg-primary { background-color: var(--accent) !important; color: var(--accent-contrast) !important; }
+.text-primary { color: var(--accent) !important; }
+.progress-bar:not([class*="bg-"]) { background-color: var(--accent); }
+
+.pagination .page-item.active .page-link {
+    background: var(--accent);
+    color: var(--accent-contrast);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 0.2rem rgba(var(--accent-rgb), 0.16);
+}
+
+.form-check-input:checked {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+.form-check-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 0.2rem rgba(var(--accent-rgb), 0.16);
+}
+
+.navbar {
+    border-top: 3px solid var(--accent);
+}
+
+/* Σκοτεινά: φόρμες και κουμπιά */
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .form-select {
+    color-scheme: dark;
+}
+
+html[data-theme="dark"] .btn-close {
+    filter: invert(1);
+}
+
+html[data-theme="dark"] .alert-light {
+    background: var(--card-bg);
+    color: var(--text-main);
+}
+
+/* ---------- Χωρίς εφέ φωτισμού ---------- */
+html[data-glow="off"] .card:hover,
+html[data-glow="off"] .top-pill:hover {
+    background: linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
+                linear-gradient(var(--border-soft), var(--border-soft)) border-box !important;
+    animation: none !important;
+    transform: none !important;
+}
+
+/* ---------- Επιλογέας θέματος ---------- */
+.theme-menu {
+    min-width: 230px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.theme-menu .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--text-main);
+}
+
+.theme-menu .dropdown-item:hover,
+.theme-menu .dropdown-item:focus {
+    background: var(--table-hover-bg);
+    color: var(--text-main);
+}
+
+.theme-menu .dropdown-item.active {
+    background: rgba(var(--accent-rgb), 0.14);
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+.theme-swatch {
+    display: inline-flex;
+    width: 30px;
+    height: 18px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(127, 127, 127, 0.35);
+    flex-shrink: 0;
+}
+
+.theme-swatch span {
+    flex: 1;
+}
+
+/* ---------- Χώροι: πλακίδια συσκευών ---------- */
+.device-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+    gap: 6px;
+}
+
+.device-tile {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--border-soft);
+    background: var(--body-bg);
+    color: var(--text-main) !important;
+    text-decoration: none;
+    font-size: 0.82rem;
+    min-width: 0;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.device-tile:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+}
+
+.device-tile .device-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.device-tile .device-ip {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.device-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: #9ca3af;
+}
+
+.device-tile.online .device-dot { background: #22c55e; box-shadow: 0 0 6px rgba(34, 197, 94, 0.7); }
+.device-tile.offline .device-dot { background: #ef4444; }
+.device-tile.unknown .device-dot { background: #f59e0b; }
+.device-tile.empty { opacity: 0.45; border-style: dashed; }
+
+/* ---------- Μικρά ---------- */
+.port-badge {
+    background: rgba(var(--accent-rgb), 0.12);
+    color: var(--text-main);
+    border: 1px solid rgba(var(--accent-rgb), 0.35);
+    font-weight: 500;
+}
+
+.settings-nav .nav-link {
+    border-radius: 999px;
+}
+
+.settings-nav .nav-link.active {
+    background: var(--accent);
+    color: var(--accent-contrast) !important;
+}
+
+/* Κρύβει το κουτί λαθών όταν δεν υπάρχουν λάθη */
+.validation-summary-valid {
+    display: none;
+}
+
+/* ---------- Διόρθωση: κουμπιά που είναι links (<a class="btn">) ----------
+   Ο κανόνας «a { color: accent }» των σκούρων θεμάτων κέρδιζε το χρώμα του κουμπιού,
+   με αποτέλεσμα κείμενο ίδιου χρώματος με το φόντο (αόρατο). */
+html[data-theme] a.btn {
+    color: var(--bs-btn-color);
+}
+
+html[data-theme] a.btn:hover,
+html[data-theme] a.btn:focus-visible {
+    color: var(--bs-btn-hover-color);
+}
+
+html[data-theme] a.btn:active,
+html[data-theme] a.btn.active {
+    color: var(--bs-btn-active-color);
+}
+
+html[data-theme] a.badge {
+    color: #fff;
+}
+
+html[data-theme] a.badge.text-dark {
+    color: #111 !important;
+}
+
+/* Πιο ευανάγνωστα «γκρι» κουμπιά στα σκούρα θέματα */
+html[data-theme="dark"] .btn-outline-secondary {
+    --bs-btn-color: #cbd5e1;
+    --bs-btn-border-color: #64748b;
+    --bs-btn-hover-bg: #475569;
+    --bs-btn-hover-border-color: #475569;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-active-bg: #475569;
+    --bs-btn-active-color: #fff;
+    --bs-btn-disabled-color: #94a3b8;
+    --bs-btn-disabled-border-color: #475569;
+}
+
+html[data-theme="dark"] .dropdown-header {
+    color: var(--text-muted);
+}
+
+html[data-theme="dark"] .dropdown-divider {
+    border-color: var(--border-soft);
+}
+
+html[data-theme="dark"] .form-check-input:not(:checked) {
+    background-color: var(--body-bg);
+    border-color: #64748b;
+}
+
+html[data-theme="dark"] code {
+    color: #f9a8d4;
+}
+
+html[data-theme="dark"] .btn-outline-success {
+    --bs-btn-color: #4ade80;
+    --bs-btn-border-color: #22c55e;
+    --bs-btn-hover-bg: #16a34a;
+    --bs-btn-hover-border-color: #16a34a;
+    --bs-btn-hover-color: #fff;
+}
+
+html[data-theme="dark"] .btn-outline-danger {
+    --bs-btn-color: #f87171;
+    --bs-btn-border-color: #ef4444;
+}
+
+/* =========================================================
+   Καρτέλα συσκευής
+   ========================================================= */
+.min-w-0 { min-width: 0; }
+
+.device-hero .card-body {
+    padding: 1.4rem 1.6rem;
+}
+
+.device-hero-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    display: grid;
+    place-items: center;
+    font-size: 2.2rem;
+    background: rgba(var(--accent-rgb), 0.12);
+    border: 1px solid rgba(var(--accent-rgb), 0.28);
+    flex-shrink: 0;
+}
+
+.device-hero-title {
+    font-size: clamp(1.5rem, 2.6vw, 2.1rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    word-break: break-word;
+}
+
+.device-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.5rem;
+}
+
+.meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.18rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    background: var(--body-bg);
+    border: 1px solid var(--border-soft);
+    color: var(--text-main) !important;
+}
+
+a.meta-chip:hover {
+    border-color: var(--accent);
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.status-pill .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.status-pill.online  { color: #15803d; background: rgba(34, 197, 94, 0.12);  border-color: rgba(34, 197, 94, 0.35); }
+.status-pill.offline { color: #b91c1c; background: rgba(239, 68, 68, 0.10);  border-color: rgba(239, 68, 68, 0.35); }
+.status-pill.unknown { color: #a16207; background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.35); }
+
+html[data-theme="dark"] .status-pill.online  { color: #4ade80; }
+html[data-theme="dark"] .status-pill.offline { color: #f87171; }
+html[data-theme="dark"] .status-pill.unknown { color: #fbbf24; }
+
+.status-pill.online .status-dot {
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25);
+}
+
+/* Λίστες «ετικέτα — τιμή» */
+.kv-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem 1.5rem;
+    margin: 0;
+}
+
+.kv-grid.kv-single {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+}
+
+.kv-grid > div {
+    min-width: 0;
+}
+
+.kv-grid .kv-wide {
+    grid-column: 1 / -1;
+}
+
+.kv-grid dt {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    margin-bottom: 0.2rem;
+}
+
+.kv-grid dd {
+    margin: 0;
+    color: var(--text-main);
+    overflow-wrap: anywhere;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.copy-btn {
+    border: 1px solid var(--border-soft);
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    line-height: 1;
+    padding: 0.25rem 0.4rem;
+    cursor: pointer;
+}
+
+.copy-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.flag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    border: 1px solid var(--border-soft);
+    color: var(--text-muted);
+}
+
+.flag-chip.on {
+    color: #15803d;
+    border-color: rgba(34, 197, 94, 0.45);
+    background: rgba(34, 197, 94, 0.10);
+}
+
+html[data-theme="dark"] .flag-chip.on {
+    color: #4ade80;
+}
+
+.spec-block + .spec-block {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px dashed var(--border-soft);
+}
+
+.spec-block-title {
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.prewrap {
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.empty-hint {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+}
+
+/* Φόρμα: ενότητα χαρακτηριστικών */
+.spec-group {
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 0.9rem 1rem 1rem;
+    margin-bottom: 0.9rem;
+    background: var(--body-bg);
+}
+
+.spec-group[hidden] {
+    display: none;
+}
+
+.spec-legend {
+    float: none;
+    width: auto;
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 0 0.4rem;
+    margin-bottom: 0.4rem;
+}
+
+.dropdown-menu {
+    background: var(--card-bg);
+    border-color: var(--border-soft);
+}
+
+.dropdown-item {
+    color: var(--text-main);
+}
+
+.dropdown-item:hover {
+    background: var(--table-hover-bg);
+    color: var(--text-main);
+}
+
+/* =========================================================
+   Γραφήματα dashboard
+   Χρώματα σειρών ελεγμένα για αχρωματοψία και αντίθεση (light + dark).
+   ========================================================= */
+.week-charts {
+    --series-down: #2a78d6;
+    --series-up: #eb6834;
+    --chart-grid: rgba(100, 116, 139, 0.18);
+    --chart-baseline: rgba(100, 116, 139, 0.55);
+}
+
+html[data-theme="dark"] .week-charts {
+    --series-down: #3987e5;
+    --series-up: #d95926;
+    --chart-grid: rgba(148, 163, 184, 0.14);
+    --chart-baseline: rgba(148, 163, 184, 0.45);
+}
+
+.chart-wrap {
+    position: relative;
+}
+
+.chart-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    overflow: visible;
+    font-family: inherit;
+}
+
+.chart-grid { stroke: var(--chart-grid); stroke-width: 1; }
+.chart-baseline { stroke: var(--chart-baseline); stroke-width: 1; }
+.chart-day-divider { stroke: var(--chart-grid); stroke-width: 1; stroke-dasharray: 2 4; }
+
+.chart-axis {
+    fill: var(--text-muted);
+    font-size: 11px;
+}
+
+.chart-axis.is-today {
+    fill: var(--text-main);
+    font-weight: 700;
+}
+
+.chart-axis-sub {
+    font-size: 10px;
+    opacity: 0.8;
+}
+
+.chart-value {
+    fill: var(--text-main);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.bar-group .hit { fill: transparent; }
+.bar-group .bar { fill: var(--series-down); opacity: 0.55; transition: opacity 0.15s ease; }
+.bar-group.is-peak .bar { opacity: 1; }
+.bar-group.is-hover .bar { opacity: 0.85; }
+.bar-group.is-peak.is-hover .bar { opacity: 1; }
+.bar-group { cursor: default; }
+
+.chart-empty-mark { stroke: var(--chart-baseline); stroke-width: 2; stroke-linecap: round; }
+
+.speed-line {
+    fill: none;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.speed-line.series-down { stroke: var(--series-down); }
+.speed-line.series-up { stroke: var(--series-up); }
+
+.speed-dot, .hover-dot {
+    stroke: var(--card-bg);
+    stroke-width: 2;
+}
+
+.speed-dot.series-down, .hover-dot.series-down { fill: var(--series-down); }
+.speed-dot.series-up, .hover-dot.series-up { fill: var(--series-up); }
+
+.crosshair {
+    stroke: var(--chart-baseline);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+}
+
+.hit-area { fill: transparent; cursor: crosshair; }
+
+.chart-tooltip {
+    position: absolute;
+    z-index: 5;
+    pointer-events: none;
+    min-width: 150px;
+    padding: 0.5rem 0.65rem;
+    border-radius: 10px;
+    background: var(--card-bg);
+    color: var(--text-main);
+    border: 1px solid var(--border-soft);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
+    font-size: 0.8rem;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+.legend-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    margin-right: 0.35rem;
+    vertical-align: -1px;
+}
+
+.legend-swatch.series-down { background: var(--series-down); }
+.legend-swatch.series-up { background: var(--series-up); }
+
+/* tooltip εκτός .week-charts κληρονομεί τα χρώματα από τον γονέα */
+.chart-tooltip .legend-swatch.series-down { background: var(--series-down, #2a78d6); }
+.chart-tooltip .legend-swatch.series-up { background: var(--series-up, #eb6834); }
+
+.chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.1rem;
+    font-size: 0.82rem;
+    margin-top: 0.4rem;
+    color: var(--text-main);
+}
+
+.chart-headline {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.4rem;
+}
+
+.chart-hero-number {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--text-main);
+}
+
+.chart-hero-unit {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.speed-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 0.6rem;
+}
+
+.speed-stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+.speed-stat-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-main);
+    letter-spacing: -0.02em;
+}
+
+.speed-stat-value span {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.chart-table {
+    margin-top: 0.6rem;
+    font-size: 0.85rem;
+}
+
+.chart-table summary {
+    cursor: pointer;
+    color: var(--text-muted);
+    width: fit-content;
+}
+
+.chart-emph {
+    color: var(--text-main);
+}
+
+/* =========================================================
+   Σελίδα «Χώροι»
+   ========================================================= */
+.location-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+    align-items: start;
+}
+
+.location-card[hidden] { display: none; }
+
+/* Μεγάλοι χώροι (πολλές συσκευές) πιάνουν όλο το πλάτος */
+.location-card:has(.device-area.is-dots) {
+    grid-column: 1 / -1;
+}
+
+.location-card .card-body {
+    padding: 1rem 1.1rem;
+}
+
+.location-card:hover {
+    transform: none;
+}
+
+.location-card.is-unassigned {
+    border-style: dashed;
+}
+
+.location-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.online-count {
+    font-weight: 700;
+    font-size: 1.05rem;
+    padding: 0.1rem 0.55rem;
+    border-radius: 999px;
+    background: var(--body-bg);
+    border: 1px solid var(--border-soft);
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.online-count span {
+    font-weight: 500;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.online-count.has-online {
+    color: #15803d;
+    border-color: rgba(34, 197, 94, 0.4);
+    background: rgba(34, 197, 94, 0.1);
+}
+
+html[data-theme="dark"] .online-count.has-online { color: #4ade80; }
+
+.icon-btn {
+    width: 30px;
+    height: 30px;
+    padding: 0 !important;
+    line-height: 1;
+}
+
+.location-progress {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--border-soft);
+    margin: 0.7rem 0 0.6rem;
+    overflow: hidden;
+}
+
+.location-progress > div {
+    height: 100%;
+    background: #22c55e;
+    border-radius: 999px;
+}
+
+.type-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: 0.7rem;
+}
+
+.type-chip {
+    font-size: 0.78rem;
+    padding: 0.08rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-soft);
+    color: var(--text-main);
+    background: var(--body-bg);
+}
+
+/* --- Συσκευές --- */
+.device-area {
+    display: grid;
+    gap: 5px;
+}
+
+.device-area.is-chips {
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+}
+
+.device-area.is-dots {
+    grid-template-columns: repeat(auto-fill, 30px);
+    gap: 4px;
+}
+
+.dev {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    text-decoration: none;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-soft);
+    background: var(--body-bg);
+    border-radius: 9px;
+    font-size: 0.8rem;
+    transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.device-area.is-chips .dev {
+    padding: 5px 8px;
+}
+
+.dev:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+}
+
+.dev-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.dev-ip {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+}
+
+.dev-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+    background: #9ca3af;
+}
+
+.dev-dot.online  { background: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18); }
+.dev-dot.offline { background: #ef4444; }
+.dev-dot.unknown { background: #f59e0b; }
+.dev-dot.empty   { background: transparent; border: 1.5px dashed #9ca3af; }
+
+.dev.empty { opacity: 0.5; border-style: dashed; }
+
+/* Χάρτης κουκκίδων: κάθε συσκευή ένα μικρό τετράγωνο με το τελευταίο νούμερο της IP */
+.device-area.is-dots .dev {
+    width: 30px;
+    height: 24px;
+    justify-content: center;
+    padding: 0;
+    border-radius: 6px;
+    font-variant-numeric: tabular-nums;
+}
+
+.dev-num {
+    font-size: 0.68rem;
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.device-area.is-dots .dev.online {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: rgba(34, 197, 94, 0.65);
+}
+
+.device-area.is-dots .dev.offline {
+    background: rgba(239, 68, 68, 0.07);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: var(--text-muted) !important;
+}
+
+.device-area.is-dots .dev.unknown {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.4);
+}
+
+/* Συσκευές με όνομα ξεχωρίζουν με έντονο περίγραμμα κάτω */
+.device-area.is-dots .dev:not(.unnamed):not(.empty) {
+    box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.dev.warn::after {
+    content: "";
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f59e0b;
+    border: 1.5px solid var(--card-bg);
+}
+
+.dev.search-hit {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+/* Επιλογή για μαζική μετακίνηση */
+.select-mode .dev {
+    cursor: pointer;
+}
+
+.select-mode .dev.selected {
+    border-color: var(--accent) !important;
+    background: rgba(var(--accent-rgb), 0.22) !important;
+    box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.35);
+}
+
+.assign-bar {
+    position: sticky;
+    bottom: 0.75rem;
+    margin-top: 0.8rem;
+    z-index: 3;
+}
+
+.assign-inner {
+    padding: 0.75rem 0.85rem;
+    border-radius: 14px;
+    border: 1px solid var(--accent);
+    background: var(--card-bg);
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.22);
+}
+
+.legend-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+    font-size: 0.82rem;
+    color: var(--text-main);
+}
+
+.legend-row .dev-dot {
+    margin-right: 0.35rem;
+    vertical-align: -1px;
+}
+
+.dev-tooltip {
+    position: fixed;
+    z-index: 1080;
+    pointer-events: none;
+    padding: 0.35rem 0.6rem;
+    border-radius: 8px;
+    background: #0f172a;
+    color: #f8fafc;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+html[data-theme="dark"] .dev-tooltip {
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+/* =========================================================
+   Ενδείξεις ΝΕΟ / ΕΝΗΜ.
+   ========================================================= */
+.change-badge {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    padding: 0.22rem 0.42rem;
+    border-radius: 6px;
+    vertical-align: middle;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.change-badge.is-new {
+    background: #2563eb;
+    color: #fff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
+.change-badge.is-updated {
+    background: rgba(245, 158, 11, 0.16);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+}
+
+html[data-theme="dark"] .change-badge.is-new {
+    background: #3b82f6;
+}
+
+html[data-theme="dark"] .change-badge.is-updated {
+    color: #fbbf24;
+}
+
+.device-hero-title + .change-badge {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.55rem;
+}
+
+.changes-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    padding: 0.65rem 0.9rem;
+    border-radius: 14px;
+    border: 1px solid rgba(37, 99, 235, 0.35);
+    background: rgba(37, 99, 235, 0.07);
+    color: var(--text-main);
+}
+
+/* Χάρτης κουκκίδων: γωνιακό σημάδι για νέες / ενημερωμένες */
+.device-area.is-dots .dev.is-new::before,
+.device-area.is-dots .dev.is-updated::before {
+    content: "";
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1.5px solid var(--card-bg);
+}
+
+.device-area.is-dots .dev.is-new::before { background: #3b82f6; }
+.device-area.is-dots .dev.is-updated::before { background: #f59e0b; }
+
+.device-area.is-dots .dev.is-new {
+    border-color: #3b82f6;
+}
+
+/* =========================================================
+   Ιστορικό λειτουργίας (heatmap) — μία απόχρωση, ανοιχτό → σκούρο
+   ========================================================= */
+.usage-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.usage-insight {
+    padding: 0.5rem 0.75rem;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    margin-bottom: 0.75rem;
+}
+
+.usage-insight.is-warn {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    color: var(--text-main);
+}
+
+.usage-heatmap {
+    --h0: #e5e7eb;
+    --h1: #bbf7d0;
+    --h2: #86efac;
+    --h3: #22c55e;
+    --h4: #15803d;
+    display: grid;
+    grid-template-columns: 74px repeat(24, minmax(0, 1fr));
+    gap: 2px;
+    font-size: 0.7rem;
+    align-items: center;
+}
+
+html[data-theme="dark"] .usage-heatmap,
+html[data-theme="dark"] .legend-row {
+    --h0: #2a3140;
+    --h1: #14532d;
+    --h2: #15803d;
+    --h3: #22c55e;
+    --h4: #86efac;
+}
+
+.uh-hour {
+    color: var(--text-muted);
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+    height: 14px;
+}
+
+.uh-day {
+    color: var(--text-muted);
+    white-space: nowrap;
+    padding-right: 6px;
+}
+
+.uh-day.is-weekend { opacity: 0.6; }
+.uh-day.is-today { color: var(--text-main); font-weight: 700; }
+
+.uh-cell {
+    height: 14px;
+    border-radius: 3px;
+    position: relative;
+}
+
+.uh-cell:hover { outline: 2px solid var(--text-main); outline-offset: 0; }
+
+.uh-cell.hn, .uh-swatch.hn { background: transparent; border: 1px dashed var(--border-soft); }
+.uh-cell.h0, .uh-swatch.h0 { background: var(--h0, #e5e7eb); }
+.uh-cell.h1, .uh-swatch.h1 { background: var(--h1, #bbf7d0); }
+.uh-cell.h2, .uh-swatch.h2 { background: var(--h2, #86efac); }
+.uh-cell.h3, .uh-swatch.h3 { background: var(--h3, #22c55e); }
+.uh-cell.h4, .uh-swatch.h4 { background: var(--h4, #15803d); }
+
+.uh-cell.has-drop::after,
+.uh-swatch.has-drop::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 4px;
+    height: 4px;
+    margin: -2px 0 0 -2px;
+    border-radius: 50%;
+    background: #dc2626;
+}
+
+.uh-swatch {
+    position: relative;
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    margin-right: 2px;
+    vertical-align: -2px;
+}
+
+.legend-row {
+    --h0: #e5e7eb; --h1: #bbf7d0; --h2: #86efac; --h3: #22c55e; --h4: #15803d;
+}
+
+/* =========================================================
+   Βλάβες
+   ========================================================= */
+.fault-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: #b45309 !important;
+    background: rgba(245, 158, 11, 0.14);
+    border: 1px solid rgba(245, 158, 11, 0.5);
+}
+
+.fault-pill.is-down {
+    color: #b91c1c !important;
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+html[data-theme="dark"] .fault-pill { color: #fbbf24 !important; }
+html[data-theme="dark"] .fault-pill.is-down { color: #f87171 !important; }
+
+.card.has-open-fault {
+    border-color: rgba(245, 158, 11, 0.55) !important;
+}
+
+.fault-form {
+    padding: 0.75rem;
+    border-radius: 12px;
+    background: var(--body-bg);
+    border: 1px solid var(--border-soft);
+}
+
+.fault-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.fault-item {
+    padding: 0.6rem 0.75rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-soft);
+    border-left-width: 4px;
+    font-size: 0.9rem;
+}
+
+.fault-item.is-open { border-left-color: #f59e0b; }
+.fault-item.is-down { border-left-color: #ef4444; }
+.fault-item.is-closed { opacity: 0.65; }
+
+/* Σήμα βλάβης στη λίστα και στους χώρους */
+.fault-mark {
+    font-size: 0.85em;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.device-area.is-dots .dev.has-fault {
+    border-color: #f59e0b !important;
+    border-style: solid;
+}
+
+.device-area.is-dots .dev.is-out {
+    border-color: #ef4444 !important;
+    background: repeating-linear-gradient(45deg, rgba(239, 68, 68, 0.18) 0 3px, transparent 3px 7px) !important;
+}
+
+.device-area.is-dots .dev .fault-mark {
+    position: absolute;
+    bottom: -6px;
+    right: -5px;
+    font-size: 0.7rem;
+}
+
+.nav-count {
+    display: inline-block;
+    min-width: 18px;
+    padding: 0 5px;
+    margin-left: 2px;
+    border-radius: 999px;
+    background: #f59e0b;
+    color: #111 !important;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+}
+
+.fault-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 0.9rem;
+}
+
+.fault-card {
+    border-left: 4px solid #f59e0b !important;
+}
+
+.fault-card.is-down {
+    border-left-color: #ef4444 !important;
+}
+
+.fault-card:hover {
+    transform: none;
+}
+
+.dashboard-alert {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.7rem 1rem;
+    border-radius: 14px;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--text-main);
+}
+
+.dashboard-alert.is-down {
+    border-color: rgba(239, 68, 68, 0.5);
+    background: rgba(239, 68, 68, 0.08);
+}
+
+/* Οριζόντιες μπάρες (Pi-hole) */
+.hbar-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(60px, 1fr) auto;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.28rem 0;
+    font-size: 0.88rem;
+}
+
+.hbar-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hbar-track {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--border-soft);
+    overflow: hidden;
+}
+
+.hbar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: #2a78d6;
+}
+
+html[data-theme="dark"] .hbar-fill { background: #3987e5; }
+
+.hbar-fill.is-domain { background: #eb6834; }
+html[data-theme="dark"] .hbar-fill.is-domain { background: #d95926; }
+
+.hbar-value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    min-width: 3ch;
+    text-align: right;
+}
+
+.fault-form textarea.form-control {
+    min-height: 64px;
+}
+
+/* =========================================================
+   Βοήθεια
+   ========================================================= */
+.help-toc {
+    position: sticky;
+    top: 1rem;
+}
+
+.help-toc:hover { transform: none; }
+
+.help-toc a {
+    display: block;
+    padding: 0.28rem 0.5rem;
+    border-radius: 8px;
+    color: var(--text-main);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.help-toc a:hover {
+    background: var(--table-hover-bg);
+    color: var(--accent);
+}
+
+.help-section {
+    margin-bottom: 1.25rem;
+    scroll-margin-top: 1rem;
+}
+
+.help-section:hover { transform: none; }
+.help-section[hidden] { display: none; }
+
+.help-body h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.9rem;
+}
+
+.help-body h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 1rem 0 0.5rem;
+}
+
+.help-body li { margin-bottom: 0.3rem; }
+
+.help-tip {
+    padding: 0.6rem 0.85rem;
+    border-radius: 12px;
+    background: rgba(var(--accent-rgb), 0.08);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    font-size: 0.92rem;
+    margin-top: 0.75rem;
+}
+
+.help-body details {
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: 0.6rem 0.85rem;
+    margin-bottom: 0.5rem;
+}
+
+.help-body details summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.help-body details[open] summary {
+    margin-bottom: 0.5rem;
+}
+
+@media print {
+    header, footer, .d-print-none { display: none !important; }
+    body { background: #fff !important; }
+    .help-section { box-shadow: none !important; border: 1px solid #ccc !important; break-inside: avoid; }
+    .help-body details { border: none; padding: 0; }
+    .help-body details > *:not(summary) { display: block !important; }
+    .col-lg-9 { width: 100% !important; }
+}
+
+/* =========================================================
+   Μπάρα πλοήγησης
+   ========================================================= */
+.app-nav {
+    background: var(--navbar-bg) !important;
+    border-bottom: 1px solid var(--border-soft);
+    padding: 0.45rem 0;
+}
+
+.app-nav-inner {
+    gap: 0.75rem;
+}
+
+.app-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: -0.02em;
+    margin-right: 0.5rem;
+    color: var(--text-main) !important;
+}
+
+.app-brand .navbar-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+}
+
+.app-links {
+    gap: 0.15rem;
+}
+
+.app-links .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.42rem 0.75rem !important;
+    border-radius: 10px;
+    font-weight: 500;
+    color: var(--text-muted) !important;
+    white-space: nowrap;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.app-links .nav-link:hover {
+    background: var(--table-hover-bg);
+    color: var(--text-main) !important;
+}
+
+.app-links .nav-link.active {
+    background: rgba(var(--accent-rgb), 0.14);
+    color: var(--accent) !important;
+    font-weight: 600;
+}
+
+.nav-ico {
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.app-tools {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: auto;
+}
+
+.info-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.32rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-soft);
+    background: var(--body-bg);
+    color: var(--text-main);
+    font-size: 0.85rem;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    cursor: default;
+}
+
+.info-part[hidden] { display: none; }
+
+.info-sep {
+    width: 1px;
+    height: 14px;
+    background: var(--border-soft);
+}
+
+.info-sep[hidden] { display: none; }
+
+.tool-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0 !important;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 10px !important;
+    border: 1px solid var(--border-soft) !important;
+    background: var(--body-bg) !important;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.tool-btn:hover,
+.tool-btn[aria-expanded="true"],
+.tool-btn.active {
+    border-color: var(--accent) !important;
+    background: rgba(var(--accent-rgb), 0.12) !important;
+}
+
+.app-nav .navbar-toggler {
+    border-color: var(--border-soft);
+}
+
+html[data-theme="dark"] .app-nav .navbar-toggler-icon {
+    filter: invert(1);
+}
+
+/* Μεσαίες οθόνες: λιγότερο κείμενο ώστε να χωρούν όλα σε μία γραμμή */
+@media (min-width: 992px) and (max-width: 1299.98px) {
+    .app-brand-text { display: none; }
+}
+
+@media (min-width: 992px) and (max-width: 1099.98px) {
+    .app-links .nav-ico { display: none; }
+    #weatherWrap, .info-sep { display: none !important; }
+}
+
+/* Κινητό / στενή οθόνη: μενού σε στήλη */
+@media (max-width: 991.98px) {
+    .app-links {
+        margin-top: 0.5rem;
+    }
+
+    .app-tools {
+        margin: 0.6rem 0 0.2rem;
+        flex-wrap: wrap;
+    }
+}
+
+/* Η παλιά μπάρα είχε κάτω περιθώριο main — μένει ίδιο */
+
+.links-menu {
+    min-width: 290px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.links-menu .dropdown-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.link-out {
+    color: var(--text-muted);
+    font-size: 0.8em;
+}
+
+/* =========================================================
+   Διορθώσεις αναγνωσιμότητας στα σκούρα θέματα
+   Το Bootstrap μπαίνει σε dark mode (data-bs-theme), και οι δικές μας
+   αποχρώσεις υπερισχύουν ώστε να ταιριάζουν με κάθε παλέτα.
+   ========================================================= */
+html[data-theme] {
+    --bs-body-color: var(--text-main);
+    --bs-secondary-color: var(--text-muted);
+    --bs-tertiary-color: var(--text-muted);
+    --bs-emphasis-color: var(--text-main);
+    --bs-border-color: var(--border-soft);
+    --bs-heading-color: var(--text-main);
+}
+
+.form-text,
+.form-label,
+.form-check-label,
+.col-form-label {
+    color: var(--text-muted);
+}
+
+.form-label,
+.form-check-label {
+    color: var(--text-main);
+}
+
+/* Στοιχεία μενού που είναι links (<a class="dropdown-item">):
+   ο κανόνας «a { color: accent }» τα έβαφε όλα στο χρώμα έμφασης */
+html[data-theme] a.dropdown-item {
+    color: var(--text-main);
+}
+
+html[data-theme] a.dropdown-item:hover,
+html[data-theme] a.dropdown-item:focus {
+    color: var(--text-main);
+    background: var(--table-hover-bg);
+}
+
+html[data-theme] .dropdown-item.text-danger,
+html[data-theme] a.dropdown-item.text-danger {
+    color: #dc2626 !important;
+}
+
+html[data-theme="dark"] .dropdown-item.text-danger,
+html[data-theme="dark"] a.dropdown-item.text-danger {
+    color: #f87171 !important;
+}
+
+html[data-theme] .dropdown-item.text-danger:hover {
+    background: rgba(239, 68, 68, 0.12);
+}
+
+.dropdown-menu {
+    --bs-dropdown-link-active-bg: rgba(var(--accent-rgb), 0.18);
+    --bs-dropdown-link-active-color: var(--text-main);
+    padding: 0.35rem;
+    border-radius: 12px;
+}
+
+.dropdown-menu .dropdown-item {
+    border-radius: 8px;
+    padding: 0.42rem 0.7rem;
+}
+
+html[data-theme="dark"] .border {
+    border-color: var(--border-soft) !important;
+}
+
+html[data-theme="dark"] .input-group-text {
+    background: var(--body-bg);
+    color: var(--text-muted);
+    border-color: var(--border-soft);
+}
+
+/* Κουμπί ⋯ της καρτέλας συσκευής: ίδιο ύψος με τα υπόλοιπα, όχι «πατημένο» */
+.device-hero-actions .btn {
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.device-hero-actions .dropdown > .btn-outline-secondary {
+    width: 38px;
+    justify-content: center;
+    padding: 0;
+}
+
+/* =========================================================
+   Κουμπιά-εικονίδια στην κεφαλίδα της συσκευής
+   ========================================================= */
+.device-hero {
+    position: relative;
+    z-index: 2;
+}
+
+.device-hero:hover {
+    transform: none;
+}
+
+.device-hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.device-hero-actions form {
+    margin: 0;
+}
+
+.icon-action {
+    width: 44px;
+    height: 44px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 12px;
+    border: 1px solid var(--border-soft);
+    background: var(--body-bg);
+    font-size: 1.15rem;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.icon-action:hover {
+    transform: translateY(-1px);
+    border-color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.12);
+}
+
+.icon-action:disabled,
+.icon-action[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.icon-action.is-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.3);
+}
+
+.icon-action.is-primary:hover {
+    background: rgba(var(--accent-rgb), 0.85);
+}
+
+.icon-action.is-info:hover { border-color: #0dcaf0; background: rgba(13, 202, 240, 0.12); }
+.icon-action.is-warning:hover { border-color: #f59e0b; background: rgba(245, 158, 11, 0.14); }
+.icon-action.is-danger:hover { border-color: #ef4444; background: rgba(239, 68, 68, 0.14); }
+
+.icon-action-sep {
+    width: 1px;
+    height: 26px;
+    background: var(--border-soft);
+    margin: 0 0.15rem;
+}
+
+/* Φύλακας Veyon */
+.veyon-down-badge {
+    background: rgba(239, 68, 68, 0.14);
+    color: #b91c1c;
+    border: 1px solid rgba(239, 68, 68, 0.45);
+}
+
+html[data-theme="dark"] .veyon-down-badge { color: #f87171; }
+
+.flag-chip.is-alert {
+    color: #b91c1c;
+    border-color: rgba(239, 68, 68, 0.5);
+    background: rgba(239, 68, 68, 0.1);
+    font-weight: 600;
+}
+
+html[data-theme="dark"] .flag-chip.is-alert { color: #f87171; }
+
+.device-area.is-dots .dev.veyon-down {
+    outline: 2px dashed #ef4444;
+    outline-offset: 1px;
+}
+
+/* =========================================================
+   Αναλώσιμα
+   ========================================================= */
+.consumable-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 1rem;
+}
+
+.consumable-card:hover { transform: none; }
+.consumable-card.is-low { border-left: 4px solid #f59e0b !important; }
+.consumable-card.is-out { border-left: 4px solid #ef4444 !important; }
+
+.stock-number {
+    font-size: 1.9rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: var(--text-main);
+}
+
+.consumable-card.is-low .stock-number { color: #d97706; }
+.consumable-card.is-out .stock-number { color: #dc2626; }
+
+.stock-bar {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--border-soft);
+    overflow: hidden;
+    margin: 0.7rem 0 0.5rem;
+}
+
+.stock-bar > div {
+    height: 100%;
+    border-radius: 999px;
+    background: #22c55e;
+}
+
+.consumable-card.is-low .stock-bar > div { background: #f59e0b; }
+.consumable-card.is-out .stock-bar > div { background: #ef4444; }
+
+.stock-flag { font-weight: 600; }
+.stock-flag.is-low { color: #d97706; }
+.stock-flag.is-out { color: #dc2626; }
+
+.consumable-card .icon-action {
+    width: 38px;
+    height: 38px;
+    font-size: 1rem;
+}
+
+/* =========================================================
+   Κωδικοί
+   ========================================================= */
+.pw-display {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+}
+
+.pw-display .form-control {
+    font-size: 1.25rem;
+    letter-spacing: 0.04em;
+    height: 44px;
+}
+
+.pw-strength {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--border-soft);
+    overflow: hidden;
+}
+
+.pw-strength > div { height: 100%; border-radius: 999px; transition: width 0.2s ease; }
+.pw-strength > div.weak { background: #ef4444; }
+.pw-strength > div.fair { background: #f59e0b; }
+.pw-strength > div.good { background: #22c55e; }
+.pw-strength > div.great { background: #15803d; }
+
+.device-picker {
+    max-height: 260px;
+    overflow-y: auto;
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: 0.4rem 0.6rem;
+    background: var(--body-bg);
+}
+
+.picker-group[hidden] { display: none; }
+
+.picker-group summary {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    cursor: pointer;
+    padding: 0.25rem 0;
+}
+
+.picker-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.15rem 0.6rem;
+    padding: 0.2rem 0 0.4rem 1.4rem;
+}
+
+.picker-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.88rem;
+    cursor: pointer;
+    min-width: 0;
+}
+
+.picker-item[hidden] { display: none; }
+
+.picker-item span:first-of-type {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pw-batch {
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: 0.55rem 0.8rem;
+    margin-bottom: 0.5rem;
+}
+
+.pw-batch[hidden] { display: none; }
+
+.pw-batch summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.8rem;
+    cursor: pointer;
+}
+
+.pw-batch[open] summary { margin-bottom: 0.5rem; }
+
+.pw-batch-account { font-weight: 700; }
+
+.pw-batch-targets {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-main);
+}
+
+tr.pw-old td { opacity: 0.55; }
+
+.pw-cell .pw-value { font-size: 1.05rem; letter-spacing: 0.03em; }
+
+@media print {
+    /* Μόνο όταν η σελίδα δείχνει πίνακα κωδικών — αλλιώς θα έκρυβε κάθε εκτύπωση */
+    body:has(.pw-result) * { visibility: hidden; }
+    .pw-result, .pw-result * { visibility: visible; }
+    .pw-result { position: absolute; left: 0; top: 0; width: 100%; border: none !important; box-shadow: none !important; }
+    .pw-result .copy-btn, .pw-result .btn { display: none !important; }
+}
+
+.pw-mini {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0;
+    border-top: 1px dashed var(--border-soft);
+}
+
+.pw-old-mini { opacity: 0.55; }
+
+/* =========================================================
+   Κάτοψη & θέσεις
+   ========================================================= */
+.plan-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 1rem;
+    align-items: start;
+}
+
+@media (max-width: 991.98px) {
+    .plan-layout { grid-template-columns: 1fr; }
+}
+
+.plan-card:hover { transform: none; }
+
+.plan-canvas {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1.6;
+    border-radius: 12px;
+    border: 1px dashed var(--border-soft);
+    background-color: var(--body-bg);
+    background-image:
+        linear-gradient(var(--border-soft) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border-soft) 1px, transparent 1px);
+    background-size: 5% 8%;
+    background-position: -1px -1px;
+    overflow: hidden;
+    outline: none;
+    user-select: none;
+    touch-action: none;
+}
+
+.plan-canvas:not(.is-editing) {
+    background-image: none;
+}
+
+.plan-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.plan-empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+}
+
+.plan-empty[hidden] { display: none; }
+
+.plan-item {
+    position: absolute;
+}
+
+/* Συσκευή: κεντραρισμένη στο σημείο της */
+.plan-device {
+    transform: translate(-50%, -50%);
+    min-width: 78px;
+    max-width: 128px;
+    padding: 4px 7px 5px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border-soft);
+    background: var(--card-bg);
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.12);
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    align-items: center;
+    gap: 3px 4px;
+    font-size: 0.72rem;
+    line-height: 1.15;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.pd-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #9ca3af;
+}
+
+.plan-device.state-online .pd-dot { background: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2); }
+.plan-device.state-offline .pd-dot { background: #ef4444; }
+.plan-device.state-unknown .pd-dot { background: #f59e0b; }
+.plan-device.state-online { border-color: rgba(34, 197, 94, 0.55); }
+.plan-device.has-fault { border-color: #f59e0b; }
+.plan-device.veyon-down { outline: 2px dashed #ef4444; outline-offset: 1px; }
+
+.pd-icon { font-size: 0.85rem; }
+
+.pd-name {
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-main);
+}
+
+.pd-flag { font-size: 0.7rem; }
+
+.pd-seat {
+    grid-column: 1 / -1;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--accent);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-top: 1px dashed var(--border-soft);
+    padding-top: 2px;
+}
+
+.pd-seat:empty { display: none; }
+.pd-seat.is-empty { color: var(--text-muted); font-weight: 400; }
+
+/* Σχήματα: πάγκοι, πίνακας, πόρτα… */
+.plan-item:not(.plan-device) {
+    border-radius: 6px;
+    display: grid;
+    place-items: center;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    overflow: hidden;
+    z-index: 1;
+}
+
+.kind-desk { background: rgba(148, 163, 184, 0.18); border: 1px solid rgba(148, 163, 184, 0.45); }
+.kind-teacher { background: rgba(var(--accent-rgb), 0.12); border: 1px solid rgba(var(--accent-rgb), 0.4); color: var(--text-main) !important; }
+.kind-board { background: #14532d; color: #dcfce7 !important; border: 2px solid #78716c; }
+.kind-door { background: rgba(180, 83, 9, 0.18); border: 1px dashed #b45309; }
+.kind-window { background: rgba(56, 189, 248, 0.18); border: 1px solid rgba(56, 189, 248, 0.6); }
+.kind-label { background: transparent; border: 1px dashed var(--border-soft); color: var(--text-main) !important; font-weight: 600; }
+
+.ps-text {
+    padding: 0 4px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+.ps-resize {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 12px;
+    height: 12px;
+    cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 50%, var(--accent) 50%);
+    border-bottom-right-radius: 6px;
+}
+
+.is-editing .plan-item { cursor: grab; }
+.is-editing .plan-item:active { cursor: grabbing; }
+.is-editing .plan-device .pd-seat { display: none; }
+
+.plan-item.is-selected {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    z-index: 3;
+}
+
+.is-seating .plan-device { cursor: text; }
+.is-seating .plan-device:hover { border-color: var(--accent); }
+
+.seat-editor {
+    position: absolute;
+    transform: translate(-50%, 34px);
+    z-index: 10;
+    width: 220px;
+    padding: 0.55rem;
+    border-radius: 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--accent);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.28);
+}
+
+/* Πλαϊνή στήλη */
+.plan-side .card:hover { transform: none; }
+
+.class-list {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.class-row {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.class-row form { margin: 0; }
+
+.class-item {
+    flex: 1;
+    display: block;
+    padding: 0.4rem 0.6rem;
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--text-main) !important;
+    border: 1px solid transparent;
+}
+
+.class-item:hover { background: var(--table-hover-bg); }
+
+.class-item.active {
+    background: rgba(var(--accent-rgb), 0.14);
+    border-color: rgba(var(--accent-rgb), 0.4);
+}
+
+.shape-palette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.unplaced {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.unplaced-item {
+    border: 1px dashed var(--border-soft);
+    background: var(--body-bg);
+    color: var(--text-main);
+    border-radius: 8px;
+    font-size: 0.78rem;
+    padding: 0.2rem 0.5rem;
+}
+
+.unplaced-item:hover { border-color: var(--accent); }
+
+.seat-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 0.25rem 1.5rem;
+}
+
+.seat-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.25rem 0;
+    border-bottom: 1px dashed var(--border-soft);
+    font-size: 0.88rem;
+}
+
+.seat-pc { color: var(--text-muted); white-space: nowrap; }
+.seat-name { font-weight: 600; text-align: right; }
+
+kbd {
+    font-size: 0.75em;
+    padding: 0.05rem 0.3rem;
+}
+
+@page plan-landscape { size: A4 landscape; margin: 8mm; }
+
+@media print {
+    /* Οριζόντια σελίδα μόνο για την κάτοψη */
+    .plan-layout, .plan-print-head { page: plan-landscape; }
+    header, footer, .d-print-none { display: none !important; }
+    body { background: #fff !important; }
+    .plan-layout { display: block; }
+    .plan-card, .seat-list-card { border: none !important; box-shadow: none !important; }
+    .plan-canvas { border: 1px solid #999; background: #fff !important; }
+    .plan-device { box-shadow: none; }
+    .seat-list-card { break-before: page; }
+    .print-header { display: flex !important; align-items: center; gap: 14px; border-bottom: 2px solid #111; padding-bottom: 6px; }
+    .print-logo { max-height: 48px; }
+    .print-title { font-size: 20px; margin: 0; font-weight: 700; }
+    .print-school { font-size: 12px; color: #555; }
+}
+
+/* ===================== Static / Dynamic διευθύνσεις (2.8) ===================== */
+.address-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.address-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.address-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-soft);
+    background: var(--card-bg);
+    color: var(--text-main) !important;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.address-chip:hover { border-color: var(--accent); }
+.address-chip.active { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.14); }
+.address-chip.is-static b { color: var(--accent); }
+.address-chip.is-dynamic b { color: var(--text-muted); }
+
+.addr-mode-tag {
+    font-size: 0.68rem;
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+    margin-top: 1px;
+}
+
+.addr-mode-tag.is-static { color: var(--accent); opacity: 0.85; }
+.addr-mode-tag.is-dynamic { color: var(--text-muted); }
+
+.dynamic-badge {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px dashed var(--border-soft);
+    font-weight: 500;
+}
+
+tr.is-dynamic-row > td { opacity: 0.55; }
+tr.is-dynamic-row:hover > td { opacity: 0.9; }
+tr.is-dynamic-row > td.row-actions { opacity: 0.8; }
+
+.addr-chip.is-static { border-color: rgba(var(--accent-rgb), 0.5); }
+.addr-chip.is-dynamic { border-style: dashed; color: var(--text-muted); }
+
+.addr-mode .btn { white-space: nowrap; }
+
+/* Εικονίδια ενεργειών στις γραμμές */
+.row-actions { white-space: nowrap; }
+.row-actions form { display: inline; margin: 0; }
+
+.row-action {
+    width: 34px;
+    height: 34px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 10px;
+    border: 1px solid var(--border-soft);
+    background: transparent;
+    font-size: 0.98rem;
+    line-height: 1;
+    text-decoration: none;
+    padding: 0;
+    margin-left: 0.2rem;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+
+.row-action:hover { transform: translateY(-1px); border-color: var(--accent); background: rgba(var(--accent-rgb), 0.12); }
+.row-action.is-primary:hover { border-color: var(--accent); }
+.row-action.is-warning { border-color: rgba(245, 158, 11, 0.55); }
+.row-action.is-warning:hover { border-color: #f59e0b; background: rgba(245, 158, 11, 0.14); }
+.row-action.is-danger:hover { border-color: #ef4444; background: rgba(239, 68, 68, 0.14); }
+
+/* Ξεσκαρτάρισμα */
+.cleanup-group .table td, .cleanup-group .table th { vertical-align: middle; }
+.cleanup-group .form-check-input { width: 1.15em; height: 1.15em; }
+.cleanup-count { font-size: 2rem; font-weight: 700; line-height: 1; }
+.cleanup-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; }
+.cleanup-stat { border: 1px solid var(--border-soft); border-radius: 14px; padding: 0.8rem 1rem; background: var(--card-bg); }
+.cleanup-stat small { color: var(--text-muted); }
+
+/* Χρήστες */
+.user-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: inline-grid;
+    place-items: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #fff;
+    background: hsl(var(--avatar-hue, 210), 55%, 48%);
+    flex: 0 0 auto;
+}
+
+.user-avatar.sm { width: 28px; height: 28px; font-size: 0.72rem; }
+.user-row.is-disabled { opacity: 0.5; }
+.user-menu-head { padding: 0.35rem 1rem 0.5rem; display: flex; align-items: center; gap: 0.6rem; }
+.user-menu-head .small { color: var(--text-muted); }
+.tool-btn .user-avatar { width: 26px; height: 26px; font-size: 0.7rem; }
+.cleanup-actions { bottom: 0.75rem; z-index: 5; border: 1px solid rgba(var(--accent-rgb), 0.35); }
+.dyn-state { font-size: 0.78rem; color: var(--text-muted); }
+.dyn-state.in-use { color: #16a34a; }
+.role-badge { background: transparent; color: var(--text-main); border: 1px solid var(--border-soft); font-weight: 500; }
+
+/* Κουμπιά σελίδας μόνο με εικονίδια */
+.page-actions { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; justify-content: flex-end; }
+.page-actions form { margin: 0; }
+
+/* Κανονισμοί (2.9) */
+.doc-tabs .nav-link { border-radius: 999px; }
+.doc-editor { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.92rem; line-height: 1.55; min-height: 420px; }
+.doc-view .card-body { padding: 2rem 2.2rem; }
+.doc-view .doc-title { font-size: 1.6rem; font-weight: 700; margin-bottom: 1rem; }
+.doc-view .doc-body h2 { font-size: 1.15rem; font-weight: 700; margin: 1.4rem 0 0.6rem; color: var(--accent); }
+.doc-view .doc-body h3 { font-size: 1rem; font-weight: 700; margin: 1rem 0 0.4rem; }
+.doc-view .doc-body li { margin-bottom: 0.3rem; }
+.doc-view .doc-meta { margin-top: 1.5rem; font-size: 0.8rem; color: var(--text-muted); }
+.doc-school { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: #6c757d; }
+
+@media print {
+    .doc-view { box-shadow: none !important; border: 0 !important; }
+    .doc-view .card-body { padding: 0; }
+}
+
+/* Δηλώσεις από τη δημόσια φόρμα */
+.report-card { border-left: 4px solid #f59e0b; }
+.report-card.is-down { border-left-color: #ef4444; }
+.report-meta { font-size: 0.82rem; color: var(--text-muted); }
+.nav-count-new { background: #f59e0b !important; color: #1f2937 !important; margin-left: 2px; }
+.doc-tabs .nav-link.active { color: #fff !important; }
+.doc-tabs .nav-link:not(.active) { color: var(--text-main) !important; }
+html[data-theme] .form-control::file-selector-button { color: var(--text-main); background: rgba(var(--accent-rgb), 0.12); border-color: var(--border-soft); }
+
+
+/* =========================================================
+   Εκτύπωση από οποιαδήποτε σελίδα: πάντα φωτεινά χρώματα
+   (το site.js γυρίζει προσωρινά σε φωτεινό θέμα πριν την εκτύπωση —
+   αυτό είναι η εφεδρεία αν ο browser δεν στείλει beforeprint)
+   ========================================================= */
+@media print {
+    html[data-theme="dark"] {
+        --body-bg: #ffffff; --card-bg: #ffffff; --card-header-bg: #f5f5f5; --navbar-bg: #ffffff;
+        --text-main: #111827; --text-muted: #555; --border-soft: #d0d5dd;
+        --table-head-bg: #f1f3f5; --table-hover-bg: #ffffff;
+        --accent: #0d47a1; --accent-rgb: 13, 71, 161;
+        color-scheme: light;
+    }
+    html, body { background: #fff !important; color: #111827 !important; }
+    .card, .card-body, .card-header { background: #fff !important; color: #111827 !important; box-shadow: none !important; }
+    main, .container { max-width: none !important; }
+    a { text-decoration: none; }
+    header, footer, .page-actions, .row-actions, .icon-action, .address-summary,
+    .dashboard-alert, .changes-banner, .btn:not(.keep-print) { display: none !important; }
+    .table-responsive { overflow: visible !important; }
+}
+.doc-view .doc-note { margin: 0.5rem 0 1rem; padding: 0.75rem 1rem; border-left: 4px solid #b8892b; background: rgba(184, 137, 43, 0.1); border-radius: 0 10px 10px 0; font-style: italic; }
+.doc-view .doc-field { display: flex; gap: 0.6rem; align-items: flex-end; margin: 0.7rem 0; }
+.doc-view .doc-field span { font-weight: 600; white-space: nowrap; }
+.doc-view .doc-field i { flex: 1; border-bottom: 1px dotted var(--text-muted); height: 1em; }
+
+/* Χώροι: νέος / άδειος χώρος και προσθήκη συσκευών (2.11) */
+.room-empty { text-align: center; padding: 1.4rem 1rem; margin-top: 0.75rem; border: 1px dashed var(--border-soft); border-radius: 14px; }
+.new-room-card { border: 1px solid rgba(var(--accent-rgb), 0.45) !important; }
+.add-list { display: grid; gap: 0.35rem; }
+.add-row {
+    display: grid; grid-template-columns: auto 1fr; gap: 0.15rem 0.7rem; align-items: center;
+    padding: 0.5rem 0.75rem; border: 1px solid var(--border-soft); border-radius: 10px; cursor: pointer; margin: 0;
+}
+.add-row:hover { border-color: var(--accent); }
+.add-row.is-selected { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.1); }
+.add-main { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.add-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.add-ip { font-family: ui-monospace, Consolas, monospace; font-size: 0.82rem; color: var(--text-muted); margin-left: auto; }
+.add-meta { grid-column: 2; font-size: 0.75rem; color: var(--text-muted); }

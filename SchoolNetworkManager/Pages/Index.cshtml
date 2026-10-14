@@ -39,6 +39,10 @@
             Import Excel
         </a>
 
+        <a class="btn btn-outline-info" asp-page="/Network/Scan">
+            📡 Σάρωση δικτύου
+        </a>
+
         <a class="btn btn-primary" asp-page="/Computers/Create">
             + Νέα Καταχώρηση
         </a>
@@ -51,7 +55,13 @@
             <div class="card-body">
                 <div class="text-muted small">Σύνολο Συσκευών</div>
                 <div class="display-6 fw-semibold">@Model.TotalComputers</div>
-                <a asp-page="/Computers/Index" class="small">Προβολή λίστας</a>
+                <a asp-page="/Computers/Index" asp-route-AddressFilter="static" class="small">Προβολή λίστας</a>
+                @if (Model.DynamicAddresses > 0)
+                {
+                    <div class="small text-muted mt-1" data-hint="Διευθύνσεις DHCP χωρίς σταθερή συσκευή — δεν μετράνε στα σύνολα">
+                        🔄 + @Model.DynamicAddresses dynamic@(Model.DynamicInUse > 0 ? $" ({Model.DynamicInUse} σε χρήση)" : "")
+                    </div>
+                }
             </div>
         </div>
     </div>
@@ -86,6 +96,62 @@
         </div>
     </div>
 </div>
+
+@if (Model.VeyonDownDevices.Any())
+{
+    <div class="dashboard-alert is-down mb-3">
+        <span>
+            🛑 <strong>Το Veyon σταμάτησε</strong> σε @Model.VeyonDownDevices.Count ανοιχτούς υπολογιστές:
+            @for (var i = 0; i < Model.VeyonDownDevices.Count && i < 12; i++)
+            {
+                var d = Model.VeyonDownDevices[i];
+                <a asp-page="/Computers/Details" asp-route-id="@d.Id" class="fw-semibold">@(string.IsNullOrWhiteSpace(d.Name) ? d.IpAddress : d.Name)</a>@(i < Model.VeyonDownDevices.Count - 1 && i < 11 ? ", " : "")
+            }
+            @if (Model.VeyonDownDevices.Count > 12)
+            {
+                <span>…</span>
+            }
+        </span>
+        <a class="btn btn-sm btn-outline-secondary" asp-page="/Help/Index" asp-fragment="faq">Πώς το σταματάω;</a>
+    </div>
+}
+
+@if (Model.OpenFaults > 0)
+{
+    <div class="dashboard-alert mb-4 @(Model.DownFaults > 0 ? "is-down" : "")">
+        <span>
+            🔧 <strong>@Model.OpenFaults</strong> ανοιχτές βλάβες
+            @if (Model.DownFaults > 0)
+            {
+                <span>· <strong>@Model.DownFaults</strong> μηχανήματα εκτός λειτουργίας</span>
+            }
+        </span>
+        <a class="btn btn-sm btn-outline-secondary" asp-page="/Faults/Index">Βιβλίο βλαβών →</a>
+    </div>
+}
+
+@if (Model.PendingReports > 0)
+{
+    <div class="dashboard-alert mb-3">
+        <span>📥 <strong>@Model.PendingReports</strong> @(Model.PendingReports == 1 ? "νέα δήλωση βλάβης" : "νέες δηλώσεις βλαβών") από μαθητές / εκπαιδευτικούς περιμένουν έλεγχο.</span>
+        <a class="btn btn-sm btn-outline-secondary" asp-page="/Faults/Index">Έλεγχος →</a>
+    </div>
+}
+
+@if (Model.LowStock.Any())
+{
+    <div class="dashboard-alert mb-4">
+        <span>
+            📦 <strong>Τελειώνουν:</strong>
+            @(string.Join(", ", Model.LowStock.Take(6).Select(c => $"{c.Name} ({c.Quantity})")))@(Model.LowStock.Count > 6 ? $" και άλλα {Model.LowStock.Count - 6}" : "")
+        </span>
+        <a class="btn btn-sm btn-outline-secondary" asp-page="/Consumables/Index">Αναλώσιμα →</a>
+    </div>
+}
+
+<partial name="_WeekCharts" model="Model" />
+
+<partial name="_PiholeCard" model="Model" />
 
 <div class="row g-4 mb-4">
     <div class="col-lg-6">
@@ -142,8 +208,8 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span class="fw-semibold">Κατάσταση Δικτύου</span>
 
-                <form method="post" asp-page-handler="CheckOnline">
-                    <button type="submit" class="btn btn-sm btn-outline-warning">
+                <form method="post" asp-page-handler="CheckOnline" class="busy-form">
+                    <button type="submit" class="btn btn-sm btn-outline-warning" data-busy-text="⏳ Έλεγχος...">
                         Έλεγχος Online/Offline
                     </button>
                 </form>
@@ -155,6 +221,13 @@
                     <div class="alert alert-success py-2 mb-3">
                         @Model.StatusMessage
                     </div>
+                }
+
+                @if (Model.MacWarnings > 0)
+                {
+                    <a class="alert alert-warning py-2 mb-3 d-block text-decoration-none" asp-page="/Computers/Index" asp-route-SearchTerm="">
+                        ⚠️ @Model.MacWarnings συσκευές με αλλαγμένη MAC — δες το ⚠️ στη λίστα.
+                    </a>
                 }
 
                 <div class="mb-3">
@@ -188,7 +261,7 @@
                 </div>
 
                 <div class="text-muted small mt-3">
-                    Τα ποσοστά ενημερώνονται μετά από χρήση του ελέγχου Online/Offline.
+                    Η κατάσταση ενημερώνεται αυτόματα στο παρασκήνιο (ρυθμίζεται στις Ρυθμίσεις → Δίκτυο).
                 </div>
             </div>
         </div>
@@ -200,7 +273,7 @@
         <div class="card shadow-sm h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span class="fw-semibold">Συσκευές ανά χώρο</span>
-                <span class="badge bg-secondary">@Model.Locations.Count χώροι</span>
+                <a asp-page="/Locations/Index" class="btn btn-sm btn-outline-secondary">Όλοι οι χώροι</a>
             </div>
 
             <div class="card-body">
@@ -215,7 +288,7 @@
                         {
                             <a class="text-decoration-none text-reset"
                                    asp-page="/Computers/Index"
-                                   asp-route-SearchTerm="@item.Location">
+                                   asp-route-LocationFilter="@(item.Location == "Χωρίς χώρο" ? "__none__" : item.Location)">
 
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <div>
@@ -223,18 +296,16 @@
                                         <span class="text-muted small ms-2">@item.Count συσκευές</span>
                                     </div>
 
-                                    <span class="badge bg-secondary">
-                                        @item.PercentageText
+                                    <span class="badge @(item.Online > 0 ? "bg-success" : "bg-secondary")"
+                                          title="Ανοιχτές τώρα / σύνολο">
+                                        🟢 @item.Online / @item.Count
                                     </span>
                                 </div>
 
-                                <div class="progress" style="height: 10px;">
-                                    <div class="progress-bar bg-secondary"
+                                <div class="progress" style="height: 10px;" title="Ποσοστό ανοιχτών">
+                                    <div class="progress-bar bg-success"
                                          role="progressbar"
-                                         style="width: @item.PercentageCss;"
-                                         aria-valuenow="@item.Percentage"
-                                         aria-valuemin="0"
-                                         aria-valuemax="100">
+                                         style="width: @item.OnlineCss;">
                                     </div>
                                 </div>
                             </a>
@@ -248,7 +319,7 @@
     <div class="col-lg-7">
         <div class="card shadow-sm h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span class="fw-semibold">Τελευταίες καταχωρήσεις</span>
+                <span class="fw-semibold">Τελευταίες αλλαγές</span>
                 <a asp-page="/Computers/Index" class="btn btn-sm btn-outline-secondary">
                     Όλες οι εγγραφές
                 </a>
@@ -292,7 +363,10 @@
                                                 }
                                             </span>
                                         </td>
-                                        <td>@computer.Name</td>
+                                        <td>
+                                            @computer.Name
+                                            <partial name="_ChangeBadge" model="computer" />
+                                        </td>
                                         <td>@computer.Location</td>
                                         <td>
                                             @if (computer.IsOnline == true)
@@ -325,3 +399,7 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/charts.js" asp-append-version="true"></script>
+}

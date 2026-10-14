@@ -1,0 +1,301 @@
+/* =========================================================
+   Εκτύπωση κανονισμών — «Επίσημο έγγραφο» και «Αφίσα»
+   ========================================================= */
+:root {
+    --navy: #0f2a5a;
+    --blue: #1d4ed8;
+    --gold: #b8892b;
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --paper: #ffffff;
+}
+
+* { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+body {
+    margin: 0;
+    background: #d9dee7;
+    color: var(--ink);
+    font-family: "Segoe UI", "Noto Sans", Roboto, Arial, sans-serif;
+    line-height: 1.5;
+}
+
+/* ---------- Μπάρα εργαλείων (μόνο οθόνη) ---------- */
+.dp-toolbar { position: sticky; top: 0; z-index: 10; background: #fff; border-bottom: 1px solid #cfd6e1; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+.dp-toolbar-inner { max-width: 210mm; margin: 0 auto; padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; font-size: 14px; }
+.dp-switch { display: inline-flex; border: 1px solid #cfd6e1; border-radius: 999px; overflow: hidden; }
+.dp-switch a { padding: 6px 14px; text-decoration: none; color: var(--ink); }
+.dp-switch a.active { background: var(--navy); color: #fff; }
+.dp-print { background: var(--blue); color: #fff; border: 0; border-radius: 999px; padding: 7px 16px; cursor: pointer; font-size: 14px; }
+.dp-size { display: inline-flex; align-items: center; gap: 6px; }
+.dp-hint { color: var(--muted); font-size: 12px; width: 100%; }
+
+.editable { outline: 1px dashed transparent; border-radius: 3px; }
+.editable:hover, .editable:focus { outline-color: #93a4c3; }
+
+/* ---------- Φύλλο Α4 στην οθόνη ---------- */
+.sheet {
+    position: relative;
+    width: 210mm;
+    min-height: 297mm;
+    margin: 18px auto 40px;
+    background: var(--paper);
+    box-shadow: 0 6px 30px rgba(15, 23, 42, .18);
+    overflow: hidden;
+}
+
+/* =================== ΕΠΙΣΗΜΟ ΕΓΓΡΑΦΟ =================== */
+.official { padding: 16mm 18mm 20mm; font-size: 11pt; }
+.official::before {
+    content: "";
+    position: absolute; left: 0; top: 0; right: 0; height: 6mm;
+    background: linear-gradient(90deg, var(--navy) 0 70%, var(--gold) 70% 100%);
+}
+.official::after {
+    content: "";
+    position: absolute; left: 0; bottom: 0; right: 0; height: 2.2mm;
+    background: var(--navy);
+}
+
+.watermark {
+    position: absolute; left: 50%; top: 52%; width: 110mm; transform: translate(-50%, -50%);
+    opacity: .05; pointer-events: none; z-index: 0;
+}
+.official > * { position: relative; z-index: 1; }
+
+.of-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12mm; margin-top: 4mm; }
+.of-authority { font-size: 9pt; line-height: 1.45; letter-spacing: .03em; color: var(--navy); text-transform: uppercase; }
+.of-authority b { font-size: 10pt; letter-spacing: .02em; }
+.of-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 3mm; }
+.of-logo { height: 20mm; width: auto; }
+.of-meta { font-size: 9.5pt; color: var(--muted); }
+
+.of-title { text-align: center; margin: 12mm 0 9mm; }
+.of-rule { display: block; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); margin-bottom: 6mm; }
+.of-title h1 {
+    margin: 0;
+    font-size: 19pt;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--navy);
+    font-weight: 800;
+    line-height: 1.25;
+}
+.of-ornament { color: var(--gold); letter-spacing: .6em; font-size: 8pt; margin-top: 4mm; }
+
+.of-intro { font-size: 11pt; margin-bottom: 4mm; text-align: justify; }
+
+.of-section { margin: 0 0 6mm; }
+.official li, .official p { break-inside: avoid; }
+.of-section h2 + * { break-before: avoid; }
+.of-section h2 {
+    display: flex; align-items: center; gap: 3mm;
+    font-size: 13pt; color: var(--navy); margin: 0 0 3mm;
+    padding-bottom: 1.6mm; border-bottom: 1.4px solid #d6dce8;
+    break-after: avoid;
+}
+.of-num {
+    display: inline-grid; place-items: center;
+    width: 7.5mm; height: 7.5mm; border-radius: 50%;
+    background: var(--navy); color: #fff; font-size: 10pt; font-weight: 700; flex: 0 0 auto;
+}
+.of-section h3 { font-size: 11pt; color: var(--blue); margin: 3mm 0 1.5mm; }
+.official p { margin: 0 0 2.5mm; text-align: justify; }
+.official ul, .official ol { margin: 0 0 3mm; padding-left: 9mm; }
+.official li { margin-bottom: 1.4mm; padding-left: 1mm; }
+.official ul li::marker { color: var(--gold); }
+.official ol li::marker { color: var(--navy); font-weight: 700; }
+.official strong { color: var(--navy); }
+
+.of-sign { display: grid; grid-template-columns: 1fr 1fr; gap: 24mm; margin-top: 16mm; text-align: center; break-inside: avoid; }
+.of-sign-role { font-weight: 700; color: var(--navy); }
+.of-sign-line { border-bottom: 1px solid var(--ink); height: 18mm; margin: 0 6mm; }
+.of-sign-name { font-size: 9.5pt; color: var(--muted); margin-top: 1.5mm; }
+.of-foot-note { grid-column: 1 / -1; margin-top: 4mm; text-align: center; font-size: 8pt; color: var(--muted); letter-spacing: .03em; }
+
+/* =================== ΑΦΙΣΑ =================== */
+.poster {
+    --po-scale: 1;
+    padding: 0 0 12mm;
+    font-size: calc(11pt * var(--po-scale));
+    background:
+        radial-gradient(circle at 100% 0, rgba(29, 78, 216, .07) 0 60mm, transparent 60mm),
+        radial-gradient(circle at 0 100%, rgba(184, 137, 43, .08) 0 50mm, transparent 50mm),
+        #fff;
+}
+
+.po-head {
+    display: flex; align-items: center; gap: 6mm;
+    padding: 10mm 14mm 8mm;
+    background: linear-gradient(120deg, var(--navy), var(--blue));
+    color: #fff;
+    border-bottom: 2.5mm solid var(--gold);
+}
+.po-head-icon {
+    width: 22mm; height: 22mm; border-radius: 50%;
+    display: grid; place-items: center;
+    background: rgba(255,255,255,.15); border: 1.2mm solid rgba(255,255,255,.35);
+    font-size: 30pt; flex: 0 0 auto;
+}
+.po-head-text { flex: 1; }
+.po-school { text-transform: uppercase; letter-spacing: .12em; font-size: 9pt; opacity: .85; }
+.po-head h1 { margin: 1.5mm 0 0; font-size: calc(22pt * var(--po-scale)); line-height: 1.15; font-weight: 800; }
+.po-logo { height: 20mm; width: auto; background: #fff; border-radius: 3mm; padding: 1.5mm; }
+
+.po-intro { margin: 7mm 14mm 0; font-size: 1em; color: var(--muted); }
+
+.po-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5mm;
+    padding: 7mm 14mm 0;
+}
+
+.po-card {
+    --tone: var(--blue);
+    --tone-soft: rgba(29, 78, 216, .07);
+    border-radius: 5mm;
+    background: var(--tone-soft);
+    border-top: 2mm solid var(--tone);
+    padding: 5mm 5.5mm 4mm;
+    break-inside: auto;
+}
+.po-list li, .po-card-head, .doc-fields, .po-banner { break-inside: avoid; }
+.po-card-head { break-after: avoid; }
+.po-card.tone-1 { --tone: #0f766e; --tone-soft: rgba(15, 118, 110, .07); }
+.po-card.tone-2 { --tone: #b45309; --tone-soft: rgba(180, 83, 9, .07); }
+.po-card.tone-3 { --tone: #7c3aed; --tone-soft: rgba(124, 58, 237, .07); }
+
+.po-card-head { display: flex; align-items: center; gap: 3mm; margin-bottom: 3mm; }
+.po-card-icon {
+    width: 12mm; height: 12mm; border-radius: 50%;
+    display: grid; place-items: center; flex: 0 0 auto;
+    background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.12);
+    font-size: calc(17pt * var(--po-scale));
+}
+.po-card h2 { margin: 0; font-size: calc(14pt * var(--po-scale)); color: var(--tone); line-height: 1.2; }
+.po-card h3 { font-size: 1em; margin: 3mm 0 1mm; }
+
+.po-list { list-style: none; margin: 0; padding: 0; }
+.po-list li {
+    position: relative;
+    padding: 1.4mm 0 1.4mm 8mm;
+    border-bottom: 1px dashed rgba(0,0,0,.08);
+    line-height: 1.35;
+}
+.po-list li:last-child { border-bottom: 0; }
+.po-list li::before {
+    position: absolute; left: 0; top: 1.3mm;
+    width: 5.5mm; height: 5.5mm; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 8pt; font-weight: 800; color: #fff;
+}
+.po-list li.mark-yes::before { content: "✓"; background: #16a34a; }
+.po-list li.mark-no::before { content: "✕"; background: #dc2626; }
+
+.po-banner {
+    margin: 3mm 0 0;
+    padding: 3mm 4mm;
+    background: #fff;
+    border-left: 1.5mm solid var(--gold);
+    border-radius: 2mm;
+    font-weight: 600;
+}
+
+/* Μόνη της παράγραφος σε ενότητα χωρίς λίστα (π.χ. το τελικό μήνυμα) */
+.po-card:not(:has(.po-list)) { grid-column: 1 / -1; background: linear-gradient(120deg, rgba(15,42,90,.06), rgba(184,137,43,.10)); border-top-color: var(--gold); }
+
+.po-foot {
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 3mm;
+    margin: 8mm 14mm 0; padding-top: 4mm;
+    border-top: 1px solid #d6dce8;
+    font-size: 9pt; color: var(--muted);
+}
+
+/* =================== Εκτύπωση =================== */
+@page official-page {
+    size: A4 portrait;
+    margin: 12mm 16mm 16mm;
+    @bottom-center { content: "Σελίδα " counter(page) " από " counter(pages); font-size: 8pt; color: #6b7280; }
+}
+@page poster-page { size: A4 portrait; margin: 10mm 0 8mm; }
+@page poster-page:first { margin: 0 0 8mm; }
+
+@media print {
+    body { background: #fff; }
+    .dp-toolbar { display: none !important; }
+    .sheet { margin: 0; box-shadow: none; }
+    .editable { outline: none !important; }
+    .official { page: official-page; width: auto; min-height: 0; padding: 9mm 0 0; overflow: visible; }
+    .official::after { display: none; }
+    .poster { page: poster-page; width: 210mm; min-height: 289mm; overflow: visible; }
+}
+
+@media screen and (max-width: 840px) {
+    .sheet { width: 100%; min-height: 0; }
+    .po-grid { grid-template-columns: 1fr; }
+}
+
+.poster { display: flex; flex-direction: column; }
+.po-foot { margin-top: auto; }
+
+.po-motto {
+    margin: 6mm 14mm 0;
+    padding: 4.5mm 6mm;
+    border-radius: 4mm;
+    text-align: center;
+    font-size: calc(13pt * var(--po-scale));
+    font-weight: 700;
+    color: var(--navy);
+    background: linear-gradient(120deg, rgba(15,42,90,.07), rgba(184,137,43,.14));
+    border: 1px solid rgba(184,137,43,.45);
+}
+.po-motto p { margin: 0; }
+.po-motto strong { color: inherit; }
+
+.po-text { margin: 0 0 2.5mm; line-height: 1.4; }
+.po-list + .po-text { margin-top: 2.5mm; padding: 2.5mm 3.5mm; background: #fff; border-left: 1.2mm solid var(--gold); border-radius: 2mm; font-weight: 600; }
+
+/* ---------- Άρθρα, πλαίσια, φόρμες ---------- */
+.of-art {
+    display: inline-block; flex: 0 0 auto;
+    padding: 0.6mm 2.6mm; border-radius: 999px;
+    background: var(--navy); color: #fff;
+    font-size: 8.5pt; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+}
+
+.doc-note {
+    margin: 2mm 0 4mm;
+    padding: 3.5mm 5mm;
+    border-left: 1.4mm solid var(--gold);
+    background: linear-gradient(90deg, rgba(184,137,43,.10), rgba(184,137,43,.02));
+    border-radius: 0 2.5mm 2.5mm 0;
+    font-style: italic;
+}
+.of-intro .doc-note { font-size: 11.5pt; text-align: center; border-left: 0; border-radius: 3mm; border: 1px solid rgba(184,137,43,.45); }
+
+.of-motto {
+    margin: 8mm 0 0;
+    padding: 4mm 6mm;
+    text-align: center;
+    font-weight: 700;
+    color: var(--navy);
+    border-top: 1.2px solid var(--gold);
+    border-bottom: 1.2px solid var(--gold);
+    background: rgba(15,42,90,.035);
+    break-inside: avoid;
+}
+.of-motto p { margin: 0; text-align: center; }
+
+.doc-fields { display: grid; gap: 5mm; margin: 5mm 0 2mm; break-inside: avoid; }
+.doc-field { display: flex; align-items: flex-end; gap: 3mm; }
+.doc-field span { white-space: nowrap; font-weight: 600; }
+.doc-field i { flex: 1; border-bottom: 1px dotted #6b7280; height: 1em; }
+
+.poster .doc-note { font-style: normal; font-weight: 600; background: #fff; }
+.poster .doc-fields { background: #fff; padding: 4mm 5mm; border-radius: 3mm; border: 1px dashed #c7cedb; }
+.po-intro .doc-note {
+    text-align: center; font-size: 1.05em; color: var(--navy);
+    border-left: 0; border-radius: 3mm; border: 1px solid rgba(184,137,43,.45);
+    background: linear-gradient(120deg, rgba(15,42,90,.05), rgba(184,137,43,.12));
+}

@@ -1,0 +1,52 @@
+@model Dictionary<string, string>
+@using SchoolNetworkManager.Models
+
+@*
+    Χαρακτηριστικά ανά τύπο συσκευής.
+    Όλες οι ομάδες υπάρχουν στη σελίδα· το specs.js δείχνει μόνο όσες ταιριάζουν στον επιλεγμένο τύπο.
+*@
+
+<div class="spec-editor mt-4">
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <h2 class="h5 mb-0">Χαρακτηριστικά</h2>
+        <span class="text-muted small" id="specTypeHint"></span>
+    </div>
+
+    @foreach (var group in DeviceSpecs.TypeGroups.Concat(new[] { DeviceSpecs.Common }))
+    {
+        var isCommon = group.Id == DeviceSpecs.Common.Id;
+
+        <fieldset class="spec-group" data-spec-types="@(isCommon ? "*" : string.Join("|", group.Types))">
+            <legend class="spec-legend">@group.Icon @group.Title</legend>
+
+            <div class="row g-3">
+                @foreach (var field in group.Fields)
+                {
+                    var key = DeviceSpecs.FormKey(group, field);
+                    var inputId = "spec_" + key;
+                    Model.TryGetValue(key, out var value);
+
+                    <div class="@(field.Wide ? "col-md-6" : "col-md-3")">
+                        <label class="form-label" for="@inputId">@field.Label</label>
+
+                        @if (field.Options != null)
+                        {
+                            <select class="form-select" id="@inputId" name="SpecInput[@key]">
+                                <option value="">—</option>
+                                @foreach (var option in field.Options)
+                                {
+                                    <option value="@option" selected="@(option == value)">@option</option>
+                                }
+                            </select>
+                        }
+                        else
+                        {
+                            <input class="form-control" id="@inputId" name="SpecInput[@key]" value="@value"
+                                   placeholder="@field.Placeholder" maxlength="500" />
+                        }
+                    </div>
+                }
+            </div>
+        </fieldset>
+    }
+</div>

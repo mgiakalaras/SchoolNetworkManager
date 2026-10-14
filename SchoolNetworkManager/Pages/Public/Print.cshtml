@@ -1,0 +1,251 @@
+@page
+@model SchoolNetworkManager.Pages.Public.PrintModel
+@using SchoolNetworkManager.Services
+
+@{
+    Layout = null;
+    var doc = Model.Current;
+    var school = Model.Settings.SchoolTitle;
+    var logo = Model.Settings.LogoPath;
+    var publicUrl = $"{Request.Scheme}://{Request.Host}/Public";
+    var titled = Model.Sections.Where(s => s.Title != null).ToList();
+    var intro = Model.Sections.FirstOrDefault(s => s.Title == null);
+    // Το τελικό μήνυμα (πλαίσιο ή παράγραφος στο τέλος της τελευταίας ενότητας) μπαίνει ολόπλατο στο κάτω μέρος.
+    var motto = DocText.Closing(titled.LastOrDefault());
+    string Mark(string item) => item.StartsWith("Δεν ") || item.StartsWith("Μην ") || item.StartsWith("Απαγορεύεται") ? "no" : "yes";
+}
+
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@doc.Title - @school</title>
+    <link rel="stylesheet" href="~/css/doc-print.css" asp-append-version="true" />
+</head>
+<body class="@(Model.IsPoster ? "is-poster" : "is-official")">
+    <div class="dp-toolbar">
+        <div class="dp-toolbar-inner">
+            <strong>@doc.Icon @doc.Title</strong>
+            <div class="dp-switch">
+                <a class="@(Model.IsPoster ? "" : "active")" href="?Doc=@doc.Key&Style=official">📄 Επίσημο έγγραφο</a>
+                <a class="@(Model.IsPoster ? "active" : "")" href="?Doc=@doc.Key&Style=poster">🖼️ Αφίσα για τον τοίχο</a>
+            </div>
+            @if (Model.IsPoster)
+            {
+                <label class="dp-size">Μέγεθος <input type="range" id="dpScale" min="80" max="125" value="100" /></label>
+            }
+            <button type="button" class="dp-print" onclick="window.print()">🖨 Εκτύπωση / PDF</button>
+            <span class="dp-hint">Τα γράμματα με διακεκομμένο πλαίσιο αλλάζουν με κλικ πριν την εκτύπωση.</span>
+        </div>
+    </div>
+
+    @if (!Model.IsPoster)
+    {
+        <!-- ======================= ΕΠΙΣΗΜΟ ΕΓΓΡΑΦΟ ======================= -->
+        <main class="sheet official">
+            @if (!string.IsNullOrWhiteSpace(logo))
+            {
+                <img src="@logo" alt="" class="watermark" />
+            }
+
+            <header class="of-head">
+                <div class="of-authority editable" contenteditable="true" data-store="authority" spellcheck="false">ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ<br />ΥΠΟΥΡΓΕΙΟ ΠΑΙΔΕΙΑΣ, ΘΡΗΣΚΕΥΜΑΤΩΝ ΚΑΙ ΑΘΛΗΤΙΣΜΟΥ<br /><b>@school</b></div>
+                <div class="of-right">
+                    @if (!string.IsNullOrWhiteSpace(logo))
+                    {
+                        <img src="@logo" alt="" class="of-logo" />
+                    }
+                    <div class="of-meta editable" contenteditable="true" data-store="meta">Ημερομηνία: @DateTime.Now.ToString("dd/MM/yyyy")</div>
+                </div>
+            </header>
+
+            <div class="of-title">
+                <span class="of-rule"></span>
+                <h1>@doc.Title</h1>
+                <div class="of-ornament">◆ ◆ ◆</div>
+            </div>
+
+            @if (intro != null)
+            {
+                <section class="of-intro">
+                    @foreach (var b in intro.Blocks)
+                    {
+                        <partial name="_DocBlock" model="b" />
+                    }
+                </section>
+            }
+
+            @for (var i = 0; i < titled.Count; i++)
+            {
+                var sec = titled[i];
+                var isLastOf = i == titled.Count - 1;
+                var (label, number, headText) = DocText.SplitHeading(sec.Title);
+                <section class="of-section">
+                    <h2>
+                        @if (label != null)
+                        {
+                            <span class="of-art">@label @number</span>
+                        }
+                        else
+                        {
+                            <span class="of-num">@(number ?? (i + 1).ToString())</span>
+                        }
+                        <span>@Html.Raw(headText)</span>
+                    </h2>
+                    @foreach (var b in sec.Blocks.Where(blk => !(isLastOf && motto.Contains(blk))))
+                    {
+                        <partial name="_DocBlock" model="b" />
+                    }
+                    @foreach (var sub in sec.Subsections)
+                    {
+                        <h3>@Html.Raw(sub.Title)</h3>
+                        @foreach (var b in sub.Blocks)
+                        {
+                            <partial name="_DocBlock" model="b" />
+                        }
+                    }
+                </section>
+            }
+
+            @if (motto.Any())
+            {
+                <div class="of-motto">
+                    @foreach (var m in motto)
+                    {
+                        <p>@Html.Raw(m.Html)</p>
+                    }
+                </div>
+            }
+
+            <footer class="of-sign">
+                <div>
+                    <div class="of-sign-role editable" contenteditable="true" data-store="sign1">Ο/Η Υπεύθυνος/η Εργαστηρίου</div>
+                    <div class="of-sign-line"></div>
+                    <div class="of-sign-name editable" contenteditable="true" data-store="sign1name">(ονοματεπώνυμο)</div>
+                </div>
+                <div>
+                    <div class="of-sign-role editable" contenteditable="true" data-store="sign2">Ο/Η Διευθυντής/ντρια</div>
+                    <div class="of-sign-line"></div>
+                    <div class="of-sign-name editable" contenteditable="true" data-store="sign2name">(ονοματεπώνυμο)</div>
+                </div>
+                <div class="of-foot-note">@school · @doc.Title · τελευταία ενημέρωση @doc.UpdatedAt.ToString("dd/MM/yyyy")</div>
+            </footer>
+        </main>
+    }
+    else
+    {
+        <!-- ======================= ΑΦΙΣΑ ======================= -->
+        <main class="sheet poster" id="poster">
+            <header class="po-head">
+                <div class="po-head-icon">@doc.Icon</div>
+                <div class="po-head-text">
+                    <div class="po-school">@school</div>
+                    <h1>@doc.Title</h1>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(logo))
+                {
+                    <img src="@logo" alt="" class="po-logo" />
+                }
+            </header>
+
+            @if (intro != null)
+            {
+                <div class="po-intro">
+                    @foreach (var b in intro.Blocks)
+                    {
+                        <partial name="_DocBlock" model="b" />
+                    }
+                </div>
+            }
+
+            <div class="po-grid">
+                @for (var i = 0; i < titled.Count; i++)
+                {
+                    var sec = titled[i];
+                    var isLast = i == titled.Count - 1;
+                    var tone = i % 4;
+                    var (_, _, cardTitle) = DocText.SplitHeading(sec.Title);
+                    var plain = System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Replace(cardTitle, "<.*?>", ""));
+                    <section class="po-card tone-@tone">
+                        <div class="po-card-head">
+                            <span class="po-card-icon">@DocText.SectionIcon(plain, i)</span>
+                            <h2>@Html.Raw(cardTitle)</h2>
+                        </div>
+                        @foreach (var b in sec.Blocks.Where(blk => !(isLast && motto.Contains(blk))))
+                        {
+                            if (b.Type == "p")
+                            {
+                                <p class="po-text">@Html.Raw(b.Html)</p>
+                            }
+                            else if (b.Type == "note")
+                            {
+                                <p class="po-banner">@Html.Raw(b.Html)</p>
+                            }
+                            else if (b.Type == "fields")
+                            {
+                                <partial name="_DocBlock" model="b" />
+                            }
+                            else
+                            {
+                                <ul class="po-list">
+                                    @foreach (var item in b.Items)
+                                    {
+                                        <li class="mark-@Mark(System.Net.WebUtility.HtmlDecode(item))">@Html.Raw(item)</li>
+                                    }
+                                </ul>
+                            }
+                        }
+                        @foreach (var sub in sec.Subsections)
+                        {
+                            <h3>@Html.Raw(sub.Title)</h3>
+                            @foreach (var b in sub.Blocks)
+                            {
+                                <partial name="_DocBlock" model="b" />
+                            }
+                        }
+                    </section>
+                }
+            </div>
+
+            @if (motto.Any())
+            {
+                <div class="po-motto">
+                    @foreach (var m in motto)
+                    {
+                        <p>@Html.Raw(m.Html)</p>
+                    }
+                </div>
+            }
+
+            <footer class="po-foot">
+                <span>🛠️ Είδες βλάβη; Πες το στον καθηγητή ή δήλωσέ τη στο <b>@publicUrl</b></span>
+                <span>@school · Ομάδα πληροφορικής</span>
+            </footer>
+        </main>
+    }
+
+    <script>
+        (function () {
+            // Οι αλλαγές στα επεξεργάσιμα πεδία μένουν σε αυτόν τον browser για την επόμενη εκτύπωση.
+            document.querySelectorAll("[data-store]").forEach(function (el) {
+                const key = "snm-print-" + el.dataset.store;
+                try { const v = localStorage.getItem(key); if (v) el.innerHTML = v; } catch (e) { }
+                el.addEventListener("input", function () { try { localStorage.setItem(key, el.innerHTML); } catch (e) { } });
+            });
+
+            const scale = document.getElementById("dpScale");
+            const poster = document.getElementById("poster");
+            if (scale && poster) {
+                try { const v = localStorage.getItem("snm-poster-scale"); if (v) scale.value = v; } catch (e) { }
+                const apply = function () {
+                    poster.style.setProperty("--po-scale", scale.value / 100);
+                    try { localStorage.setItem("snm-poster-scale", scale.value); } catch (e) { }
+                };
+                scale.addEventListener("input", apply);
+                apply();
+            }
+        })();
+    </script>
+</body>
+</html>

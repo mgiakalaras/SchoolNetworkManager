@@ -1,0 +1,13 @@
+@model SchoolNetworkManager.Models.Computer
+@inject SchoolNetworkManager.Services.SettingsService SettingsSvc
+@{
+    var kind = SchoolNetworkManager.Services.ChangeBadge.For(Model, SettingsSvc.Current);
+}
+@if (kind == SchoolNetworkManager.Services.ChangeKind.New)
+{
+    <span class="change-badge is-new" title="Καταχωρήθηκε @Model.CreatedAt.ToString("dd/MM HH:mm")">ΝΕΟ</span>
+}
+else if (kind == SchoolNetworkManager.Services.ChangeKind.Updated)
+{
+    <span class="change-badge is-updated" title="Ενημερώθηκε @(Model.UpdatedAt?.ToString("dd/MM HH:mm"))">ΕΝΗΜ.</span>
+}

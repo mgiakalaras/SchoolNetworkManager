@@ -1,0 +1,60 @@
+/* Ετήσια αναφορά — Α4 όρθιο */
+body { background: #e9ecef; color: #212529; font-size: 13px; }
+.rp-toolbar { position: sticky; top: 0; z-index: 5; background: #fff; border-bottom: 1px solid #dee2e6; padding: .6rem 1rem; }
+.rp-page { background: #fff; max-width: 210mm; margin: 1rem auto; padding: 14mm 14mm 18mm; box-shadow: 0 2px 12px rgba(0,0,0,.12); }
+.rp-header { display: flex; gap: 14px; align-items: center; border-bottom: 3px solid #0d6efd; padding-bottom: 10px; margin-bottom: 14px; }
+.rp-logo { height: 58px; width: auto; }
+.rp-school { font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; color: #6c757d; font-weight: 600; }
+.rp-header h1 { font-size: 1.45rem; margin: 2px 0; font-weight: 700; }
+.rp-sub { color: #6c757d; font-size: .8rem; }
+.rp-page h2 { font-size: 1.02rem; font-weight: 700; margin: 18px 0 8px; padding-bottom: 3px; border-bottom: 1px solid #dee2e6; color: #0d3b7a; break-after: avoid; }
+.rp-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.rp-kpi { border: 1px solid #dee2e6; border-radius: 8px; padding: 6px 4px; text-align: center; }
+.rp-kpi b { display: block; font-size: 1.35rem; line-height: 1.1; }
+.rp-kpi span { font-size: .7rem; color: #6c757d; }
+.rp-kpi.warn b { color: #dc3545; }
+.rp-table { font-size: .8rem; margin-bottom: 6px; }
+.rp-table th { background: #f1f4f8 !important; font-weight: 600; vertical-align: bottom; }
+.rp-table td:first-child { white-space: nowrap; }
+.rp-table td, .rp-table th { padding: 3px 6px; }
+.rp-table tr { break-inside: avoid; }
+.rp-faults tr.open td { background: #fff4f4 !important; }
+.rp-bars { margin: 4px 0 10px; }
+.rp-bar-row { display: grid; grid-template-columns: 150px 1fr 30px; gap: 8px; align-items: center; font-size: .78rem; margin-bottom: 3px; }
+.rp-bar { height: 10px; background: #eef1f5; border-radius: 5px; overflow: hidden; }
+.rp-bar i { display: block; height: 100%; background: #0d6efd; border-radius: 5px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.rp-bar-num { text-align: right; font-weight: 600; }
+.rp-list { margin: 0; padding-left: 1.1rem; }
+.rp-list li { margin-bottom: 2px; }
+.rp-mini-title { font-weight: 600; font-size: .8rem; color: #495057; margin-bottom: 3px; }
+.rp-notes { min-height: 110px; border: 1px dashed #adb5bd; border-radius: 6px; padding: 8px 10px; white-space: pre-wrap; outline: none; }
+.rp-notes:empty::before { content: attr(data-placeholder); color: #adb5bd; }
+.rp-notes:focus { border-color: #0d6efd; }
+.rp-sign { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 34px; text-align: center; break-inside: avoid; }
+.rp-sign-title { font-weight: 600; margin-bottom: 46px; }
+.rp-sign-line { border-top: 1px solid #212529; padding-top: 4px; min-height: 22px; outline: none; }
+
+@page { size: A4 portrait; margin: 12mm; }
+@media print {
+    body { background: #fff; }
+    .rp-page { box-shadow: none; margin: 0; padding: 0; max-width: none; }
+    .rp-notes { border-color: #ced4da; border-style: solid; }
+    .rp-notes:empty::before { content: ""; }
+    .rp-kpi, .rp-table th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* Ενότητες: αρίθμηση που προσαρμόζεται όταν κρύβεται κάποια */
+.rp-page { counter-reset: rpsec; }
+.rp-sec { counter-increment: rpsec; }
+.rp-sec > h2::before { content: counter(rpsec) ". "; }
+.rp-hidden { display: none !important; }
+.rp-sections { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.9rem; font-size: .82rem; }
+.rp-sections label { display: inline-flex; align-items: center; gap: .3rem; cursor: pointer; }
+.rp-type-chips { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .82rem; margin-bottom: 6px; }
+.rp-type-chips span { border: 1px solid #dee2e6; border-radius: 999px; padding: 1px 10px; }
+.rp-hours { display: flex; align-items: flex-end; gap: 6px; height: 92px; margin-top: 4px; }
+.rp-hour { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; font-size: .68rem; }
+.rp-hour-bar { flex: 1; width: 100%; max-width: 26px; display: flex; align-items: flex-end; background: #f1f4f8; border-radius: 4px; overflow: hidden; }
+.rp-hour-bar i { display: block; width: 100%; background: #0d6efd; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.rp-hour small { color: #6c757d; }
+.rp-sign-title[contenteditable]:focus { outline: 1px dashed #0d6efd; }

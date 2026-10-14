@@ -1,0 +1,44 @@
+/* Δημόσια σελίδα: απλή, φιλική σε κινητό */
+:root { --pub-accent: #0d6efd; }
+body { background: #eef2f7; color: #1f2937; min-height: 100vh; }
+.pub-wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+.pub-header { background: linear-gradient(120deg, #0d3b7a, #0d6efd); color: #fff; padding: 18px 0; margin-bottom: 22px; }
+.pub-logo { height: 46px; width: auto; background: #fff; border-radius: 10px; padding: 3px; }
+.pub-school { font-weight: 700; font-size: 1.15rem; line-height: 1.2; }
+.pub-sub { opacity: .85; font-size: .9rem; }
+.pub-card { background: #fff; border-radius: 18px; padding: 24px; box-shadow: 0 6px 24px rgba(15, 23, 42, .08); margin-bottom: 18px; }
+.pub-title { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; }
+.pub-label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 1.02rem; }
+.pub-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.pub-choice { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 12px; border: 2px solid #dbe2ea; background: #fff; cursor: pointer; user-select: none; margin: 0; }
+.pub-choice span { font-size: 1.2rem; }
+.pub-choice.small { padding: 6px 14px; }
+.btn-check:checked + .pub-choice { border-color: var(--pub-accent); background: rgba(13, 110, 253, .08); }
+.btn-check:checked + .pub-choice.is-down { border-color: #dc3545; background: rgba(220, 53, 69, .08); }
+.btn-check:focus-visible + .pub-choice { outline: 3px solid rgba(13, 110, 253, .35); }
+.pub-success { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 18px; padding: 22px; text-align: center; margin-bottom: 18px; }
+.pub-docs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.pub-doc { display: flex; align-items: center; gap: 14px; background: #fff; border-radius: 16px; padding: 16px 18px; text-decoration: none; color: inherit; box-shadow: 0 4px 16px rgba(15, 23, 42, .06); border: 1px solid transparent; }
+.pub-doc:hover { border-color: var(--pub-accent); color: inherit; }
+.pub-doc-icon { font-size: 2rem; }
+.pub-footer { text-align: center; color: #94a3b8; font-size: .8rem; padding-top: 6px; padding-bottom: 28px; }
+.pub-hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.pub-back { display: inline-block; margin-bottom: 12px; text-decoration: none; }
+
+/* Κείμενο κανονισμών */
+.doc-title { font-size: 1.55rem; font-weight: 700; margin-bottom: 1rem; }
+.doc-body h2 { font-size: 1.15rem; font-weight: 700; margin: 1.4rem 0 .6rem; color: #0d3b7a; }
+.doc-body h3 { font-size: 1rem; font-weight: 700; margin: 1rem 0 .4rem; }
+.doc-body li { margin-bottom: .3rem; }
+.doc-meta { margin-top: 1.5rem; font-size: .8rem; color: #94a3b8; }
+
+@media print {
+    body { background: #fff; }
+    .pub-header, .pub-footer, .d-print-none, .pub-back { display: none !important; }
+    .pub-card { box-shadow: none; padding: 0; }
+}
+.doc-school { font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; color: #6c757d; }
+.doc-note { margin: .5rem 0 1rem; padding: .75rem 1rem; border-left: 4px solid #b8892b; background: rgba(184, 137, 43, .1); border-radius: 0 10px 10px 0; font-style: italic; }
+.doc-field { display: flex; gap: .6rem; align-items: flex-end; margin: .7rem 0; }
+.doc-field span { font-weight: 600; white-space: nowrap; }
+.doc-field i { flex: 1; border-bottom: 1px dotted #94a3b8; height: 1em; }

@@ -5,16 +5,15 @@
     ViewData["Title"] = "Υπολογιστές";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
     <div>
         <h1 class="mb-1">Υπολογιστές</h1>
-        <p class="text-muted mb-0">
-            Καταγραφή υπολογιστών σχολικού δικτύου — Σύνολο: @Model.TotalCount
-        </p>
+        <p class="text-muted mb-0">Καταγραφή σχολικού δικτύου · Σύνολο: @Model.TotalCount</p>
     </div>
 
-    <div class="d-flex gap-2 flex-wrap justify-content-end">
+    <div class="page-actions">
         <form method="post"
+              class="busy-form"
               asp-page="./Index"
               asp-page-handler="CheckOnline"
               asp-route-SearchTerm="@Model.SearchTerm"
@@ -22,50 +21,165 @@
               asp-route-VeyonFilter="@Model.VeyonFilter"
               asp-route-LanFilter="@Model.LanFilter"
               asp-route-StatusFilter="@Model.StatusFilter"
-              asp-route-SortBy="@Model.SortBy">
-            <button type="submit" class="btn btn-outline-warning">
-                Έλεγχος Online/Offline
-            </button>
+              asp-route-SortBy="@Model.SortBy"
+              asp-route-LocationFilter="@Model.LocationFilter"
+              asp-route-TypeFilter="@Model.TypeFilter"
+              asp-route-ChangeFilter="@Model.ChangeFilter"
+              asp-route-AddressFilter="@Model.AddressFilter">
+            <button type="submit" class="icon-action is-warning" data-busy-text="⏳"
+                    data-hint="Έλεγχος Online/Offline τώρα" aria-label="Έλεγχος Online/Offline">📶</button>
         </form>
 
-        <a class="btn btn-outline-success"
+        <form method="post"
+              class="busy-form"
+              asp-page="./Index"
+              asp-page-handler="Detect"
+              asp-route-SearchTerm="@Model.SearchTerm"
+              asp-route-PageNumber="@Model.PageNumber"
+              asp-route-VeyonFilter="@Model.VeyonFilter"
+              asp-route-LanFilter="@Model.LanFilter"
+              asp-route-StatusFilter="@Model.StatusFilter"
+              asp-route-SortBy="@Model.SortBy"
+              asp-route-LocationFilter="@Model.LocationFilter"
+              asp-route-TypeFilter="@Model.TypeFilter"
+              asp-route-ChangeFilter="@Model.ChangeFilter"
+              asp-route-AddressFilter="@Model.AddressFilter">
+            <button type="submit" class="icon-action is-info" data-busy-text="⏳"
+                    data-hint="Αυτόματη συμπλήρωση: MAC, όνομα, κατασκευαστής, ports (για όσες είναι ανοιχτές)"
+                    aria-label="Αυτόματη συμπλήρωση">🔍</button>
+        </form>
+
+        <form method="post"
+              asp-page="./Index"
+              asp-page-handler="Wake"
+              asp-route-SearchTerm="@Model.SearchTerm"
+              asp-route-PageNumber="@Model.PageNumber"
+              asp-route-VeyonFilter="@Model.VeyonFilter"
+              asp-route-LanFilter="@Model.LanFilter"
+              asp-route-StatusFilter="@Model.StatusFilter"
+              asp-route-SortBy="@Model.SortBy"
+              asp-route-LocationFilter="@Model.LocationFilter"
+              asp-route-TypeFilter="@Model.TypeFilter"
+              asp-route-ChangeFilter="@Model.ChangeFilter"
+              asp-route-AddressFilter="@Model.AddressFilter"
+              onsubmit="return confirm('Να ανάψουν όλες οι συσκευές της λίστας (με τα τρέχοντα φίλτρα);');">
+            <button type="submit" class="icon-action is-warning"
+                    data-hint="Άναμμα όλων της λίστας (Wake-on-LAN)" aria-label="Άναμμα όλων">⚡</button>
+        </form>
+
+        <span class="icon-action-sep"></span>
+
+        <a class="icon-action"
                asp-page="./Index"
                asp-page-handler="Export"
                asp-route-SearchTerm="@Model.SearchTerm"
                asp-route-VeyonFilter="@Model.VeyonFilter"
                asp-route-LanFilter="@Model.LanFilter"
                asp-route-StatusFilter="@Model.StatusFilter"
-               asp-route-SortBy="@Model.SortBy">
-            Export Excel
-        </a>
+               asp-route-SortBy="@Model.SortBy"
+               asp-route-LocationFilter="@Model.LocationFilter"
+               asp-route-TypeFilter="@Model.TypeFilter"
+               asp-route-ChangeFilter="@Model.ChangeFilter"
+               asp-route-AddressFilter="@Model.AddressFilter" data-hint="Εξαγωγή σε Excel (με τα τρέχοντα φίλτρα)" aria-label="Export Excel">📤</a>
 
-        <a class="btn btn-outline-primary" asp-page="./Import">
-            Import Excel
-        </a>
+        <a class="icon-action" asp-page="./Import" data-hint="Εισαγωγή από Excel" aria-label="Import Excel">📥</a>
 
-        <a class="btn btn-primary" asp-page="./Create">
-            + Νέα Καταχώρηση
-        </a>
+        <span class="icon-action-sep"></span>
+
+        <a class="icon-action is-primary" asp-page="./Create" data-hint="Νέα καταχώρηση" aria-label="Νέα καταχώρηση">➕</a>
     </div>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
 {
-    <div class="alert alert-success shadow-sm">
+    <div class="alert alert-@(Model.StatusKind ?? "success") shadow-sm">
         @Model.StatusMessage
     </div>
 }
 
+@if (Model.ChangedCount > 0)
+{
+    <div class="changes-banner mb-3">
+        <span>
+            <span class="change-badge is-new">ΝΕΟ</span> / <span class="change-badge is-updated">ΕΝΗΜ.</span>
+            <strong>@Model.ChangedCount</strong> συσκευές προστέθηκαν ή συμπληρώθηκαν πρόσφατα.
+        </span>
+        <span class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-sm btn-outline-primary" asp-page="./Index" asp-route-ChangeFilter="changed" asp-route-SortBy="recent">Δείξε μόνο αυτές</a>
+            <form method="post" asp-page-handler="ClearBadges">
+                <button type="submit" class="btn btn-sm btn-outline-secondary" title="Σβήνει τις ενδείξεις για όλους">✓ Όλα ειδωμένα</button>
+            </form>
+        </span>
+    </div>
+}
+
+<div class="address-summary mb-3">
+    <div class="address-chips">
+        <a class="address-chip @(string.IsNullOrEmpty(Model.AddressFilter) ? "active" : "")"
+           asp-page="./Index" asp-route-SearchTerm="@Model.SearchTerm" asp-route-LocationFilter="@Model.LocationFilter" asp-route-TypeFilter="@Model.TypeFilter" asp-route-SortBy="@Model.SortBy"
+           data-hint="Όλες οι καταχωρημένες διευθύνσεις">
+            <b>@Model.AddressTotal</b> διευθύνσεις
+        </a>
+        <a class="address-chip is-static @(Model.AddressFilter == "static" ? "active" : "")"
+           asp-page="./Index" asp-route-AddressFilter="static" asp-route-SearchTerm="@Model.SearchTerm" asp-route-LocationFilter="@Model.LocationFilter" asp-route-TypeFilter="@Model.TypeFilter" asp-route-SortBy="@Model.SortBy"
+           data-hint="Σταθερές συσκευές (υπολογιστές, εκτυπωτές, router…)">
+            📌 <b>@Model.StaticCount</b> συσκευές
+        </a>
+        <a class="address-chip is-dynamic @(Model.AddressFilter == "dynamic" ? "active" : "")"
+           asp-page="./Index" asp-route-AddressFilter="dynamic" asp-route-SearchTerm="@Model.SearchTerm" asp-route-SortBy="@Model.SortBy"
+           data-hint="Διευθύνσεις DHCP χωρίς σταθερή συσκευή">
+            🔄 <b>@Model.DynamicCount</b> dynamic
+        </a>
+    </div>
+    <a class="btn btn-sm @(Model.CleanupCandidates > 0 ? "btn-warning" : "btn-outline-secondary")" asp-page="./Cleanup"
+       data-hint="Βρες ποιες καταχωρήσεις είναι άδειες διευθύνσεις και κάν' τες Dynamic">
+        🧹 Ξεσκαρτάρισμα@(Model.CleanupCandidates > 0 ? $" ({Model.CleanupCandidates})" : "")
+    </a>
+</div>
+
 <div class="card shadow-sm mb-3">
     <div class="card-body">
-        <form method="get" class="row g-2 align-items-end">
+        <form method="get" class="row g-2 align-items-end" id="filtersForm">
             <input type="hidden" name="PageNumber" value="1" />
+            <input type="hidden" name="AddressFilter" value="@Model.AddressFilter" />
 
             <div class="col-md-4">
                 <label class="form-label">Αναζήτηση</label>
                 <input asp-for="SearchTerm"
                        class="form-control"
                        placeholder="IP, όνομα, MAC, χώρος, τύπος, σημειώσεις..." />
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="LocationFilter" class="form-label">Χώρος</label>
+                <select asp-for="LocationFilter" class="form-select">
+                    <option value="">Όλοι οι χώροι</option>
+                    @foreach (var location in Model.AllLocations)
+                    {
+                        <option value="@location">@location</option>
+                    }
+                    <option value="__none__">— Χωρίς χώρο —</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="TypeFilter" class="form-label">Τύπος</label>
+                <select asp-for="TypeFilter" class="form-select">
+                    <option value="">Όλοι οι τύποι</option>
+                    @foreach (var type in Model.AllTypes)
+                    {
+                        <option value="@type">@type</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="ChangeFilter" class="form-label">Αλλαγές</label>
+                <select asp-for="ChangeFilter" class="form-select">
+                    <option value="">Όλες οι συσκευές</option>
+                    <option value="changed">Νέες ή ενημερωμένες</option>
+                    <option value="new">Μόνο νέες</option>
+                </select>
             </div>
 
             <div class="col-md-2">
@@ -100,6 +214,7 @@
                 <label asp-for="SortBy" class="form-label">Ταξινόμηση</label>
                 <select asp-for="SortBy" class="form-select">
                     <option value="ip">IP Address</option>
+                    <option value="recent">Πιο πρόσφατα</option>
                     <option value="type">Τύπος</option>
                     <option value="name">Name</option>
                     <option value="location">Location</option>
@@ -144,18 +259,25 @@
                             <th>LAN</th>
                             <th>Veyon</th>
                             <th>Status</th>
-                            <th class="text-end">Actions</th>
+                            <th class="text-end"></th>
                         </tr>
                     </thead>
 
                     <tbody>
                         @foreach (var computer in Model.Computers)
                         {
-                            <tr class="location-row" style="@Model.GetLocationStyle(computer)">
-                                <td><strong>@computer.IpAddress</strong></td>
+                            <tr class="location-row @(computer.IsDynamic ? "is-dynamic-row" : "")" style="@Model.GetLocationStyle(computer)">
+                                <td>
+                                    <strong>@computer.IpAddress</strong>
+                                    <div class="addr-mode-tag @(computer.IsDynamic ? "is-dynamic" : "is-static")">@(computer.IsDynamic ? "🔄 dynamic" : "📌 static")</div>
+                                </td>
 
                                 <td>
-                                    @if (computer.IsEmptySlot)
+                                    @if (computer.IsDynamic)
+                                    {
+                                        <span class="badge dynamic-badge">Dynamic</span>
+                                    }
+                                    else if (computer.IsEmptySlot)
                                     {
                                         <span class="text-muted">-</span>
                                     }
@@ -167,12 +289,34 @@
                                     }
                                 </td>
 
-                                <td>@computer.Name</td>
-                                <td>@computer.MacAddress</td>
+                                <td>
+                                    @computer.Name
+                                    @if (Model.OpenFaults.TryGetValue(computer.Id, out var isOut))
+                                    {
+                                        <a class="fault-mark text-decoration-none" asp-page="./Details" asp-route-id="@computer.Id" asp-fragment="faults"
+                                           title="@(isOut ? "Εκτός λειτουργίας" : "Ανοιχτή βλάβη")">@(isOut ? "⛔" : "🔧")</a>
+                                    }
+                                    <partial name="_ChangeBadge" model="computer" />
+                                </td>
+                                <td>
+                                    @computer.MacAddress
+                                    @if (computer.HasMacMismatch)
+                                    {
+                                        <span class="ms-1" title="Στο δίκτυο βρέθηκε άλλη MAC: @computer.DetectedMac">⚠️</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(computer.Vendor))
+                                    {
+                                        <div class="text-muted small text-truncate" style="max-width: 190px;" title="@computer.Vendor">@computer.Vendor</div>
+                                    }
+                                </td>
                                 <td>@computer.Location</td>
 
                                 <td>
-                                    @if (computer.HasLanMessenger)
+                                    @if (computer.IsDynamic)
+                                    {
+                                        <span class="text-muted">·</span>
+                                    }
+                                    else if (computer.HasLanMessenger)
                                     {
                                         <span class="badge bg-success">Ναι</span>
                                     }
@@ -183,7 +327,15 @@
                                 </td>
 
                                 <td>
-                                    @if (computer.HasVeyon)
+                                    @if (computer.IsDynamic)
+                                    {
+                                        <span class="text-muted">·</span>
+                                    }
+                                    else if (computer.VeyonDown)
+                                    {
+                                        <span class="badge veyon-down-badge" title="Ο υπολογιστής είναι ανοιχτός αλλά το Veyon δεν απαντά από @(computer.VeyonDownSince?.ToString("dd/MM HH:mm"))">🛑 Σταμάτησε</span>
+                                    }
+                                    else if (computer.HasVeyon)
                                     {
                                         <span class="badge bg-success">Ναι</span>
                                     }
@@ -194,13 +346,19 @@
                                 </td>
 
                                 <td>
-                                    @if (computer.IsOnline == true)
+                                    @if (computer.IsDynamic)
+                                    {
+                                        <span class="dyn-state @(computer.IsOnline == true ? "in-use" : "")"
+                                              data-hint="@(computer.IsOnline == true ? "Κάποια συσκευή έχει πάρει αυτή τη διεύθυνση τώρα" : "Καμία συσκευή αυτή τη στιγμή")">@(computer.IsOnline == true ? "● σε χρήση" : "ελεύθερη")</span>
+                                    }
+                                    else if (computer.IsOnline == true)
                                     {
                                         <span class="badge bg-success">Online</span>
                                     }
                                     else if (computer.IsOnline == false)
                                     {
-                                        <span class="badge bg-danger">Offline</span>
+                                        <span class="badge bg-danger"
+                                              title="Τελευταία φορά online: @(computer.LastSeenOnline?.ToString("dd/MM/yyyy HH:mm") ?? "ποτέ")">Offline</span>
                                     }
                                     else
                                     {
@@ -208,25 +366,31 @@
                                     }
                                 </td>
 
-                                <td class="text-end">
-                                    <a class="btn btn-sm btn-outline-primary"
-                                           asp-page="./Edit"
-                                           asp-route-id="@computer.Id"
-                                           asp-route-returnUrl="@Url.Page("./Index", new { SearchTerm = Model.SearchTerm, PageNumber = Model.PageNumber, VeyonFilter = Model.VeyonFilter, LanFilter = Model.LanFilter, StatusFilter = Model.StatusFilter, SortBy = Model.SortBy })">
-                                        Edit
-                                    </a>
+                                <td class="text-end text-nowrap row-actions">
+                                    @if (!string.IsNullOrWhiteSpace(computer.MacAddress) && computer.IsOnline != true)
+                                    {
+                                        <form method="post" class="d-inline"
+                                              asp-page="./Index"
+                                              asp-page-handler="Wake"
+                                              asp-route-id="@computer.Id"
+                                              asp-route-SearchTerm="@Model.SearchTerm"
+                                              asp-route-PageNumber="@Model.PageNumber"
+                                              asp-route-VeyonFilter="@Model.VeyonFilter"
+                                              asp-route-LanFilter="@Model.LanFilter"
+                                              asp-route-StatusFilter="@Model.StatusFilter"
+                                              asp-route-SortBy="@Model.SortBy"
+                                              asp-route-LocationFilter="@Model.LocationFilter"
+                                              asp-route-TypeFilter="@Model.TypeFilter"
+                                              asp-route-ChangeFilter="@Model.ChangeFilter"
+                                              asp-route-AddressFilter="@Model.AddressFilter">
+                                            <button type="submit" class="row-action is-warning" data-hint="Άναμμα (Wake-on-LAN)" aria-label="Άναμμα">⚡</button>
+                                        </form>
+                                    }
 
-                                    <a class="btn btn-sm btn-outline-secondary"
-                                           asp-page="./Details"
-                                           asp-route-id="@computer.Id">
-                                        Details
-                                    </a>
-
-                                    <a class="btn btn-sm btn-outline-danger"
-                                           asp-page="./Delete"
-                                           asp-route-id="@computer.Id">
-                                        Delete
-                                    </a>
+                                    <a class="row-action is-primary" asp-page="./Details" asp-route-id="@computer.Id" data-hint="Λεπτομέρειες" aria-label="Λεπτομέρειες">📄</a>
+                                    <a class="row-action" asp-page="./Edit" asp-route-id="@computer.Id"
+                                       asp-route-returnUrl="@Url.Page("./Index", new { SearchTerm = Model.SearchTerm, PageNumber = Model.PageNumber, VeyonFilter = Model.VeyonFilter, LanFilter = Model.LanFilter, StatusFilter = Model.StatusFilter, SortBy = Model.SortBy, LocationFilter = Model.LocationFilter, TypeFilter = Model.TypeFilter, ChangeFilter = Model.ChangeFilter, AddressFilter = Model.AddressFilter })" data-hint="Επεξεργασία" aria-label="Επεξεργασία">✏️</a>
+                                    <a class="row-action is-danger" asp-page="./Delete" asp-route-id="@computer.Id" data-hint="Διαγραφή" aria-label="Διαγραφή">🗑️</a>
                                 </td>
                             </tr>
                         }
@@ -250,6 +414,10 @@
                                            asp-route-LanFilter="@Model.LanFilter"
                                            asp-route-StatusFilter="@Model.StatusFilter"
                                            asp-route-SortBy="@Model.SortBy"
+                                           asp-route-LocationFilter="@Model.LocationFilter"
+                                           asp-route-TypeFilter="@Model.TypeFilter"
+                                           asp-route-ChangeFilter="@Model.ChangeFilter"
+                                           asp-route-AddressFilter="@Model.AddressFilter"
                                            asp-route-PageNumber="@(Model.PageNumber - 1)">
                                         Προηγούμενη
                                     </a>
@@ -265,6 +433,10 @@
                                                asp-route-LanFilter="@Model.LanFilter"
                                                asp-route-StatusFilter="@Model.StatusFilter"
                                                asp-route-SortBy="@Model.SortBy"
+                                               asp-route-LocationFilter="@Model.LocationFilter"
+                                               asp-route-TypeFilter="@Model.TypeFilter"
+                                               asp-route-ChangeFilter="@Model.ChangeFilter"
+                                               asp-route-AddressFilter="@Model.AddressFilter"
                                                asp-route-PageNumber="@i">
                                             @i
                                         </a>
@@ -279,6 +451,10 @@
                                            asp-route-LanFilter="@Model.LanFilter"
                                            asp-route-StatusFilter="@Model.StatusFilter"
                                            asp-route-SortBy="@Model.SortBy"
+                                           asp-route-LocationFilter="@Model.LocationFilter"
+                                           asp-route-TypeFilter="@Model.TypeFilter"
+                                           asp-route-ChangeFilter="@Model.ChangeFilter"
+                                           asp-route-AddressFilter="@Model.AddressFilter"
                                            asp-route-PageNumber="@(Model.PageNumber + 1)">
                                         Επόμενη
                                     </a>
@@ -291,3 +467,14 @@
         }
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // Τα φίλτρα εφαρμόζονται αμέσως μόλις αλλάξει μια επιλογή
+        document.querySelectorAll("#filtersForm select").forEach(function (select) {
+            select.addEventListener("change", function () {
+                document.getElementById("filtersForm").submit();
+            });
+        });
+    </script>
+}

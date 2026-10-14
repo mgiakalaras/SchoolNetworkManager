@@ -1,0 +1,244 @@
+@page
+@model SchoolNetworkManager.Pages.Network.ScanModel
+
+@{
+    ViewData["Title"] = "Σάρωση δικτύου";
+    var newCount = Model.Rows.Count(r => r.ExistingId == null);
+    var knownCount = Model.Rows.Count - newCount;
+    var changedCount = Model.Rows.Count(r => r.MacChanged);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h1 class="mb-1">Σάρωση δικτύου</h1>
+        <p class="text-muted mb-0">Βρίσκει όλες τις συσκευές που απαντούν και δείχνει ποιες δεν είναι καταχωρημένες</p>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-info shadow-sm">@Model.StatusMessage</div>
+}
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="post" asp-page-handler="Scan" class="row g-3 align-items-end busy-form">
+            <div class="col-md-5">
+                <label asp-for="Range" class="form-label">Εύρος IP</label>
+                <input asp-for="Range" class="form-control" placeholder="π.χ. 192.168.2.1-254" />
+                <span asp-validation-for="Range" class="text-danger"></span>
+                <div class="form-text">
+                    Μορφές: <code>192.168.2.1-254</code>, <code>192.168.2.0/24</code>, ή πολλά με κόμμα.
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="form-check">
+                    <input asp-for="IncludePorts" class="form-check-input" />
+                    <label asp-for="IncludePorts" class="form-check-label">
+                        Έλεγχος και ανοιχτών ports (πιο αργό, πιο ακριβής τύπος)
+                    </label>
+                </div>
+            </div>
+
+            <div class="col-md-3 text-md-end">
+                <button type="submit" class="btn btn-primary w-100" data-busy-text="⏳ Σάρωση... (έως 1 λεπτό)">
+                    📡 Έναρξη σάρωσης
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model.HasScanned)
+{
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <div class="text-muted small">Βρέθηκαν</div>
+                <div class="fs-3 fw-semibold">@Model.Rows.Count</div>
+                <div class="text-muted small">από @Model.RangeSize διευθύνσεις</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <div class="text-muted small">Νέες (μη καταχωρημένες)</div>
+                <div class="fs-3 fw-semibold text-primary">@newCount</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <div class="text-muted small">Ήδη καταχωρημένες</div>
+                <div class="fs-3 fw-semibold text-success">@knownCount</div>
+                @if (changedCount > 0)
+                {
+                    <div class="small text-warning">⚠️ @changedCount με άλλη MAC</div>
+                }
+            </div></div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <div class="text-muted small">Καταχωρημένες που δεν απάντησαν</div>
+                <div class="fs-3 fw-semibold text-danger">@Model.MissingRegistered</div>
+                <div class="text-muted small">σημειώθηκαν Offline</div>
+            </div></div>
+        </div>
+    </div>
+
+    @if (!Model.Rows.Any())
+    {
+        <div class="alert alert-warning">
+            Δεν απάντησε καμία συσκευή. Αν η εφαρμογή τρέχει σε Docker, βεβαιώσου ότι το stack έχει
+            <code>network_mode: host</code>.
+        </div>
+    }
+    else
+    {
+        <form method="post" asp-page-handler="Add">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex flex-wrap gap-2 align-items-end justify-content-between">
+                    <div class="fw-semibold">Αποτελέσματα</div>
+
+                    @if (newCount > 0)
+                    {
+                        <div class="d-flex flex-wrap gap-2 align-items-end">
+                            <div>
+                                <label asp-for="NewLocation" class="form-label small mb-1">Χώρος για τις νέες</label>
+                                <input asp-for="NewLocation" class="form-control form-control-sm" list="locationList"
+                                       placeholder="π.χ. Εργαστήριο 1" />
+                                <datalist id="locationList">
+                                    @foreach (var location in Model.AllLocations)
+                                    {
+                                        <option value="@location"></option>
+                                    }
+                                </datalist>
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-success">
+                                + Προσθήκη επιλεγμένων
+                            </button>
+                        </div>
+                    }
+                </div>
+
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 2em;">
+                                        @if (newCount > 0)
+                                        {
+                                            <input type="checkbox" class="form-check-input" id="selectAll" checked
+                                                   title="Επιλογή όλων των νέων" />
+                                        }
+                                    </th>
+                                    <th>IP</th>
+                                    <th>Όνομα</th>
+                                    <th>Τύπος</th>
+                                    <th>MAC / Κατασκευαστής</th>
+                                    <th>Κατάσταση</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (var i = 0; i < Model.Rows.Count; i++)
+                                {
+                                    var row = Model.Rows[i];
+                                    var isNew = row.ExistingId == null;
+
+                                    <tr class="@(isNew ? "" : "table-light-subtle")">
+                                        <td>
+                                            <input type="hidden" asp-for="Rows[i].Ip" />
+                                            <input type="hidden" asp-for="Rows[i].Mac" />
+                                            <input type="hidden" asp-for="Rows[i].Vendor" />
+                                            <input type="hidden" asp-for="Rows[i].OpenPorts" />
+                                            <input type="hidden" asp-for="Rows[i].HasVeyon" />
+                                            <input type="hidden" asp-for="Rows[i].ExistingId" />
+
+                                            @if (isNew)
+                                            {
+                                                <input asp-for="Rows[i].Selected" class="form-check-input row-select" />
+                                            }
+                                        </td>
+                                        <td class="fw-semibold text-nowrap">@row.Ip</td>
+                                        <td>
+                                            @if (isNew)
+                                            {
+                                                <input asp-for="Rows[i].Name" class="form-control form-control-sm" placeholder="όνομα" />
+                                            }
+                                            else
+                                            {
+                                                <span>@row.ExistingName</span>
+                                                <input type="hidden" asp-for="Rows[i].Name" />
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (isNew)
+                                            {
+                                                <select asp-for="Rows[i].MachineType" class="form-select form-select-sm">
+                                                    @foreach (var type in SchoolNetworkManager.Models.MachineTypes.All)
+                                                    {
+                                                        <option value="@type">@type</option>
+                                                    }
+                                                </select>
+                                            }
+                                            else
+                                            {
+                                                <input type="hidden" asp-for="Rows[i].MachineType" />
+                                                <span class="text-muted small">@row.ExistingLocation</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="font-monospace small">@(row.Mac ?? "—")</div>
+                                            @if (!string.IsNullOrWhiteSpace(row.Vendor))
+                                            {
+                                                <div class="text-muted small text-truncate" style="max-width: 220px;" title="@row.Vendor">@row.Vendor</div>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(row.OpenPorts))
+                                            {
+                                                <div class="text-muted small">Ports: @row.OpenPorts</div>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (isNew)
+                                            {
+                                                <span class="badge bg-primary">Νέα</span>
+                                            }
+                                            else
+                                            {
+                                                <a class="badge bg-success text-decoration-none"
+                                                   asp-page="/Computers/Details" asp-route-id="@row.ExistingId">Καταχωρημένη</a>
+                                                @if (row.MacChanged)
+                                                {
+                                                    <div class="small text-warning mt-1" title="Καταχωρημένη: @row.RegisteredMac">⚠️ άλλη MAC</div>
+                                                }
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </form>
+    }
+}
+else
+{
+    <div class="alert alert-light border">
+        💡 Η σάρωση ελέγχει κάθε διεύθυνση του εύρους (ping + NetBIOS) και βρίσκει όνομα, MAC και κατασκευαστή.
+        Οι υπάρχουσες καταχωρήσεις ενημερώνονται αυτόματα. Οι νέες συσκευές εμφανίζονται για να τις προσθέσεις με ένα κλικ.
+    </div>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            const all = document.getElementById("selectAll");
+            if (!all) return;
+            all.addEventListener("change", function () {
+                document.querySelectorAll(".row-select").forEach(cb => cb.checked = all.checked);
+            });
+        })();
+    </script>
+}

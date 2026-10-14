@@ -21,11 +21,32 @@
         <form method="post">
             <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
+            <input type="hidden" asp-for="Computer.Vendor" />
+            <input type="hidden" asp-for="Computer.OpenPorts" />
+
+            <div id="probePanel" class="alert alert-info d-none"></div>
+
             <div class="row g-3">
                 <div class="col-md-3">
                     <label asp-for="Computer.IpAddress" class="form-label"></label>
-                    <input asp-for="Computer.IpAddress" class="form-control" placeholder="π.χ. 192.168.1.25" />
+                    <div class="input-group">
+                        <input asp-for="Computer.IpAddress" class="form-control" placeholder="π.χ. 192.168.1.25" />
+                        <button type="button" class="btn btn-outline-primary" id="probeButton"
+                                data-probe-url="@Url.Page("/Api/Probe")" data-mode="create"
+                                title="Βρες αυτόματα όνομα, MAC, κατασκευαστή και ports">
+                            🔍 Ανίχνευση
+                        </button>
+                    </div>
                     <span asp-validation-for="Computer.IpAddress" class="text-danger"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Διεύθυνση</label>
+                    <div class="btn-group w-100 addr-mode" role="group" aria-label="Static ή Dynamic">
+                        <input type="radio" class="btn-check" name="Computer.IsDynamic" id="addrStatic" value="false" checked="@(!Model.Computer.IsDynamic)" />
+                        <label class="btn btn-outline-primary" for="addrStatic" title="Σταθερή συσκευή σε αυτή την IP">📌 Static</label>
+                        <input type="radio" class="btn-check" name="Computer.IsDynamic" id="addrDynamic" value="true" checked="@Model.Computer.IsDynamic" />
+                        <label class="btn btn-outline-secondary" for="addrDynamic" title="Διεύθυνση DHCP: μπαίνει ό,τι συνδεθεί">🔄 Dynamic</label>
+                    </div>
                 </div>
                 <div class="col-md-3">
                     <label asp-for="Computer.MachineType" class="form-label"></label>
@@ -63,17 +84,12 @@
 
                 <div class="col-md-6">
                     <label asp-for="Computer.Extras" class="form-label"></label>
-                    <input asp-for="Computer.Extras" class="form-control" placeholder="π.χ. SSD, projector, printer, dual boot" />
+                    <textarea asp-for="Computer.Extras" class="form-control" rows="3" placeholder="Ό,τι δεν χωράει στα χαρακτηριστικά"></textarea>
                 </div>
 
                 <div class="col-md-6">
                     <label asp-for="Computer.Notes" class="form-label"></label>
                     <textarea asp-for="Computer.Notes" class="form-control" rows="3"></textarea>
-                </div>
-
-                <div class="col-md-6">
-                    <label asp-for="Computer.Comments" class="form-label"></label>
-                    <textarea asp-for="Computer.Comments" class="form-control" rows="3"></textarea>
                 </div>
 
                 <div class="col-md-12">
@@ -89,6 +105,8 @@
                 </div>
             </div>
 
+            <partial name="_SpecsEditor" model="Model.SpecInputView" />
+
             <hr />
 
             <div class="d-flex justify-content-end gap-2">
@@ -101,4 +119,6 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/probe.js" asp-append-version="true"></script>
+    <script src="~/js/specs.js" asp-append-version="true"></script>
 }

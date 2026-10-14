@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace SchoolNetworkManager.Pages;
@@ -20,6 +20,12 @@ public class ExitModel : PageModel
 
     public IActionResult OnPost()
     {
+        // Σε server (Docker/ZimaOS) η εφαρμογή δεν κλείνει από τη σελίδα.
+        if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
+        {
+            return RedirectToPage("/Index");
+        }
+
         IsClosing = true;
 
         Task.Run(async () =>

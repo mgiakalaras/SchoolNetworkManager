@@ -1,0 +1,177 @@
+@page
+@model SchoolNetworkManager.Pages.Users.IndexModel
+@using SchoolNetworkManager.Services
+
+@{
+    ViewData["Title"] = "Χρήστες";
+    var loginUrl = $"{Request.Scheme}://{Request.Host}/Login";
+}
+
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+        <h1 class="mb-1">👥 Χρήστες</h1>
+        <p class="text-muted mb-0">Ο καθένας μπαίνει με δικό του κωδικό — όλοι βλέπουν και δουλεύουν στα ίδια δεδομένα.</p>
+    </div>
+</div>
+
+@if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ADMIN_PASSWORD")))
+{
+    <div class="alert alert-warning">Η σύνδεση με κωδικό είναι κλειστή (δεν έχει οριστεί <code>ADMIN_PASSWORD</code>), οπότε οι λογαριασμοί δεν χρησιμοποιούνται σε αυτή την εγκατάσταση.</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-@(Model.StatusKind ?? "info") shadow-sm">@Model.StatusMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.IssuedPassword))
+{
+    var message = $"Γεια! Σου έφτιαξα λογαριασμό στο School Network Manager.\nΔιεύθυνση: {loginUrl}\nΌνομα χρήστη: {Model.IssuedUser}\nΠροσωρινός κωδικός: {Model.IssuedPassword}\nΣτην πρώτη σύνδεση θα σου ζητήσει να βάλεις δικό σου κωδικό.";
+    <div class="card shadow-sm mb-4 border-warning">
+        <div class="card-body">
+            <h2 class="h6">🔑 Προσωρινός κωδικός για @Model.IssuedFor — φαίνεται μόνο τώρα</h2>
+            <div class="d-flex flex-wrap align-items-center gap-3 my-2">
+                <span>Όνομα χρήστη: <code class="fs-6">@Model.IssuedUser</code></span>
+                <span>Κωδικός: <code class="fs-5">@Model.IssuedPassword</code></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary copy-btn" data-copy="@message">⧉ Αντιγραφή μηνύματος</button>
+            </div>
+            <div class="small text-muted">Στείλ' το στον συνάδελφο (Viber, email). Στην πρώτη σύνδεση θα αλλάξει υποχρεωτικά τον κωδικό.</div>
+        </div>
+    </div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                @if (!Model.Users.Any())
+                {
+                    <div class="text-center text-muted py-4">
+                        <div class="fs-1">👥</div>
+                        Δεν υπάρχουν ακόμη προσωπικοί λογαριασμοί.<br />
+                        Ξεκίνα φτιάχνοντας έναν για σένα και έναν για κάθε συνάδελφο.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Χρήστης</th>
+                                    <th>Ρόλος</th>
+                                    <th>Τελευταία σύνδεση</th>
+                                    <th class="text-end"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var u in Model.Users)
+                                {
+                                    var isMe = u.Id == Model.MyId;
+                                    <tr class="user-row @(u.IsDisabled ? "is-disabled" : "")">
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="user-avatar" style="--avatar-hue: @UserPasswords.Hue(u.DisplayName)">@u.Initials</span>
+                                                <div>
+                                                    <div class="fw-semibold">
+                                                        @u.DisplayName
+                                                        @if (isMe)
+                                                        {
+                                                            <span class="badge role-badge ms-1">εσύ</span>
+                                                        }
+                                                    </div>
+                                                    <div class="small text-muted font-monospace">@u.UserName</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            @if (u.IsDisabled)
+                                            {
+                                                <span class="badge text-bg-secondary">⏸ Ανενεργός</span>
+                                            }
+                                            else if (u.IsAdmin)
+                                            {
+                                                <span class="badge text-bg-primary">⭐ Διαχειριστής</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge role-badge">Χρήστης</span>
+                                            }
+                                            @if (u.MustChangePassword && !u.IsDisabled)
+                                            {
+                                                <div class="small text-warning mt-1" data-hint="Δεν έχει μπει ακόμη με δικό του κωδικό">⏳ προσωρινός κωδικός</div>
+                                            }
+                                        </td>
+                                        <td class="small">@(u.LastLoginAt?.ToString("dd/MM/yyyy HH:mm") ?? "ποτέ")</td>
+                                        <td class="text-end row-actions">
+                                            <form method="post" asp-page-handler="Reset" asp-route-id="@u.Id"
+                                                  onsubmit="return confirm('Νέος προσωρινός κωδικός για @u.DisplayName; Ο παλιός θα πάψει να ισχύει.');">
+                                                <button type="submit" class="row-action is-warning" data-hint="Νέος προσωρινός κωδικός" aria-label="Επαναφορά κωδικού">🔑</button>
+                                            </form>
+                                            @if (!isMe)
+                                            {
+                                                <form method="post" asp-page-handler="ToggleAdmin" asp-route-id="@u.Id">
+                                                    <button type="submit" class="row-action" data-hint="@(u.IsAdmin ? "Αφαίρεση δικαιώματος διαχειριστή" : "Κάνε τον διαχειριστή")" aria-label="Ρόλος">@(u.IsAdmin ? "☆" : "⭐")</button>
+                                                </form>
+                                                <form method="post" asp-page-handler="ToggleDisabled" asp-route-id="@u.Id">
+                                                    <button type="submit" class="row-action" data-hint="@(u.IsDisabled ? "Ενεργοποίηση" : "Απενεργοποίηση (δεν μπορεί να μπει)")" aria-label="Ενεργοποίηση/απενεργοποίηση">@(u.IsDisabled ? "▶️" : "⏸️")</button>
+                                                </form>
+                                                <form method="post" asp-page-handler="Delete" asp-route-id="@u.Id"
+                                                      onsubmit="return confirm('Διαγραφή του χρήστη @u.DisplayName;');">
+                                                    <button type="submit" class="row-action is-danger" data-hint="Διαγραφή" aria-label="Διαγραφή">🗑️</button>
+                                                </form>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header fw-semibold">＋ Νέος χρήστης</div>
+            <div class="card-body">
+                <form method="post" asp-page-handler="Create" class="d-grid gap-3">
+                    <div>
+                        <label class="form-label" for="NewDisplayName">Ονοματεπώνυμο</label>
+                        <input asp-for="NewDisplayName" class="form-control" placeholder="π.χ. Μάριος Γιακαλάρας" maxlength="80" required />
+                    </div>
+                    <div>
+                        <label class="form-label" for="NewUserName">Όνομα χρήστη</label>
+                        <input asp-for="NewUserName" class="form-control font-monospace" placeholder="π.χ. mgiakalaras"
+                               autocapitalize="none" spellcheck="false" pattern="[A-Za-z0-9._\-]{2,40}" required />
+                        <div class="form-text">Λατινικά, χωρίς κενά. Με αυτό θα μπαίνει.</div>
+                    </div>
+                    <div>
+                        <label class="form-label" for="NewPassword">Κωδικός <span class="text-muted small">(προαιρετικά)</span></label>
+                        <input asp-for="NewPassword" class="form-control font-monospace" autocomplete="off" placeholder="κενό = τυχαίος προσωρινός" />
+                        <div class="form-text">Στην πρώτη σύνδεση θα τον αλλάξει με δικό του.</div>
+                    </div>
+                    <div class="form-check">
+                        <input asp-for="NewIsAdmin" class="form-check-input" />
+                        <label class="form-check-label" for="NewIsAdmin">⭐ Διαχειριστής (προσθέτει / αφαιρεί χρήστες)</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Δημιουργία</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body small">
+                <h2 class="h6">Πώς δουλεύει</h2>
+                <ul class="mb-0 ps-3">
+                    <li>Όλοι βλέπουν τα ίδια: συσκευές, χώρους, βλάβες, κωδικούς, αναλώσιμα.</li>
+                    <li>Στο ιστορικό (βλάβες, κωδικοί, αναλώσιμα, αλλαγές συσκευών) γράφεται αυτόματα <strong>ποιος</strong> το έκανε.</li>
+                    <li>Μόνο οι ⭐ διαχειριστές βλέπουν αυτή τη σελίδα.</li>
+                    <li>Ο κοινός λογαριασμός <code>admin</code> με τον κωδικό του server δουλεύει πάντα — κράτα τον για ώρα ανάγκης.</li>
+                    <li>Αν ξεχάσει κάποιος τον κωδικό του: 🔑 → νέος προσωρινός.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

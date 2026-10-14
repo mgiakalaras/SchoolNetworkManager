@@ -1,85 +1,255 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+﻿@using System.Globalization
+@inject SchoolNetworkManager.Services.SettingsService SettingsSvc
+@inject SchoolNetworkManager.Data.AppDbContext Db
+@{
+    var appSettings = SettingsSvc.Current;
+    var defaultTheme = SchoolNetworkManager.Models.Themes.Normalize(appSettings.DefaultTheme);
+    var isContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+    var isSignedIn = User.Identity?.IsAuthenticated == true;
+    var isAdminUser = SchoolNetworkManager.Services.UserPasswords.IsAdmin(User);
+    var currentUserName = SchoolNetworkManager.Services.UserPasswords.DisplayName(User) ?? "";
+    var currentInitials = string.Concat(currentUserName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0])));
+    var currentPath = Context.Request.Path.Value ?? "/";
+    var openFaultCount = 0;
+    var lowStockCount = 0;
+    var pendingReports = 0;
+    var toolsActive = currentPath.StartsWith("/Consumables", StringComparison.OrdinalIgnoreCase)
+                      || currentPath.StartsWith("/Rules", StringComparison.OrdinalIgnoreCase)
+                      || currentPath.StartsWith("/Passwords", StringComparison.OrdinalIgnoreCase)
+                      || currentPath.StartsWith("/Report", StringComparison.OrdinalIgnoreCase);
+    if (isSignedIn || string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ADMIN_PASSWORD")))
+    {
+        try { openFaultCount = Db.Faults.Count(f => f.ResolvedAt == null); } catch { }
+        try { lowStockCount = Db.Consumables.Count(c => c.Quantity <= c.MinQuantity); } catch { }
+        try { pendingReports = Db.FaultReports.Count(r => r.Status == "new"); } catch { }
+    }
+
+    var usefulLinks = SchoolNetworkManager.Services.UsefulLinks.Defaults
+        .Concat(SchoolNetworkManager.Services.UsefulLinks.ServerLinks(appSettings, Context.Request.Host.Host))
+        .Concat(SchoolNetworkManager.Services.UsefulLinks.ParseCustom(appSettings.CustomLinks))
+        .ToList();
+
+    bool UserIsPersonal() => SchoolNetworkManager.Services.UserPasswords.UserId(User) != null;
+
+    string Active(string prefix) =>
+        (prefix == "/" ? currentPath == "/" || currentPath.Equals("/Index", StringComparison.OrdinalIgnoreCase)
+                       : currentPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            ? "active" : "";
+}
+<!DOCTYPE html>
+<html lang="el" data-theme="light" data-palette="blue"
+      data-default-theme="@defaultTheme"
+      data-glow="@(appSettings.EnableGlow ? "on" : "off")">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - SchoolNetworkManager</title>
+    <title>@ViewData["Title"] - @appSettings.SchoolTitle</title>
+    <script>
+        // Εφαρμογή θέματος πριν φορτώσει η σελίδα (χωρίς «αναβόσβημα»)
+        (function () {
+            var root = document.documentElement;
+            var id = null;
+            try {
+                id = localStorage.getItem("snm-theme-id");
+                if (!id && localStorage.getItem("snm-theme") === "dark") id = "dark-blue";
+            } catch (e) { }
+            if (!id) id = root.getAttribute("data-default-theme") || "light-blue";
+            var parts = id.split("-");
+            root.setAttribute("data-theme", parts[0] === "dark" ? "dark" : "light");
+            root.setAttribute("data-bs-theme", parts[0] === "dark" ? "dark" : "light");
+            root.setAttribute("data-palette", parts[1] || "blue");
+            root.setAttribute("data-theme-id", id);
+        })();
+    </script>
     <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/themes.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/SchoolNetworkManager.styles.css" asp-append-version="true" />
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container">
-                <a class="navbar-brand fw-semibold d-flex align-items-center gap-2" asp-area="" asp-page="/Index">
-                    <img src="~/favicon.ico" alt="School Network Manager" class="navbar-logo" />
-                    <span>School Network Manager</span>
+        <nav class="navbar navbar-expand-lg app-nav mb-3">
+            <div class="container app-nav-inner">
+                <a class="navbar-brand app-brand" asp-area="" asp-page="/Index" title="@appSettings.SchoolTitle">
+                    <img src="@(string.IsNullOrWhiteSpace(appSettings.LogoPath) ? Url.Content("~/favicon.ico") : appSettings.LogoPath)"
+                         alt="" class="navbar-logo" />
+                    <span class="app-brand-text">School Network Manager</span>
                 </a>
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+                @if (isSignedIn || string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ADMIN_PASSWORD")))
+                {
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                            aria-controls="mainNav" aria-expanded="false" aria-label="Μενού">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
 
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Index">
-                                Dashboard
-                            </a>
-                        </li>
+                    <div class="collapse navbar-collapse" id="mainNav">
+                        <ul class="navbar-nav app-links">
+                            <li class="nav-item">
+                                <a class="nav-link @Active("/")" asp-area="" asp-page="/Index"><span class="nav-ico">📊</span>Αρχική</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @Active("/Computers")" asp-area="" asp-page="/Computers/Index"><span class="nav-ico">🖥️</span>Υπολογιστές</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @Active("/Locations")" asp-area="" asp-page="/Locations/Index"><span class="nav-ico">📍</span>Χώροι</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @Active("/Network")" asp-area="" asp-page="/Network/Scan"><span class="nav-ico">📡</span>Σάρωση</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @Active("/Faults")" asp-area="" asp-page="/Faults/Index">
+                                    <span class="nav-ico">🔧</span>Βλάβες
+                                    @if (openFaultCount > 0)
+                                    {
+                                        <span class="nav-count">@openFaultCount</span>
+                                    }
+                                    @if (pendingReports > 0)
+                                    {
+                                        <span class="nav-count nav-count-new" title="Νέες δηλώσεις από τη δημόσια φόρμα">📥@pendingReports</span>
+                                    }
+                                </a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle @(toolsActive ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="nav-ico">🧰</span>Εργαλεία
+                                    @if (lowStockCount > 0)
+                                    {
+                                        <span class="nav-count" title="Αναλώσιμα που τελειώνουν">@lowStockCount</span>
+                                    }
+                                </a>
+                                <ul class="dropdown-menu shadow">
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center gap-2" asp-area="" asp-page="/Consumables/Index">
+                                            📦 Αναλώσιμα
+                                            @if (lowStockCount > 0)
+                                            {
+                                                <span class="badge rounded-pill text-bg-warning ms-auto">@lowStockCount λίγα</span>
+                                            }
+                                        </a>
+                                    </li>
+                                    <li><a class="dropdown-item" asp-area="" asp-page="/Passwords/Index">🔑 Κωδικοί συσκευών</a></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-page="/Rules/Index">📜 Κανονισμοί</a></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-page="/Public/Index" target="_blank">🌐 Δημόσια σελίδα (δήλωση βλάβης)</a></li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-page="/Report/Index">📑 Ετήσια αναφορά</a></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-page="/Print/Index">🖨 Λίστες για εκτύπωση</a></li>
+                                </ul>
+                            </li>
+                        </ul>
 
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Computers/Index">
-                                Υπολογιστές
-                            </a>
-                        </li>
+                        <div class="app-tools">
+                            <div class="info-pill" id="infoPill">
+                                <span title="Τοπική ώρα" class="info-part">🕒 <span id="currentClock">--:--</span></span>
+                                @if (appSettings.ShowWeather)
+                                {
+                                    <span class="info-sep"></span>
+                                    <span class="info-part" id="weatherWrap" title="Καιρός">
+                                        <span id="weatherIcon">🌤️</span>
+                                        <span id="weatherWidget"
+                                              data-place="@appSettings.WeatherPlace"
+                                              data-lat="@appSettings.WeatherLatitude.ToString(CultureInfo.InvariantCulture)"
+                                              data-lon="@appSettings.WeatherLongitude.ToString(CultureInfo.InvariantCulture)">…</span>
+                                    </span>
+                                }
+                            </div>
 
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Computers/Create">
-                                Νέα Καταχώρηση
-                            </a>
-                        </li>
+                            <div class="dropdown">
+                                <button type="button" class="btn tool-btn" data-bs-toggle="dropdown" aria-expanded="false"
+                                        title="Χρήσιμα links" aria-label="Χρήσιμα links">🔗</button>
+                                <ul class="dropdown-menu dropdown-menu-end links-menu shadow">
+                                    @foreach (var linkGroup in usefulLinks.GroupBy(l => l.Group))
+                                    {
+                                        <li><h6 class="dropdown-header">@linkGroup.Key</h6></li>
+                                        @foreach (var link in linkGroup)
+                                        {
+                                            <li>
+                                                <a class="dropdown-item" href="@link.Url" target="_blank" rel="noopener noreferrer">
+                                                    @link.Title <span class="link-out">↗</span>
+                                                </a>
+                                            </li>
+                                        }
+                                    }
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li><a class="dropdown-item small text-muted" asp-area="" asp-page="/Settings/Index" asp-route-tab="general">＋ Προσθήκη links (Ρυθμίσεις)</a></li>
+                                </ul>
+                            </div>
 
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Computers/Import">
-                                Import Excel
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Settings/Index">
-                                Ρυθμίσεις
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/About">
-                                Πληροφορίες
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-danger" asp-area="" asp-page="/Exit">
-                                Έξοδος
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            <div class="d-flex align-items-center gap-2 top-widgets">
-                <div class="top-pill" title="Τοπική ώρα">
-                    <span>🕒</span>
-                    <span id="currentClock">--:--</span>
-                </div>
+                            <div class="dropdown">
+                                <button type="button" id="themeToggle" class="btn tool-btn" data-bs-toggle="dropdown"
+                                        aria-expanded="false" title="Θέμα εμφάνισης" aria-label="Θέμα εμφάνισης">🎨</button>
+                                <ul class="dropdown-menu dropdown-menu-end theme-menu shadow">
+                                    <li><h6 class="dropdown-header">Θέμα εμφάνισης</h6></li>
+                                    @foreach (var theme in SchoolNetworkManager.Models.Themes.All)
+                                    {
+                                        <li>
+                                            <button type="button" class="dropdown-item theme-option" data-theme-id="@theme.Id">
+                                                <span class="theme-swatch">
+                                                    <span style="background: @theme.Background;"></span>
+                                                    <span style="background: @theme.Accent;"></span>
+                                                </span>
+                                                @theme.Name
+                                            </button>
+                                        </li>
+                                    }
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li>
+                                        <button type="button" class="dropdown-item theme-option" data-theme-id="">
+                                            ↺ Προεπιλογή σχολείου
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
 
-                <div class="top-pill" title="Καιρός">
-                    <span>🌤️</span>
-                    <span id="weatherWidget">Καιρός...</span>
-                </div>
-
-                <button type="button" id="themeToggle" class="btn btn-sm btn-outline-secondary theme-toggle">
-                    🌙 Dark
-                </button>
+                            <div class="dropdown">
+                                <button type="button" class="btn tool-btn @(Active("/Settings") + Active("/Help") + Active("/About") + Active("/Account") + Active("/Users"))"
+                                        data-bs-toggle="dropdown" aria-expanded="false" title="@(isSignedIn ? currentUserName + " · " : "")Ρυθμίσεις και βοήθεια" aria-label="Ρυθμίσεις και βοήθεια">@if (isSignedIn && UserIsPersonal())
+                                        {
+                                            <span class="user-avatar" style="--avatar-hue: @SchoolNetworkManager.Services.UserPasswords.Hue(currentUserName)">@currentInitials</span>
+                                        }
+                                        else
+                                        {
+                                            <span>⚙️</span>
+                                        }</button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow">
+                                    @if (isSignedIn)
+                                    {
+                                        <li class="user-menu-head">
+                                            <span class="user-avatar sm" style="--avatar-hue: @SchoolNetworkManager.Services.UserPasswords.Hue(currentUserName)">@currentInitials</span>
+                                            <span>
+                                                <span class="fw-semibold d-block">@currentUserName</span>
+                                                <span class="small">@(isAdminUser ? "Διαχειριστής" : "Χρήστης")</span>
+                                            </span>
+                                        </li>
+                                        <li><a class="dropdown-item" asp-area="" asp-page="/Account">👤 Ο λογαριασμός μου</a></li>
+                                        @if (isAdminUser)
+                                        {
+                                            <li><a class="dropdown-item" asp-area="" asp-page="/Users/Index">👥 Χρήστες</a></li>
+                                            <li><a class="dropdown-item" asp-area="" asp-page="/Backups/Index">🗄️ Αντίγραφα ασφαλείας</a></li>
+                                        }
+                                        <li><hr class="dropdown-divider" /></li>
+                                    }
+                                    <li><a class="dropdown-item" asp-area="" asp-page="/Settings/Index">⚙️ Ρυθμίσεις</a></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-page="/Help/Index">❓ Βοήθεια</a></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-page="/About">ℹ️ Πληροφορίες</a></li>
+                                    @if (isSignedIn || !isContainer)
+                                    {
+                                        <li><hr class="dropdown-divider" /></li>
+                                    }
+                                    @if (!isContainer)
+                                    {
+                                        <li><a class="dropdown-item text-danger" asp-area="" asp-page="/Exit">⏻ Έξοδος</a></li>
+                                    }
+                                    @if (isSignedIn)
+                                    {
+                                        <li><a class="dropdown-item text-danger" href="~/Logout">↪ Αποσύνδεση</a></li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                }
             </div>
         </nav>
     </header>
@@ -91,7 +261,7 @@
 
     <footer class="border-top footer text-muted">
         <div class="container">
-            &copy; 2026 - School Network Manager
+            &copy; @DateTime.Now.Year - @appSettings.SchoolTitle
         </div>
     </footer>
 

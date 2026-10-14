@@ -1,0 +1,108 @@
+@page
+@model SchoolNetworkManager.Pages.AccountModel
+@using SchoolNetworkManager.Services
+
+@{
+    ViewData["Title"] = "Ο λογαριασμός μου";
+    var shownName = UserPasswords.DisplayName(User) ?? "";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="d-flex align-items-center gap-3 mb-4">
+            <span class="user-avatar" style="--avatar-hue: @UserPasswords.Hue(shownName)">@(Model.Account?.Initials ?? "A")</span>
+            <div>
+                <h1 class="mb-0 h3">@shownName</h1>
+                <div class="text-muted small">
+                    @(User.Identity?.Name)
+                    @if (UserPasswords.IsAdmin(User))
+                    {
+                        <span class="badge text-bg-primary ms-1">Διαχειριστής</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (Model.Denied)
+        {
+            <div class="alert alert-warning">🔒 Αυτή η σελίδα είναι μόνο για διαχειριστές.</div>
+        }
+
+        @if (Model.First)
+        {
+            <div class="alert alert-info">👋 Καλώς ήρθες! Πρώτα άλλαξε τον προσωρινό κωδικό που σου δόθηκε με έναν δικό σου.</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="alert alert-success">@Model.StatusMessage</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Model.Error))
+        {
+            <div class="alert alert-danger">@Model.Error</div>
+        }
+
+        @if (Model.IsMaster)
+        {
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h6">Κοινός λογαριασμός διαχειριστή</h2>
+                    <p class="mb-2">Είσαι συνδεδεμένος με τον κωδικό του server (<code>ADMIN_PASSWORD</code> στο stack). Αλλάζει μόνο από το Portainer.</p>
+                    <p class="mb-0 text-muted small">
+                        Καλύτερα ο καθένας να μπαίνει με δικό του λογαριασμό, ώστε να φαίνεται ποιος έκανε τι.
+                        Φτιάξε λογαριασμούς από <a asp-page="/Users/Index">👥 Χρήστες</a> — και έναν για σένα.
+                    </p>
+                </div>
+            </div>
+        }
+        else
+        {
+            if (!Model.First)
+            {
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header fw-semibold">🪪 Στοιχεία</div>
+                    <div class="card-body">
+                        <form method="post" asp-page-handler="Profile" class="row g-2 align-items-end">
+                            <div class="col-sm-8">
+                                <label class="form-label" for="DisplayName">Ονοματεπώνυμο (φαίνεται στο ιστορικό)</label>
+                                <input asp-for="DisplayName" class="form-control" maxlength="80" required />
+                            </div>
+                            <div class="col-sm-4">
+                                <button type="submit" class="btn btn-outline-primary w-100">Αποθήκευση</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            }
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header fw-semibold">🔑 @(Model.First ? "Ο δικός σου κωδικός" : "Αλλαγή κωδικού")</div>
+                <div class="card-body">
+                    <form method="post" asp-page-handler="Password" class="row g-3">
+                        <input type="hidden" asp-for="First" />
+                        @if (Model.Account?.MustChangePassword != true)
+                        {
+                            <div class="col-12">
+                                <label class="form-label" for="CurrentPassword">Τρέχων κωδικός</label>
+                                <input asp-for="CurrentPassword" type="password" class="form-control" autocomplete="current-password" required />
+                            </div>
+                        }
+                        <div class="col-sm-6">
+                            <label class="form-label" for="NewPassword">Νέος κωδικός</label>
+                            <input asp-for="NewPassword" type="password" class="form-control" autocomplete="new-password" minlength="@UserPasswords.MinLength" required />
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label" for="ConfirmPassword">Ξανά ο νέος</label>
+                            <input asp-for="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" minlength="@UserPasswords.MinLength" required />
+                        </div>
+                        <div class="col-12 form-text mt-1">Τουλάχιστον @UserPasswords.MinLength χαρακτήρες, με γράμματα και αριθμούς.</div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">🔒 Αλλαγή κωδικού</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+</div>

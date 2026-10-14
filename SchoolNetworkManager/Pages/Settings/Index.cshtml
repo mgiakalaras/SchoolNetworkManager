@@ -3,12 +3,16 @@
 
 @{
     ViewData["Title"] = "Ρυθμίσεις";
+    var tab = string.IsNullOrWhiteSpace(Model.ActiveTab) ? "general" : Model.ActiveTab;
+
+    string TabClass(string name) => tab == name ? "active" : "";
+    string PaneClass(string name) => tab == name ? "show active" : "";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="mb-1">Ρυθμίσεις</h1>
-        <p class="text-muted mb-0">Προσαρμογή τίτλου, υπότιτλου και λογότυπου εφαρμογής</p>
+        <p class="text-muted mb-0">Σχολείο, εμφάνιση, δίκτυο και αντίγραφα ασφαλείας</p>
     </div>
 
     <a class="btn btn-outline-secondary" asp-page="/Index">
@@ -23,72 +27,348 @@
     </div>
 }
 
-<div class="card shadow-sm">
-    <div class="card-body">
-        <form method="post" enctype="multipart/form-data">
-            <input type="hidden" asp-for="Settings.Id" />
-            <input type="hidden" asp-for="Settings.LogoPath" />
+<ul class="nav nav-pills settings-nav mb-3 gap-1" role="tablist">
+    <li class="nav-item">
+        <button class="nav-link @TabClass("general")" data-bs-toggle="pill" data-bs-target="#tab-general" data-tab="general" type="button">🏫 Γενικά</button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @TabClass("appearance")" data-bs-toggle="pill" data-bs-target="#tab-appearance" data-tab="appearance" type="button">🎨 Εμφάνιση</button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @TabClass("network")" data-bs-toggle="pill" data-bs-target="#tab-network" data-tab="network" type="button">📡 Δίκτυο</button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @TabClass("backup")" data-bs-toggle="pill" data-bs-target="#tab-backup" data-tab="backup" type="button">💾 Αντίγραφο ασφαλείας</button>
+    </li>
+</ul>
 
-            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+<form method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="Settings.Id" />
+    <input type="hidden" asp-for="Settings.LogoPath" />
+    <input type="hidden" asp-for="ActiveTab" id="activeTabInput" />
 
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <label asp-for="Settings.SchoolTitle" class="form-label"></label>
-                    <input asp-for="Settings.SchoolTitle" class="form-control" />
-                    <span asp-validation-for="Settings.SchoolTitle" class="text-danger"></span>
-                </div>
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div asp-validation-summary="All" class="alert alert-danger"></div>
+    }
 
-                <div class="col-md-6">
-                    <label asp-for="Settings.SchoolSubtitle" class="form-label"></label>
-                    <input asp-for="Settings.SchoolSubtitle" class="form-control" />
-                    <span asp-validation-for="Settings.SchoolSubtitle" class="text-danger"></span>
-                </div>
+    <div class="tab-content">
+        <!-- ===================== Γενικά ===================== -->
+        <div class="tab-pane fade @PaneClass("general")" id="tab-general">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label asp-for="Settings.SchoolTitle" class="form-label"></label>
+                            <input asp-for="Settings.SchoolTitle" class="form-control" />
+                            <span asp-validation-for="Settings.SchoolTitle" class="text-danger"></span>
+                        </div>
 
-                <div class="col-md-6">
-                    <label asp-for="LogoUpload" class="form-label">Νέο λογότυπο</label>
-                    <input asp-for="LogoUpload" class="form-control" type="file" accept=".png,.jpg,.jpeg,.webp" />
-                    <span asp-validation-for="LogoUpload" class="text-danger"></span>
-                    <div class="form-text">
-                        Επιτρέπονται PNG, JPG, JPEG, WEBP έως 2MB.
-                    </div>
-                </div>
+                        <div class="col-md-6">
+                            <label asp-for="Settings.SchoolSubtitle" class="form-label"></label>
+                            <input asp-for="Settings.SchoolSubtitle" class="form-control" />
+                            <span asp-validation-for="Settings.SchoolSubtitle" class="text-danger"></span>
+                        </div>
 
-                <div class="col-md-6">
-                    <div class="text-muted small mb-2">Τρέχον λογότυπο</div>
-
-                    @if (!string.IsNullOrWhiteSpace(Model.Settings.LogoPath))
-                    {
-                        <div class="d-flex align-items-center gap-3">
-                            <img src="@Model.Settings.LogoPath"
-                                 alt="Λογότυπο"
-                                 style="max-height: 90px; max-width: 180px;"
-                                 class="rounded border bg-white p-2" />
-
-                            <div class="form-check">
-                                <input asp-for="RemoveLogo" class="form-check-input" />
-                                <label asp-for="RemoveLogo" class="form-check-label">
-                                    Αφαίρεση λογότυπου
-                                </label>
+                        <div class="col-md-6">
+                            <label asp-for="LogoUpload" class="form-label">Νέο λογότυπο</label>
+                            <input asp-for="LogoUpload" class="form-control" type="file" accept=".png,.jpg,.jpeg,.webp" />
+                            <span asp-validation-for="LogoUpload" class="text-danger"></span>
+                            <div class="form-text">
+                                PNG, JPG, JPEG, WEBP έως 2MB. Εμφανίζεται στο dashboard, στο μενού και στις εκτυπώσεις.
                             </div>
                         </div>
-                    }
-                    else
-                    {
-                        <div class="text-muted">Δεν έχει οριστεί λογότυπο.</div>
-                    }
+
+                        <div class="col-md-6">
+                            <div class="text-muted small mb-2">Τρέχον λογότυπο</div>
+
+                            @if (!string.IsNullOrWhiteSpace(Model.Settings.LogoPath))
+                            {
+                                <div class="d-flex align-items-center gap-3">
+                                    <img src="@Model.Settings.LogoPath"
+                                         alt="Λογότυπο"
+                                         style="max-height: 90px; max-width: 180px;"
+                                         class="rounded border bg-white p-2" />
+
+                                    <div class="form-check">
+                                        <input asp-for="RemoveLogo" class="form-check-input" />
+                                        <label asp-for="RemoveLogo" class="form-check-label">
+                                            Αφαίρεση λογότυπου
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-muted">Δεν έχει οριστεί λογότυπο.</div>
+                            }
+                        </div>
+
+                        <div class="col-md-3">
+                            <label asp-for="Settings.PageSize" class="form-label"></label>
+                            <input asp-for="Settings.PageSize" class="form-control" type="number" min="5" max="500" />
+                            <span asp-validation-for="Settings.PageSize" class="text-danger"></span>
+                            <div class="form-text">Στη λίστα «Υπολογιστές».</div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label asp-for="Settings.NewBadgeDays" class="form-label"></label>
+                            <input asp-for="Settings.NewBadgeDays" class="form-control" type="number" min="0" max="365" />
+                            <div class="form-text">Πόσες ημέρες φαίνεται «ΝΕΟ» / «ΕΝΗΜ.». 0 = ποτέ.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mt-md-4">
+                                <input asp-for="Settings.PublicFaultsPage" class="form-check-input" />
+                                <label asp-for="Settings.PublicFaultsPage" class="form-check-label"></label>
+                            </div>
+                            <div class="form-text">
+                                Οι συνάδελφοι βλέπουν στο <code>/Faults/Public</code> ποια μηχανήματα έχουν βλάβη,
+                                χωρίς κωδικό και χωρίς IP / MAC / κωδικούς.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="Settings.PublicPortal" class="form-check-input" />
+                                <label asp-for="Settings.PublicPortal" class="form-check-label"></label>
+                            </div>
+                            <div class="form-text">
+                                Στο <code>/Public</code> μαθητές και εκπαιδευτικοί δηλώνουν βλάβη χωρίς κωδικό και διαβάζουν τους κανονισμούς.
+                                Οι δηλώσεις περιμένουν έγκριση στο Βιβλίο βλαβών.
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label asp-for="Settings.CustomLinks" class="form-label"></label>
+                            <textarea asp-for="Settings.CustomLinks" class="form-control font-monospace" rows="4"
+                                      placeholder="Ένα ανά γραμμή:  Τίτλος | https://διεύθυνση
+π.χ.  Πλατφόρμα myschool | https://myschool.sch.gr"></textarea>
+                            <div class="form-text">
+                                Εμφανίζονται στο κουμπί 🔗 πάνω δεξιά, μαζί με τα σταθερά (Veyon, Ninite, Windows) και τα εργαλεία του server.
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <hr />
+        <!-- ===================== Εμφάνιση ===================== -->
+        <div class="tab-pane fade @PaneClass("appearance")" id="tab-appearance">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <label class="form-label fw-semibold">Προεπιλεγμένο θέμα σχολείου</label>
+                    <div class="form-text mb-3">
+                        Το βλέπουν όλοι, εκτός αν κάποιος διαλέξει δικό του θέμα από το κουμπί 🎨 πάνω δεξιά
+                        (αυτή η επιλογή μένει μόνο στον δικό του browser).
+                    </div>
 
-            <div class="d-flex justify-content-end gap-2">
-                <a class="btn btn-outline-secondary" asp-page="/Index">Άκυρο</a>
-                <button type="submit" class="btn btn-primary">Αποθήκευση ρυθμίσεων</button>
+                    <div class="row g-2 mb-4">
+                        @foreach (var theme in SchoolNetworkManager.Models.Themes.All)
+                        {
+                            var inputId = "theme_" + theme.Id;
+
+                            <div class="col-6 col-md-4 col-xl-3">
+                                <input type="radio" class="btn-check" name="Settings.DefaultTheme" id="@inputId"
+                                       value="@theme.Id" checked="@(Model.Settings.DefaultTheme == theme.Id)" />
+                                <label class="btn btn-outline-secondary w-100 d-flex align-items-center gap-2 text-start" for="@inputId">
+                                    <span class="theme-swatch">
+                                        <span style="background: @theme.Background;"></span>
+                                        <span style="background: @theme.Accent;"></span>
+                                    </span>
+                                    @theme.Name
+                                </label>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="Settings.EnableGlow" class="form-check-input" />
+                                <label asp-for="Settings.EnableGlow" class="form-check-label"></label>
+                            </div>
+                            <div class="form-text">Ο χρωματιστός φωτισμός όταν περνάει το ποντίκι πάνω από τις κάρτες.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="Settings.ShowWeather" class="form-check-input" />
+                                <label asp-for="Settings.ShowWeather" class="form-check-label"></label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="Settings.WeatherPlace" class="form-label"></label>
+                            <input asp-for="Settings.WeatherPlace" class="form-control" placeholder="π.χ. Σάμος" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="WeatherLatText" class="form-label">Γεωγρ. πλάτος</label>
+                            <input asp-for="WeatherLatText" class="form-control" inputmode="decimal" placeholder="37.69" />
+                            <span asp-validation-for="WeatherLatText" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="WeatherLonText" class="form-label">Γεωγρ. μήκος</label>
+                            <input asp-for="WeatherLonText" class="form-control" inputmode="decimal" placeholder="26.94" />
+                        </div>
+
+                        <div class="col-12 form-text mt-0">
+                            Τις συντεταγμένες τις βρίσκεις στο Google Maps: δεξί κλικ στο σχολείο → οι αριθμοί που εμφανίζονται πρώτοι.
+                        </div>
+                    </div>
+                </div>
             </div>
-        </form>
+        </div>
+
+        <!-- ===================== Δίκτυο ===================== -->
+        <div class="tab-pane fade @PaneClass("network")" id="tab-network">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label asp-for="Settings.ScanRange" class="form-label"></label>
+                            <input asp-for="Settings.ScanRange" class="form-control" placeholder="192.168.2.1-254" />
+                            <span asp-validation-for="Settings.ScanRange" class="text-danger"></span>
+                            <div class="form-text">
+                                Προεπιλογή για τη «Σάρωση». Μορφές: <code>192.168.2.1-254</code>, <code>192.168.2.0/24</code>.
+                                @if (Model.RangeCount > 0)
+                                {
+                                    <span>Τώρα: @Model.RangeCount διευθύνσεις.</span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label asp-for="Settings.MonitorIntervalMinutes" class="form-label"></label>
+                            <input asp-for="Settings.MonitorIntervalMinutes" class="form-control" type="number" min="0" max="1440" />
+                            <span asp-validation-for="Settings.MonitorIntervalMinutes" class="text-danger"></span>
+                            <div class="form-text">0 = απενεργοποίηση.</div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label asp-for="Settings.WolBroadcast" class="form-label"></label>
+                            <input asp-for="Settings.WolBroadcast" class="form-control" placeholder="192.168.2.255" />
+                            <span asp-validation-for="Settings.WolBroadcast" class="text-danger"></span>
+                            <div class="form-text">Συνήθως το δίκτυό σου με <code>.255</code> στο τέλος.</div>
+                        </div>
+
+                        <div class="col-12">
+                            <label asp-for="Settings.PortsToScan" class="form-label"></label>
+                            <textarea asp-for="Settings.PortsToScan" class="form-control font-monospace" rows="3"></textarea>
+                            <span asp-validation-for="Settings.PortsToScan" class="text-danger"></span>
+                            <div class="form-text">
+                                Μορφή <code>port:όνομα</code> χωρισμένα με κόμμα. Από αυτά βγαίνει και ο αυτόματος τύπος
+                                (π.χ. 9100 → Εκτυπωτής, 11100 → Veyon). Άδειο = προεπιλογή.
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <h3 class="h6 mb-3">📈 Ταχύτητα δικτύου (MySpeed)</h3>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label asp-for="Settings.MySpeedUrl" class="form-label"></label>
+                            <input asp-for="Settings.MySpeedUrl" class="form-control" placeholder="http://127.0.0.1:5216" />
+                            <span asp-validation-for="Settings.MySpeedUrl" class="text-danger"></span>
+                            <div class="form-text">
+                                Αν το MySpeed τρέχει στο ίδιο Zima: <code>http://127.0.0.1:5216</code>.
+                                Άδειο = χωρίς γράφημα ταχύτητας.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Settings.MySpeedPassword" class="form-label"></label>
+                            <input asp-for="Settings.MySpeedPassword" class="form-control" type="password"
+                                   autocomplete="new-password" placeholder="μόνο αν έχεις βάλει κωδικό στο MySpeed" />
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <h3 class="h6 mb-3">🛡️ Pi-hole</h3>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label asp-for="Settings.PiholeUrl" class="form-label"></label>
+                            <input asp-for="Settings.PiholeUrl" class="form-control" placeholder="π.χ. http://192.168.2.114:8080" />
+                            <span asp-validation-for="Settings.PiholeUrl" class="text-danger"></span>
+                            <div class="form-text">Η διεύθυνση που ανοίγεις για τη σελίδα διαχείρισης του Pi-hole (χωρίς το /admin). Άδειο = χωρίς κάρτα Pi-hole.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Settings.PiholePassword" class="form-label"></label>
+                            <input asp-for="Settings.PiholePassword" class="form-control" type="password" autocomplete="new-password"
+                                   placeholder="@(string.IsNullOrWhiteSpace(Model.Settings.PiholePassword) ? "" : "•••••• (αποθηκευμένος — άφησέ το κενό)")" />
+                            <div class="form-text">
+                                Pi-hole 6: ο κωδικός του web interface ή καλύτερα ένα <em>app password</em> (Settings → Web interface / API → Configure app password).
+                                Pi-hole 5: το API token.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-light border mt-4 mb-0 small">
+                        💡 Για MAC, σάρωση και Wake-on-LAN σε Docker, το stack πρέπει να έχει <code>network_mode: host</code>.
+                        Για το Wake-on-LAN, οι υπολογιστές πρέπει να το έχουν ενεργό στο BIOS και στην κάρτα δικτύου.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== Αντίγραφο ασφαλείας ===================== -->
+        <div class="tab-pane fade @PaneClass("backup")" id="tab-backup">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="row g-3 align-items-end mb-3">
+                        <div class="col-md-4">
+                            <div class="form-check form-switch">
+                                <input asp-for="Settings.AutoBackup" class="form-check-input" />
+                                <label asp-for="Settings.AutoBackup" class="form-check-label"></label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="Settings.AutoBackupHour" class="form-label"></label>
+                            <select asp-for="Settings.AutoBackupHour" class="form-select">
+                                @for (var h = 0; h < 24; h++)
+                                {
+                                    <option value="@h">@h.ToString("00"):00</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label asp-for="Settings.BackupKeep" class="form-label"></label>
+                            <input asp-for="Settings.BackupKeep" type="number" min="1" max="60" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="form-text mb-3">
+                        Κάθε μέρα στην ώρα που ορίζεις φτιάχνεται αντίγραφο στον φάκελο <code>data/backups</code> και σβήνονται τα παλαιότερα.
+                        Αν ο server ήταν κλειστός εκείνη την ώρα, το αντίγραφο γίνεται μόλις ανοίξει. Πάτα «Αποθήκευση ρυθμίσεων» για να ισχύσουν.
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-primary" asp-page="/Backups/Index">🗄️ Αντίγραφα & επαναφορά</a>
+                        <a class="btn btn-outline-primary" asp-page-handler="Backup">⬇️ Λήψη αντιγράφου τώρα</a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+
+    <div class="d-flex justify-content-end gap-2 mt-3" id="saveBar">
+        <a class="btn btn-outline-secondary" asp-page="/Index">Άκυρο</a>
+        <button type="submit" class="btn btn-primary">Αποθήκευση ρυθμίσεων</button>
+    </div>
+</form>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.querySelectorAll(".settings-nav [data-tab]").forEach(function (button) {
+            button.addEventListener("shown.bs.tab", function () {
+                document.getElementById("activeTabInput").value = button.dataset.tab;
+                document.getElementById("saveBar").classList.remove("d-none");
+            });
+        });
+
+    </script>
 }

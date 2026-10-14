@@ -1,0 +1,65 @@
+@page
+@model SchoolNetworkManager.Pages.Public.RulesModel
+@using SchoolNetworkManager.Services
+
+@{
+    Layout = null;
+    var doc = Model.Current!;
+}
+
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>@doc.Title - @Model.Settings.SchoolTitle</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/public.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="pub-header">
+        <div class="pub-wrap d-flex align-items-center gap-3">
+            @if (!string.IsNullOrWhiteSpace(Model.Settings.LogoPath))
+            {
+                <img src="@Model.Settings.LogoPath" alt="" class="pub-logo" />
+            }
+            <div>
+                <div class="pub-school">@Model.Settings.SchoolTitle</div>
+                <div class="pub-sub">Εργαστήρια πληροφορικής</div>
+            </div>
+        </div>
+    </header>
+
+    <main class="pub-wrap">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2 d-print-none">
+            <a class="pub-back me-auto" asp-page="/Public/Index">← Δήλωση βλάβης</a>
+            @foreach (var d in Model.Documents.Where(d => d.Key != doc.Key))
+            {
+                <a class="btn btn-sm btn-outline-primary" asp-page="/Public/Rules" asp-route-Doc="@d.Key">@d.Icon @SchoolDocuments.ShortName(d.Key)</a>
+            }
+        </div>
+
+        <article class="pub-card">
+            <div class="doc-school d-none d-print-block">@Model.Settings.SchoolTitle</div>
+            <h1 class="doc-title">@doc.Icon @doc.Title</h1>
+            <div class="doc-body">@Html.Raw(DocText.ToHtml(doc.Body))</div>
+            <div class="doc-meta">Τελευταία ενημέρωση @doc.UpdatedAt.ToString("dd/MM/yyyy")</div>
+        </article>
+
+        <div class="d-flex flex-wrap gap-2 mb-4 d-print-none">
+            @if (!string.IsNullOrWhiteSpace(doc.FilePath))
+            {
+                <a class="btn btn-primary" asp-page="/Public/Rules" asp-page-handler="File" asp-route-Doc="@doc.Key">⬇ @doc.FileName</a>
+            }
+            else
+            {
+                <a class="btn btn-outline-primary" asp-page="/Public/Rules" asp-page-handler="Word" asp-route-Doc="@doc.Key">⬇ Λήψη (Word)</a>
+            }
+            <a class="btn btn-outline-secondary" asp-page="/Public/Print" asp-route-Doc="@doc.Key" target="_blank">🖨 Εκτύπωση</a>
+        </div>
+    </main>
+
+    <footer class="pub-wrap pub-footer">@Model.Settings.SchoolTitle · Ομάδα πληροφορικής</footer>
+</body>
+</html>

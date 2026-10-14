@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SchoolNetworkManager.Data;
@@ -18,8 +18,22 @@ public class CreateModel : PageModel
     [BindProperty]
     public Computer Computer { get; set; } = new();
 
-    public void OnGet()
+    [BindProperty]
+    public Dictionary<string, string?> SpecInput { get; set; } = new();
+
+    /// <summary>Τιμές για την ενότητα «Χαρακτηριστικά» της φόρμας.</summary>
+    public Dictionary<string, string> SpecInputView =>
+        SpecInput.Count > 0
+            ? SpecInput.Where(x => x.Value != null).ToDictionary(x => x.Key, x => x.Value!)
+            : Computer.SpecValues;
+
+    public void OnGet(string? location)
     {
+        // «Νέα καταχώρηση εδώ» από τη σελίδα Χώροι
+        if (!string.IsNullOrWhiteSpace(location) && location != SchoolNetworkManager.Pages.Locations.IndexModel.NoLocationKey)
+        {
+            Computer.Location = location.Trim();
+        }
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -45,7 +59,11 @@ public class CreateModel : PageModel
             return Page();
         }
 
+        Computer.MacAddress = SchoolNetworkManager.Services.NetworkTools.NormalizeMac(Computer.MacAddress);
+        Computer.Specs = DeviceSpecs.Serialize(SpecInput, Computer.MachineType, null);
+        Computer.Comments = null;
         Computer.CreatedAt = DateTime.Now;
+        Computer.UpdatedBy = SchoolNetworkManager.Services.UserPasswords.ActorName(User);
 
         _context.Computers.Add(Computer);
         await _context.SaveChangesAsync();

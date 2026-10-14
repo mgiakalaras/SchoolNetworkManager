@@ -1,0 +1,170 @@
+@page
+@model SchoolNetworkManager.Pages.Print.IndexModel
+
+@{
+    Layout = null;
+    var today = DateTime.Now.ToString("dd/MM/yyyy");
+}
+
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Εκτύπωση λίστας - @Model.Settings.SchoolTitle</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/print.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="print-toolbar d-print-none">
+        <form method="get" class="d-flex flex-wrap align-items-end gap-3">
+            <div>
+                <label class="form-label small mb-1">Χώρος</label>
+                <select asp-for="Location" class="form-select form-select-sm">
+                    <option value="">Όλοι οι χώροι</option>
+                    @foreach (var key in Model.AllLocationKeys)
+                    {
+                        <option value="@key">@SchoolNetworkManager.Pages.Print.IndexModel.LocationLabel(key)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-check">
+                <input asp-for="ShowType" class="form-check-input" />
+                <label asp-for="ShowType" class="form-check-label">Τύπος</label>
+            </div>
+
+            <div class="form-check">
+                <input asp-for="ShowMac" class="form-check-input" />
+                <label asp-for="ShowMac" class="form-check-label">MAC</label>
+            </div>
+
+            <div class="form-check">
+                <input asp-for="ShowStatus" class="form-check-input" />
+                <label asp-for="ShowStatus" class="form-check-label">Κατάσταση</label>
+            </div>
+
+            <div class="form-check">
+                <input asp-for="ShowNotes" class="form-check-input" />
+                <label asp-for="ShowNotes" class="form-check-label">Σημειώσεις</label>
+            </div>
+
+            <div class="form-check">
+                <input asp-for="ShowCheck" class="form-check-input" />
+                <label asp-for="ShowCheck" class="form-check-label">Στήλη ελέγχου ☐</label>
+            </div>
+
+            <div class="form-check">
+                <input asp-for="IncludeEmpty" class="form-check-input" />
+                <label asp-for="IncludeEmpty" class="form-check-label">Κενές θέσεις</label>
+            </div>
+
+            <button type="submit" class="btn btn-sm btn-outline-primary">Ανανέωση</button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="window.print()">🖨 Εκτύπωση</button>
+            <a class="btn btn-sm btn-outline-secondary" asp-page="/Locations/Index">Πίσω</a>
+        </form>
+        <div class="small text-muted mt-2">
+            Κάθε χώρος τυπώνεται σε δική του σελίδα. Για PDF διάλεξε «Αποθήκευση ως PDF» στον εκτυπωτή.
+        </div>
+    </div>
+
+    @if (!Model.Groups.Any())
+    {
+        <div class="container py-5 text-center text-muted">Δεν βρέθηκαν συσκευές για εκτύπωση.</div>
+    }
+
+    @foreach (var place in Model.Groups)
+    {
+        var number = 0;
+        var realCount = place.Computers.Count(c => !c.IsEmptySlot);
+
+        <section class="print-page">
+            <header class="print-header">
+                @if (!string.IsNullOrWhiteSpace(Model.Settings.LogoPath))
+                {
+                    <img src="@Model.Settings.LogoPath" alt="" class="print-logo" />
+                }
+                <div class="flex-grow-1">
+                    <div class="print-school">@Model.Settings.SchoolTitle</div>
+                    <h1 class="print-title">@place.Name</h1>
+                </div>
+                <div class="text-end small">
+                    <div>Ημερομηνία: <strong>@today</strong></div>
+                    <div>Συσκευές: <strong>@realCount</strong></div>
+                </div>
+            </header>
+
+            <table class="table table-sm table-bordered print-table">
+                <thead>
+                    <tr>
+                        <th style="width: 2.5em;">#</th>
+                        <th>IP</th>
+                        <th>Όνομα</th>
+                        @if (Model.ShowType)
+                        {
+                            <th>Τύπος</th>
+                        }
+                        @if (Model.ShowMac)
+                        {
+                            <th>MAC</th>
+                        }
+                        @if (Model.ShowStatus)
+                        {
+                            <th>Κατάσταση</th>
+                        }
+                        @if (Model.ShowNotes)
+                        {
+                            <th>Σημειώσεις</th>
+                        }
+                        @if (Model.ShowCheck)
+                        {
+                            <th class="text-center" style="width: 5em;">Βρέθηκε</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var computer in place.Computers)
+                    {
+                        number++;
+                        var notes = string.Join(" · ", new[] { computer.Extras, computer.Notes, computer.Comments }
+                            .Where(x => !string.IsNullOrWhiteSpace(x)));
+
+                        <tr class="@(computer.IsEmptySlot ? "empty-slot" : "")">
+                            <td>@number</td>
+                            <td class="fw-semibold text-nowrap">@computer.IpAddress</td>
+                            <td>@(computer.IsEmptySlot ? "— κενή θέση —" : computer.Name)</td>
+                            @if (Model.ShowType)
+                            {
+                                <td>@(computer.IsEmptySlot ? "" : computer.DisplayMachineType)</td>
+                            }
+                            @if (Model.ShowMac)
+                            {
+                                <td class="font-monospace small text-nowrap">@computer.MacAddress</td>
+                            }
+                            @if (Model.ShowStatus)
+                            {
+                                <td>
+                                    @(computer.IsOnline == true ? "Online" : computer.IsOnline == false ? "Offline" : "—")
+                                </td>
+                            }
+                            @if (Model.ShowNotes)
+                            {
+                                <td class="small">@notes</td>
+                            }
+                            @if (Model.ShowCheck)
+                            {
+                                <td class="text-center check-cell">☐</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <footer class="print-footer">
+                <span>Έλεγχος από: ______________________</span>
+                <span>Υπογραφή: ______________________</span>
+            </footer>
+        </section>
+    }
+</body>
+</html>

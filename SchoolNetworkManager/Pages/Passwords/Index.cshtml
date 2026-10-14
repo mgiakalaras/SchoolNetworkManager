@@ -1,0 +1,286 @@
+﻿@page
+@model SchoolNetworkManager.Pages.Passwords.IndexModel
+
+@{
+    ViewData["Title"] = "Κωδικοί";
+    var greek = new System.Globalization.CultureInfo("el-GR");
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h1 class="mb-1">🔐 Κωδικοί</h1>
+        <p class="text-muted mb-0">Γεννήτρια ισχυρών κωδικών και ιστορικό: ποιος κωδικός, σε ποιον λογαριασμό, πού, από ποιον, πότε</p>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-info shadow-sm">@Model.StatusMessage</div>
+}
+
+@if (Model.JustSaved != null)
+{
+    var b = Model.JustSaved;
+
+    <div class="card shadow-sm mb-4 pw-result">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span class="fw-semibold">✅ Καταχωρήθηκε — @b.Account · @b.Items.Count @(b.Items.Count == 1 ? "στόχος" : "στόχοι")</span>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="window.print()">🖨 Εκτύπωση λίστας</button>
+        </div>
+        <div class="card-body">
+            <table class="table table-sm align-middle mb-3">
+                <thead><tr><th>Πού</th><th>Κωδικός</th><th>Εντολή (cmd ως διαχειριστής)</th></tr></thead>
+                <tbody>
+                    @foreach (var item in b.Items)
+                    {
+                        var cmd = SchoolNetworkManager.Services.PasswordGenerator.NetUserCommand(
+                            item.Device?.Username ?? "Admin", item.Record.Secret ?? "");
+                        <tr>
+                            <td class="fw-semibold">@item.TargetLabel @if (item.Device != null) { <span class="text-muted small">· @item.Device.IpAddress</span> }</td>
+                            <td class="font-monospace pw-cell">
+                                <span class="pw-value">@item.Record.Secret</span>
+                                <button type="button" class="copy-btn" data-copy="@item.Record.Secret" title="Αντιγραφή">⧉</button>
+                            </td>
+                            <td class="font-monospace small">
+                                <span class="text-muted">@cmd</span>
+                                <button type="button" class="copy-btn" data-copy="@cmd" title="Αντιγραφή εντολής">⧉</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <div class="help-tip mt-0">
+                💡 Η εντολή αλλάζει τον κωδικό τοπικού λογαριασμού Windows. Τρέξ' την σε <strong>Γραμμή εντολών ως διαχειριστής</strong> στον υπολογιστή.
+                Αν το όνομα λογαριασμού δεν είναι «Admin», διόρθωσέ το στην εντολή. Μην αφήσεις την εκτύπωση πάνω στον πάγκο. 🙂
+            </div>
+        </div>
+    </div>
+}
+
+<div class="row g-4 mb-4">
+    <!-- ====================== Γεννήτρια ====================== -->
+    <div class="col-lg-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-header fw-semibold">🎲 Γεννήτρια</div>
+            <div class="card-body">
+                <div class="pw-display">
+                    <input type="text" id="pwOut" class="form-control font-monospace" readonly aria-label="Κωδικός" />
+                    <button type="button" class="icon-action" id="pwNew" data-hint="Νέος κωδικός" aria-label="Νέος κωδικός">🔄</button>
+                    <button type="button" class="icon-action" id="pwCopy" data-hint="Αντιγραφή" aria-label="Αντιγραφή">⧉</button>
+                </div>
+                <div class="pw-strength mt-2"><div id="pwBar"></div></div>
+                <div class="small text-muted mt-1" id="pwStrength">&nbsp;</div>
+
+                <div class="mt-3">
+                    <label class="form-label d-flex justify-content-between" for="pwLength">
+                        <span>Μήκος</span><strong id="pwLenLabel">14</strong>
+                    </label>
+                    <input type="range" class="form-range" id="pwLength" min="8" max="32" value="14" />
+                </div>
+
+                <div class="row g-2 mt-1">
+                    <div class="col-6"><div class="form-check"><input class="form-check-input pw-opt" type="checkbox" id="pwUpper" checked /><label class="form-check-label" for="pwUpper">ABC κεφαλαία</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input pw-opt" type="checkbox" id="pwLower" checked /><label class="form-check-label" for="pwLower">abc μικρά</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input pw-opt" type="checkbox" id="pwDigits" checked /><label class="form-check-label" for="pwDigits">123 αριθμοί</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input pw-opt" type="checkbox" id="pwSymbols" checked /><label class="form-check-label" for="pwSymbols">!@@# σύμβολα</label></div></div>
+                    <div class="col-12"><div class="form-check"><input class="form-check-input pw-opt" type="checkbox" id="pwAmbig" checked /><label class="form-check-label" for="pwAmbig">Χωρίς μπερδεμένους χαρακτήρες (0/O, 1/l/I)</label></div></div>
+                </div>
+
+                <div class="help-tip">
+                    💡 Για BIOS ή όπου πληκτρολογείς συχνά, άσε μήκος 10–12 χωρίς σύμβολα. Για Admin, 14+ με σύμβολα.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================== Καταχώρηση ====================== -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-header fw-semibold">📝 Καταχώρηση: πού μπήκε ο κωδικός</div>
+            <div class="card-body">
+                <form method="post" asp-page-handler="Save" id="pwForm">
+                    <input type="hidden" asp-for="Password" id="pwHidden" />
+                    <input type="hidden" asp-for="Options.Length" id="optLength" />
+                    <input type="hidden" asp-for="Options.Upper" id="optUpper" />
+                    <input type="hidden" asp-for="Options.Lower" id="optLower" />
+                    <input type="hidden" asp-for="Options.Digits" id="optDigits" />
+                    <input type="hidden" asp-for="Options.Symbols" id="optSymbols" />
+                    <input type="hidden" asp-for="Options.AvoidAmbiguous" id="optAmbig" />
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="Account">Λογαριασμός</label>
+                            <input asp-for="Account" class="form-control" list="accountList" placeholder="π.χ. Admin (τοπικός διαχειριστής)" required />
+                            <datalist id="accountList">
+                                @foreach (var a in SchoolNetworkManager.Models.PasswordRecord.CommonAccounts)
+                                {
+                                    <option value="@a"></option>
+                                }
+                            </datalist>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="SetBy">Από (ποιος τον έβαλε)</label>
+                            <input asp-for="SetBy" class="form-control who-input" placeholder="Το όνομά σου" required />
+                        </div>
+
+                        <div class="col-12">
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="TargetMode" id="tmDevices" value="devices" checked="@(Model.TargetMode != "other")" />
+                                <label class="btn btn-outline-secondary" for="tmDevices">🖥️ Σε συσκευές</label>
+                                <input type="radio" class="btn-check" name="TargetMode" id="tmOther" value="other" checked="@(Model.TargetMode == "other")" />
+                                <label class="btn btn-outline-secondary" for="tmOther">🏷️ Αλλού (Wi-Fi, λογαριασμός…)</label>
+                            </div>
+                        </div>
+
+                        <!-- Συσκευές -->
+                        <div class="col-12 target-devices">
+                            <input type="search" class="form-control form-control-sm mb-2" id="deviceSearch" placeholder="🔎 Φίλτρο: όνομα, IP, χώρος" />
+                            <div class="device-picker">
+                                @foreach (var loc in Model.DevicesByLocation)
+                                {
+                                    <details class="picker-group" open="@(Model.DevicesByLocation.Count <= 3 || loc.Any(d => Model.DeviceIds.Contains(d.Id)))">
+                                        <summary>
+                                            <input type="checkbox" class="form-check-input picker-all" aria-label="Όλες του χώρου" />
+                                            <strong>@loc.Key</strong>
+                                            <span class="text-muted small">· @loc.Count()</span>
+                                        </summary>
+                                        <div class="picker-items">
+                                            @foreach (var d in loc)
+                                            {
+                                                var label = string.IsNullOrWhiteSpace(d.Name) ? d.IpAddress : d.Name;
+                                                <label class="picker-item" data-search="@((label + " " + d.IpAddress + " " + loc.Key).ToLowerInvariant())">
+                                                    <input type="checkbox" class="form-check-input" name="DeviceIds" value="@d.Id" checked="@Model.DeviceIds.Contains(d.Id)" />
+                                                    <span>@label</span>
+                                                    <span class="text-muted small">.@d.IpAddress.Split('.').Last()</span>
+                                                </label>
+                                            }
+                                        </div>
+                                    </details>
+                                }
+                            </div>
+                            <div class="small text-muted mt-1"><span id="pickedCount">0</span> επιλεγμένες</div>
+
+                            <div class="row g-2 mt-2">
+                                <div class="col-12">
+                                    <div class="form-check form-switch">
+                                        <input asp-for="UniquePerDevice" class="form-check-input" />
+                                        <label class="form-check-label" for="UniquePerDevice">
+                                            <strong>Διαφορετικός κωδικός σε κάθε συσκευή</strong>
+                                            <span class="text-muted small">— αν διαρρεύσει ένας, δεν ανοίγουν όλοι</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <div class="form-check form-switch">
+                                        <input asp-for="UpdateDeviceCredentials" class="form-check-input" />
+                                        <label class="form-check-label" for="UpdateDeviceCredentials">Ενημέρωση και του «Πρόσβαση» στην καρτέλα της συσκευής</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <input asp-for="WindowsUser" class="form-control form-control-sm" placeholder="Όνομα χρήστη, π.χ. Admin" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Άλλος στόχος -->
+                        <div class="col-12 target-other" hidden>
+                            <label class="form-label" for="OtherTarget">Πού μπαίνει</label>
+                            <input asp-for="OtherTarget" class="form-control" placeholder="π.χ. Wi-Fi «EPAL-LAB», Pi-hole, λογαριασμός Microsoft εργαστηρίου" />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label" for="Note">Σημείωση</label>
+                            <input asp-for="Note" class="form-control" placeholder="π.χ. αλλαγή επειδή μαθητής ήξερε τον παλιό" />
+                        </div>
+
+                        <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <span class="small text-muted" id="pwWillUse">Θα καταχωρηθεί ο κωδικός της γεννήτριας.</span>
+                            <button type="submit" class="btn btn-primary">🔐 Καταχώρηση</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====================== Ιστορικό ====================== -->
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span class="fw-semibold">🕘 Ιστορικό</span>
+        <input type="search" id="historySearch" class="form-control form-control-sm" style="width: 240px;" placeholder="🔎 Αναζήτηση: συσκευή, λογαριασμός, όνομα" />
+    </div>
+    <div class="card-body">
+        @if (!Model.History.Any())
+        {
+            <div class="empty-hint">Δεν έχει καταχωρηθεί ακόμα κωδικός.</div>
+        }
+
+        <div class="pw-history">
+            @foreach (var batch in Model.History)
+            {
+                var targets = string.Join(", ", batch.Items.Take(6).Select(i => i.TargetLabel)) + (batch.Items.Count > 6 ? $" +{batch.Items.Count - 6}" : "");
+                var searchText = (batch.Account + " " + batch.SetBy + " " + batch.Note + " " + string.Join(" ", batch.Items.Select(i => i.TargetLabel + " " + i.Device?.IpAddress))).ToLowerInvariant();
+
+                <details class="pw-batch" data-search="@searchText">
+                    <summary>
+                        <span class="pw-batch-account">@batch.Account</span>
+                        <span class="pw-batch-targets">@targets</span>
+                        <span class="text-muted small text-nowrap">@batch.SetAt.ToString("dd/MM/yy HH:mm", greek) · @(batch.SetBy ?? "—")</span>
+                        @if (batch.Items.Count > 1)
+                        {
+                            <span class="badge port-badge">@(batch.SamePasswordForAll ? "ίδιος σε όλες" : "διαφορετικός ανά συσκευή")</span>
+                        }
+                    </summary>
+
+                    @if (!string.IsNullOrWhiteSpace(batch.Note))
+                    {
+                        <div class="small mb-2">📝 @batch.Note</div>
+                    }
+
+                    <table class="table table-sm align-middle mb-0">
+                        <tbody>
+                            @foreach (var item in batch.Items)
+                            {
+                                <tr class="@(item.IsCurrent ? "" : "pw-old")">
+                                    <td>
+                                        @if (item.Device != null)
+                                        {
+                                            <a asp-page="/Computers/Details" asp-route-id="@item.Device.Id">@item.TargetLabel</a>
+                                            <span class="text-muted small">· @item.Device.IpAddress</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@item.TargetLabel</span>
+                                        }
+                                    </td>
+                                    <td class="text-nowrap">
+                                        @if (item.IsCurrent)
+                                        {
+                                            <span class="badge bg-success">τρέχων</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary" title="Έχει αντικατασταθεί από νεότερο">παλιός</span>
+                                        }
+                                    </td>
+                                    <td class="font-monospace text-end text-nowrap">
+                                        <span class="pw-mask" data-secret="@item.Record.Secret">••••••••</span>
+                                        <button type="button" class="copy-btn pw-toggle" title="Εμφάνιση">👁</button>
+                                        <button type="button" class="copy-btn" data-copy="@item.Record.Secret" title="Αντιγραφή">⧉</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </details>
+            }
+        </div>
+    </div>
+</div>
+
+<partial name="_WhoAmI" />
+
+@section Scripts {
+    <script src="~/js/passwords.js" asp-append-version="true"></script>
+}

@@ -1,38 +1,101 @@
 ﻿(function () {
     const root = document.documentElement;
-    const themeToggle = document.getElementById("themeToggle");
     const clockElement = document.getElementById("currentClock");
     const weatherElement = document.getElementById("weatherWidget");
 
-    // Theme
-    const savedTheme = localStorage.getItem("snm-theme") || "light";
-    root.setAttribute("data-theme", savedTheme);
-    updateThemeButton(savedTheme);
+    // Theme: κάθε θέμα είναι «τρόπος-παλέτα», π.χ. dark-teal
+    function applyTheme(id) {
+        const parts = (id || "light-blue").split("-");
+        root.setAttribute("data-theme", parts[0] === "dark" ? "dark" : "light");
+        root.setAttribute("data-bs-theme", parts[0] === "dark" ? "dark" : "light");
+        root.setAttribute("data-palette", parts[1] || "blue");
+        root.setAttribute("data-theme-id", id);
+        markActiveTheme();
+    }
 
-    if (themeToggle) {
-        themeToggle.addEventListener("click", function () {
-            const currentTheme = root.getAttribute("data-theme") || "light";
-            const nextTheme = currentTheme === "dark" ? "light" : "dark";
-
-            root.setAttribute("data-theme", nextTheme);
-            localStorage.setItem("snm-theme", nextTheme);
-            updateThemeButton(nextTheme);
+    function markActiveTheme() {
+        let stored = null;
+        try { stored = localStorage.getItem("snm-theme-id"); } catch (e) { }
+        // Ενεργό: το προσωπικό θέμα, αλλιώς η «Προεπιλογή σχολείου»
+        document.querySelectorAll(".theme-option").forEach(function (item) {
+            const id = item.getAttribute("data-theme-id");
+            item.classList.toggle("active", stored ? id === stored : id === "");
         });
     }
 
-    function updateThemeButton(theme) {
-        if (!themeToggle) return;
+    document.querySelectorAll(".theme-option").forEach(function (item) {
+        item.addEventListener("click", function () {
+            const id = item.getAttribute("data-theme-id");
 
-        if (theme === "dark") {
-            themeToggle.textContent = "☀️ Light";
-            themeToggle.classList.remove("btn-outline-secondary");
-            themeToggle.classList.add("btn-outline-warning");
-        } else {
-            themeToggle.textContent = "🌙 Dark";
-            themeToggle.classList.remove("btn-outline-warning");
-            themeToggle.classList.add("btn-outline-secondary");
+            try {
+                if (id) {
+                    localStorage.setItem("snm-theme-id", id);
+                } else {
+                    localStorage.removeItem("snm-theme-id");
+                }
+                localStorage.removeItem("snm-theme");
+            } catch (e) { }
+
+            applyTheme(id || root.getAttribute("data-default-theme") || "light-blue");
+        });
+    });
+
+    markActiveTheme();
+
+    // Εκτύπωση: πάντα με φωτεινό θέμα (αλλιώς ανοιχτά γράμματα σε λευκό χαρτί = κενή σελίδα)
+    let themeBeforePrint = null;
+    window.addEventListener("beforeprint", function () {
+        if (root.getAttribute("data-theme") === "dark") {
+            themeBeforePrint = root.getAttribute("data-theme-id") || "dark-blue";
+            root.setAttribute("data-theme", "light");
+            root.setAttribute("data-bs-theme", "light");
         }
-    }
+    });
+    window.addEventListener("afterprint", function () {
+        if (themeBeforePrint) {
+            applyTheme(themeBeforePrint);
+            themeBeforePrint = null;
+        }
+    });
+
+    // Γενικό tooltip για στοιχεία με data-hint (π.χ. κελιά ιστορικού)
+    (function () {
+        const hinted = document.querySelectorAll("[data-hint]");
+        if (!hinted.length) return;
+
+        const tip = document.createElement("div");
+        tip.className = "dev-tooltip";
+        tip.hidden = true;
+        document.body.appendChild(tip);
+
+        hinted.forEach(function (el) {
+            el.addEventListener("pointerenter", function () {
+                tip.textContent = el.dataset.hint;
+                tip.hidden = false;
+                const r = el.getBoundingClientRect();
+                const w = tip.offsetWidth;
+                let left = r.left + r.width / 2 - w / 2;
+                left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+                tip.style.left = left + "px";
+                tip.style.top = (r.top - tip.offsetHeight - 6) + "px";
+            });
+            el.addEventListener("pointerleave", function () { tip.hidden = true; });
+        });
+
+        window.addEventListener("scroll", function () { tip.hidden = true; }, { passive: true });
+    })();
+
+    // Κουμπιά που κάνουν αργή εργασία: απενεργοποίηση και μήνυμα αναμονής
+    document.querySelectorAll("form.busy-form").forEach(function (form) {
+        form.addEventListener("submit", function (event) {
+            const button = form.querySelector("button[type=submit]");
+            if (!button || event.defaultPrevented) return;   // π.χ. «Άκυρο» στο confirm
+            setTimeout(function () {
+                button.disabled = true;
+                if (button.dataset.busyText) button.textContent = button.dataset.busyText;
+            }, 0);
+        });
+    });
 
     // Clock
     function updateClock() {
@@ -40,13 +103,12 @@
 
         const now = new Date();
 
-        clockElement.textContent = new Intl.DateTimeFormat("el-GR", {
-            weekday: "short",
-            day: "2-digit",
-            month: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit"
-        }).format(now);
+        // Στη μπάρα: ημέρα και ώρα σύντομα· πλήρης ημερομηνία στο tooltip
+        const day = new Intl.DateTimeFormat("el-GR", { weekday: "short", day: "numeric", month: "numeric" }).format(now);
+        const time = new Intl.DateTimeFormat("el-GR", { hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
+
+        clockElement.textContent = day + " · " + time;
+        clockElement.parentElement.title = new Intl.DateTimeFormat("el-GR", { dateStyle: "full", timeStyle: "short" }).format(now);
     }
 
     updateClock();
@@ -56,9 +118,9 @@
     async function loadWeather() {
         if (!weatherElement) return;
 
-        const latitude = 37.69;
-        const longitude = 26.94;
-        const place = "Σάμος";
+        const latitude = parseFloat(weatherElement.dataset.lat || "37.69");
+        const longitude = parseFloat(weatherElement.dataset.lon || "26.94");
+        const place = weatherElement.dataset.place || "";
 
         try {
             const url =
@@ -85,10 +147,30 @@
             const code = data.current.weather_code;
             const description = weatherCodeToText(code);
 
-            weatherElement.textContent = `${place}: ${temp}°C, ${description}, ${wind} km/h`;
+            // Στη μπάρα μόνο θερμοκρασία· τα υπόλοιπα στο tooltip
+            weatherElement.textContent = `${temp}°`;
+            const wrap = document.getElementById("weatherWrap");
+            const icon = document.getElementById("weatherIcon");
+            if (wrap) wrap.title = `${place ? place + ": " : ""}${temp}°C, ${description}, άνεμος ${wind} km/h`;
+            if (icon) icon.textContent = weatherCodeToIcon(code);
         } catch (error) {
-            weatherElement.textContent = "Καιρός μη διαθέσιμος";
+            const wrap = document.getElementById("weatherWrap");
+            if (wrap) wrap.hidden = true;
+            const sep = document.querySelector("#infoPill .info-sep");
+            if (sep) sep.hidden = true;
         }
+    }
+
+    function weatherCodeToIcon(code) {
+        if (code === 0) return "☀️";
+        if (code <= 2) return "🌤️";
+        if (code === 3) return "☁️";
+        if (code === 45 || code === 48) return "🌫️";
+        if (code >= 51 && code <= 67) return "🌧️";
+        if (code >= 71 && code <= 77) return "❄️";
+        if (code >= 80 && code <= 82) return "🌦️";
+        if (code >= 95) return "⛈️";
+        return "🌤️";
     }
 
     function weatherCodeToText(code) {

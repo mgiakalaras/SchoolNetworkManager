@@ -1,0 +1,379 @@
+@page
+@model SchoolNetworkManager.Pages.Report.IndexModel
+
+@{
+    Layout = null;
+    var types = Model.Types.Take(6).ToList();
+    var otherTypes = Model.Types.Skip(6).ToList();
+    var openFaults = Model.Faults.Where(f => f.Fault.ResolvedAt == null).ToList();
+    var yearFaults = Model.Faults.Where(f => f.Fault.CreatedAt >= Model.From).ToList();
+    var faultsByLocation = yearFaults
+        .GroupBy(f => f.LocationLabel)
+        .OrderByDescending(g => g.Count())
+        .ToList();
+    var maxFaults = faultsByLocation.Select(g => g.Count()).DefaultIfEmpty(1).Max();
+}
+
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ετήσια αναφορά @Model.SchoolYearLabel - @Model.Settings.SchoolTitle</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/report.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="rp-toolbar d-print-none">
+        <form method="get" class="d-flex flex-wrap align-items-center gap-2">
+            <span class="fw-semibold">📑 Ετήσια αναφορά</span>
+            <select name="Location" class="form-select form-select-sm w-auto" onchange="this.form.submit()" title="Για ποιον χώρο">
+                <option value="">🏫 Όλο το σχολείο</option>
+                @foreach (var loc in Model.AllLocations)
+                {
+                    <option value="@loc" selected="@(loc == Model.Location)">📍 @(loc == SchoolNetworkManager.Pages.Locations.IndexModel.NoLocationKey ? SchoolNetworkManager.Pages.Locations.IndexModel.NoLocationName : loc)</option>
+                }
+            </select>
+            <select name="Year" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                @foreach (var y in Model.AvailableYears)
+                {
+                    <option value="@y" selected="@(y == Model.From.Year)">Σχολικό έτος @y-@(((y + 1) % 100).ToString("00"))</option>
+                }
+            </select>
+            <button type="button" class="btn btn-sm btn-primary" onclick="window.print()">🖨 Εκτύπωση / PDF</button>
+            <a class="btn btn-sm btn-outline-secondary" href="/">Πίσω</a>
+        </form>
+        <div class="rp-sections mt-2">
+            <span class="small text-muted me-1">Ενότητες:</span>
+            <label><input type="checkbox" data-sec-toggle="equipment" checked /> Εξοπλισμός</label>
+            <label><input type="checkbox" data-sec-toggle="faults" checked /> Βλάβες</label>
+            <label><input type="checkbox" data-sec-toggle="usage" checked /> Χρήση</label>
+            <label><input type="checkbox" data-sec-toggle="attention" checked /> Αντικατάσταση</label>
+            <label><input type="checkbox" data-sec-toggle="consumables" checked="@(!Model.IsLocationReport)" /> Αναλώσιμα</label>
+            <label><input type="checkbox" data-sec-toggle="notes" checked /> Παρατηρήσεις</label>
+            <span class="small text-muted ms-auto">Τα πλαίσια με διακεκομμένη γραμμή γράφονται εδώ πριν την εκτύπωση.</span>
+        </div>
+    </div>
+
+    <main class="rp-page">
+        <header class="rp-header">
+            @if (!string.IsNullOrWhiteSpace(Model.Settings.LogoPath))
+            {
+                <img src="@Model.Settings.LogoPath" alt="" class="rp-logo" />
+            }
+            <div>
+                <div class="rp-school">@Model.Settings.SchoolTitle</div>
+                @if (Model.IsLocationReport)
+                {
+                    <h1>Ετήσια αναφορά — @Model.LocationLabel</h1>
+                }
+                else
+                {
+                    <h1>Ετήσια αναφορά εργαστηρίων &amp; εξοπλισμού</h1>
+                }
+                <div class="rp-sub">Σχολικό έτος @Model.SchoolYearLabel (@Model.From.ToString("dd/MM/yyyy") – @Model.To.ToString("dd/MM/yyyy")) · Συντάχθηκε @DateTime.Now.ToString("dd/MM/yyyy")</div>
+            </div>
+        </header>
+
+        <section class="rp-kpis">
+            <div class="rp-kpi"><b>@Model.Devices.Count</b><span>συσκευές</span></div>
+            @if (Model.IsLocationReport)
+            {
+                <div class="rp-kpi"><b>@(Model.DevicesUsed?.ToString() ?? "—")</b><span>χρησιμοποιήθηκαν</span></div>
+            }
+            else
+            {
+                <div class="rp-kpi"><b>@Model.ByLocation.Count</b><span>χώροι</span></div>
+            }
+            <div class="rp-kpi"><b>@Model.FaultsOpened</b><span>βλάβες στη χρονιά</span></div>
+            <div class="rp-kpi"><b>@Model.FaultsClosed</b><span>επισκευάστηκαν</span></div>
+            <div class="rp-kpi @(Model.FaultsStillOpen > 0 ? "warn" : "")"><b>@Model.FaultsStillOpen</b><span>ανοιχτές σήμερα</span></div>
+            <div class="rp-kpi"><b>@(Model.AvgRepairDays == null ? "—" : Model.AvgRepairDays.Value.ToString("0.#"))</b><span>μέρες μέχρι επισκευή (μ.ό.)</span></div>
+        </section>
+
+        <section class="rp-sec" data-sec="equipment">
+        @if (Model.IsLocationReport)
+        {
+            <h2>Εξοπλισμός</h2>
+            <div class="rp-type-chips">
+                @foreach (var t in Model.Types)
+                {
+                    <span>@t: <b>@Model.Devices.Count(d => d.DisplayMachineType == t)</b></span>
+                }
+            </div>
+            <table class="table table-sm rp-table">
+                <thead>
+                    <tr><th>#</th><th>Συσκευή</th><th>IP</th><th>Τύπος</th><th>Μάρκα / μοντέλο</th><th>Επεξεργαστής</th><th>RAM</th><th>Αρ. απογρ.</th></tr>
+                </thead>
+                <tbody>
+                    @{ var rowNo = 0; }
+                    @foreach (var d in Model.Devices)
+                    {
+                        rowNo++;
+                        var spec = d.SpecValues;
+                        <tr>
+                            <td class="text-muted">@rowNo</td>
+                            <td>@(string.IsNullOrWhiteSpace(d.Name) ? "—" : d.Name)</td>
+                            <td class="text-nowrap">@d.IpAddress</td>
+                            <td>@d.DisplayMachineType</td>
+                            <td>@spec.GetValueOrDefault("common_brand")</td>
+                            <td>@spec.GetValueOrDefault("pc_cpu")</td>
+                            <td class="text-nowrap">@spec.GetValueOrDefault("pc_ram")</td>
+                            <td>@spec.GetValueOrDefault("common_inventory")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <h2>Εξοπλισμός ανά χώρο</h2>
+        <table class="table table-sm rp-table">
+            <thead>
+                <tr>
+                    <th>Χώρος</th>
+                    @foreach (var t in types)
+                    {
+                        <th class="text-center">@t</th>
+                    }
+                    @if (otherTypes.Count > 0)
+                    {
+                        <th class="text-center">Λοιπά</th>
+                    }
+                    <th class="text-end">Σύνολο</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.ByLocation)
+                {
+                    <tr>
+                        <td>@row.Name</td>
+                        @foreach (var t in types)
+                        {
+                            <td class="text-center">@(row.ByType.GetValueOrDefault(t) is var n && n > 0 ? n.ToString() : "·")</td>
+                        }
+                        @if (otherTypes.Count > 0)
+                        {
+                            var rest = otherTypes.Sum(t => row.ByType.GetValueOrDefault(t));
+                            <td class="text-center">@(rest > 0 ? rest.ToString() : "·")</td>
+                        }
+                        <td class="text-end fw-semibold">@row.Total</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th>Σύνολο</th>
+                    @foreach (var t in types)
+                    {
+                        <th class="text-center">@Model.Devices.Count(d => d.DisplayMachineType == t)</th>
+                    }
+                    @if (otherTypes.Count > 0)
+                    {
+                        <th class="text-center">@Model.Devices.Count(d => otherTypes.Contains(d.DisplayMachineType))</th>
+                    }
+                    <th class="text-end">@Model.Devices.Count</th>
+                </tr>
+            </tfoot>
+        </table>
+        }
+        </section>
+
+        <section class="rp-sec" data-sec="faults">
+        <h2>Βλάβες</h2>
+        @if (yearFaults.Count == 0 && openFaults.Count == 0)
+        {
+            <p class="text-muted">Δεν καταγράφηκαν βλάβες στο βιβλίο βλαβών για αυτή τη χρονιά. 👍</p>
+        }
+        else
+        {
+            if (faultsByLocation.Count > 0)
+            {
+                <div class="rp-bars">
+                    @foreach (var g in faultsByLocation)
+                    {
+                        <div class="rp-bar-row">
+                            <span class="rp-bar-label">@g.Key</span>
+                            <span class="rp-bar"><i style="width:@((g.Count() * 100.0 / maxFaults).ToString("0", System.Globalization.CultureInfo.InvariantCulture))%"></i></span>
+                            <span class="rp-bar-num">@g.Count()</span>
+                        </div>
+                    }
+                </div>
+            }
+
+            <table class="table table-sm rp-table rp-faults">
+                <thead>
+                    <tr>
+                        <th>Ημ/νία</th>
+                        <th>Συσκευή</th>
+                        <th>Χώρος</th>
+                        <th>Πρόβλημα</th>
+                        <th>Έκβαση</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var f in Model.Faults)
+                    {
+                        <tr class="@(f.Fault.ResolvedAt == null ? "open" : "")">
+                            <td class="text-nowrap">@f.Fault.CreatedAt.ToString("dd/MM/yy")</td>
+                            <td>@f.DeviceLabel</td>
+                            <td>@f.LocationLabel</td>
+                            <td>@(f.Fault.IsDown ? "⛔ " : "")@f.Fault.Description</td>
+                            <td>
+                                @if (f.Fault.ResolvedAt == null)
+                                {
+                                    <b>Εκκρεμεί</b>
+                                }
+                                else
+                                {
+                                    <span>✔ @f.Fault.ResolvedAt.Value.ToString("dd/MM/yy")@(string.IsNullOrWhiteSpace(f.Fault.Resolution) ? "" : " — " + f.Fault.Resolution)</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        </section>
+
+        <section class="rp-sec" data-sec="usage">
+        <h2>Χρήση</h2>
+        @if (Model.PeakOnline == null)
+        {
+            <p class="text-muted">Δεν υπάρχουν ακόμη μετρήσεις για αυτή τη χρονιά.</p>
+        }
+        else
+        {
+            <ul class="rp-list">
+                <li>Μέγιστος αριθμός ταυτόχρονα ανοιχτών συσκευών: <b>@Model.PeakOnline</b> (@Model.PeakOnlineAt?.ToString("dd/MM/yyyy HH:mm")).</li>
+                <li>Μέσος όρος ημερήσιας αιχμής (εργάσιμες): <b>@(Model.AvgDailyPeak?.ToString("0.#"))</b> συσκευές.</li>
+                @if (Model.DevicesUsed != null)
+                {
+                    <li>Συσκευές που άνοιξαν τουλάχιστον μία φορά: <b>@Model.DevicesUsed</b> από @Model.Devices.Count.</li>
+                }
+                <li class="text-muted small">Μετρήσεις από @Model.UsageDataFrom?.ToString("dd/MM/yyyy") (@Model.UsageDays ημέρες).@(Model.IsLocationReport ? " Το ιστορικό ανά συσκευή κρατιέται 35 ημέρες." : " Το ιστορικό κρατιέται 90 ημέρες.")</li>
+            </ul>
+            @if (Model.ByHourOfDay.Count > 0)
+            {
+                var maxHour = Math.Max(1, Model.ByHourOfDay.Max(h => h.Avg));
+                <div class="rp-mini-title mt-2">Μέσος αριθμός ανοιχτών ανά ώρα (εργάσιμες)</div>
+                <div class="rp-hours">
+                    @foreach (var h in Model.ByHourOfDay)
+                    {
+                        <div class="rp-hour">
+                            <span class="rp-hour-bar"><i style="height:@((h.Avg * 100 / maxHour).ToString("0", System.Globalization.CultureInfo.InvariantCulture))%"></i></span>
+                            <b>@h.Avg.ToString("0.#")</b>
+                            <small>@h.Hour:00</small>
+                        </div>
+                    }
+                </div>
+            }
+        }
+        </section>
+
+        <section class="rp-sec" data-sec="attention">
+        <h2>Συσκευές που χρειάζονται προσοχή / αντικατάσταση</h2>
+        @if (Model.Attention.Count == 0)
+        {
+            <p class="text-muted">Καμία συσκευή δεν πληροί τα κριτήρια (εκτός λειτουργίας, ≥3 βλάβες, αχρησιμοποίητη, ≥8 ετών, &lt;8 GB RAM).</p>
+        }
+        else
+        {
+            <table class="table table-sm rp-table">
+                <thead>
+                    <tr><th>Συσκευή</th><th>Χώρος</th><th>IP</th><th>Λόγος</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var a in Model.Attention)
+                    {
+                        <tr>
+                            <td>@(string.IsNullOrWhiteSpace(a.Device.Name) ? a.Device.IpAddress : a.Device.Name)</td>
+                            <td>@(string.IsNullOrWhiteSpace(a.Device.Location) ? "—" : a.Device.Location)</td>
+                            <td class="text-nowrap">@a.Device.IpAddress</td>
+                            <td>@(string.Join(" · ", a.Reasons))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        </section>
+
+        <section class="rp-sec" data-sec="consumables">
+        <h2>Αναλώσιμα</h2>
+        @if (Model.ConsumablesUsed.Count == 0 && Model.LowStock.Count == 0)
+        {
+            <p class="text-muted">Δεν καταγράφηκαν κινήσεις αναλωσίμων.</p>
+        }
+        else
+        {
+            <div class="row g-3">
+                <div class="col-6">
+                    <div class="rp-mini-title">Καταναλώθηκαν στη χρονιά</div>
+                    <ul class="rp-list">
+                        @foreach (var c in Model.ConsumablesUsed.Take(12))
+                        {
+                            <li>@c.Name: <b>@c.Used</b></li>
+                        }
+                        @if (Model.ConsumablesUsed.Count == 0)
+                        {
+                            <li class="text-muted">—</li>
+                        }
+                    </ul>
+                </div>
+                <div class="col-6">
+                    <div class="rp-mini-title">Χρειάζονται παραγγελία</div>
+                    <ul class="rp-list">
+                        @foreach (var c in Model.LowStock)
+                        {
+                            <li>@(c.IsOut ? "🔴" : "🟠") @c.Name — απόθεμα <b>@c.Quantity</b> (ελάχ. @c.MinQuantity)</li>
+                        }
+                        @if (Model.LowStock.Count == 0)
+                        {
+                            <li class="text-muted">Όλα επαρκούν.</li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+        </section>
+
+        <section class="rp-sec" data-sec="notes">
+        <h2>Παρατηρήσεις &amp; προτάσεις</h2>
+        <div class="rp-notes" contenteditable="true" id="rpNotes" data-key="snm-report-notes-@Model.From.Year-@(Model.Location ?? "all")"
+             data-placeholder="Γράψε εδώ παρατηρήσεις, ανάγκες για την επόμενη χρονιά, προτάσεις αγορών…"></div>
+        </section>
+
+        <footer class="rp-sign">
+            <div>
+                <div class="rp-sign-title" contenteditable="true">Ο/Η Υπεύθυνος/η @(Model.IsLocationReport ? "εργαστηρίου" : "εργαστηρίων")</div>
+                <div class="rp-sign-line" contenteditable="true"></div>
+            </div>
+            <div>
+                <div class="rp-sign-title" contenteditable="true" data-hint="Πάτα για να αλλάξεις">@(Model.IsLocationReport ? "Ο/Η Τομεάρχης" : "Ο/Η Διευθυντής/ντρια")</div>
+                <div class="rp-sign-line" contenteditable="true"></div>
+            </div>
+        </footer>
+    </main>
+
+    <script>
+        (function () {
+            var notes = document.getElementById('rpNotes');
+            var key = notes.dataset.key;
+            try { notes.innerText = localStorage.getItem(key) || ''; } catch (e) { }
+            notes.addEventListener('input', function () {
+                try { localStorage.setItem(key, notes.innerText); } catch (e) { }
+            });
+
+            document.querySelectorAll('[data-sec-toggle]').forEach(function (cb) {
+                function apply() {
+                    document.querySelectorAll('[data-sec="' + cb.dataset.secToggle + '"]').forEach(function (sec) {
+                        sec.classList.toggle('rp-hidden', !cb.checked);
+                    });
+                }
+                cb.addEventListener('change', apply);
+                apply();
+            });
+        })();
+    </script>
+</body>
+</html>

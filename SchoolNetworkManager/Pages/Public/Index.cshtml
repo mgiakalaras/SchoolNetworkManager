@@ -1,0 +1,186 @@
+@page
+@model SchoolNetworkManager.Pages.Public.IndexModel
+@using SchoolNetworkManager.Models
+@using SchoolNetworkManager.Services
+
+@{
+    Layout = null;
+    var devicesJson = Model.Locations.ToDictionary(l => l.Name, l => l.Devices.Select(d => new { id = d.Id, label = d.Icon + " " + d.Label }));
+}
+
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Δήλωση βλάβης - @Model.Settings.SchoolTitle</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/public.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="pub-header">
+        <div class="pub-wrap d-flex align-items-center gap-3">
+            @if (!string.IsNullOrWhiteSpace(Model.Settings.LogoPath))
+            {
+                <img src="@Model.Settings.LogoPath" alt="" class="pub-logo" />
+            }
+            <div>
+                <div class="pub-school">@Model.Settings.SchoolTitle</div>
+                <div class="pub-sub">Εργαστήρια πληροφορικής</div>
+            </div>
+        </div>
+    </header>
+
+    <main class="pub-wrap">
+        @if (!Model.Enabled)
+        {
+            <div class="pub-card text-center py-5">
+                <div class="fs-1">🔒</div>
+                Η δημόσια σελίδα δεν είναι ενεργή αυτή τη στιγμή.
+            </div>
+        }
+        else
+        {
+            if (Model.Sent)
+            {
+                <div class="pub-success">
+                    <div class="fs-1">✅</div>
+                    <div class="fw-semibold fs-5">Ευχαριστούμε! Η δήλωση στάλθηκε.</div>
+                    @if (!string.IsNullOrWhiteSpace(Model.SentWhat))
+                    {
+                        <div class="text-muted">@Model.SentWhat</div>
+                    }
+                    <div class="small mt-2">Η ομάδα πληροφορικής θα την ελέγξει. Μέχρι τότε, πες το και στον καθηγητή σου.</div>
+                </div>
+            }
+
+            <section class="pub-card">
+                <h1 class="pub-title">🔧 Δήλωση βλάβης</h1>
+                <p class="text-muted mb-4">Κάτι δεν δουλεύει στο εργαστήριο; Πες μας τι και πού — δεν χρειάζεται κωδικός.</p>
+
+                @if (!string.IsNullOrWhiteSpace(Model.Error))
+                {
+                    <div class="alert alert-danger">@Model.Error</div>
+                }
+
+                @if (!Model.Locations.Any())
+                {
+                    <div class="text-muted">Δεν έχουν καταχωρηθεί ακόμη χώροι.</div>
+                }
+                else
+                {
+                    <form method="post" class="d-grid gap-4" id="reportForm">
+                        <div class="pub-hp" aria-hidden="true">
+                            <label>Μην το συμπληρώσεις <input name="Website" tabindex="-1" autocomplete="off" /></label>
+                        </div>
+
+                        <div>
+                            <label class="pub-label" for="Location">1. Σε ποιο εργαστήριο;</label>
+                            <select asp-for="Location" class="form-select form-select-lg" id="Location" required>
+                                <option value="">— διάλεξε —</option>
+                                @foreach (var l in Model.Locations)
+                                {
+                                    <option value="@l.Name">@l.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="pub-label" for="Device">2. Ποια συσκευή;</label>
+                            <select asp-for="Device" class="form-select form-select-lg" id="Device">
+                                <option value="">— διάλεξε πρώτα εργαστήριο —</option>
+                            </select>
+                            <div class="form-text">Το όνομα είναι συνήθως γραμμένο σε ετικέτα πάνω στον υπολογιστή ή στην οθόνη.</div>
+                            <input asp-for="DeviceText" class="form-control mt-2" id="DeviceText" maxlength="120"
+                                   placeholder="Δεν τη βρίσκω — γράψε ποια είναι (π.χ. προβολέας, 3η θέση δίπλα στο παράθυρο)" />
+                        </div>
+
+                        <div>
+                            <span class="pub-label">3. Πόσο σοβαρό είναι;</span>
+                            <div class="pub-choices">
+                                <input type="radio" class="btn-check" name="Severity" id="sevMinor" value="@Fault.SeverityMinor" checked="@(Model.Severity != Fault.SeverityDown)" />
+                                <label class="pub-choice" for="sevMinor"><span>🔧</span> Δουλεύει, αλλά με πρόβλημα</label>
+                                <input type="radio" class="btn-check" name="Severity" id="sevDown" value="@Fault.SeverityDown" checked="@(Model.Severity == Fault.SeverityDown)" />
+                                <label class="pub-choice is-down" for="sevDown"><span>⛔</span> Δεν λειτουργεί καθόλου</label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="pub-label" for="Description">4. Τι πρόβλημα έχει;</label>
+                            <textarea asp-for="Description" class="form-control" rows="4" maxlength="1000" required
+                                      placeholder="π.χ. Δεν ανάβει η οθόνη · Δεν έχει ίντερνετ · Το ποντίκι δεν δουλεύει · Λείπει το πληκτρολόγιο"></textarea>
+                        </div>
+
+                        <div>
+                            <span class="pub-label">5. Ποιος το δηλώνει; <span class="text-muted fw-normal small">(προαιρετικά)</span></span>
+                            <div class="pub-choices mb-2">
+                                @for (var i = 0; i < FaultReport.Roles.Length; i++)
+                                {
+                                    var role = FaultReport.Roles[i];
+                                    <input type="radio" class="btn-check" name="ReporterRole" id="role@(i)" value="@role" checked="@(Model.ReporterRole == role)" />
+                                    <label class="pub-choice small" for="role@(i)">@role</label>
+                                }
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-sm-7"><input asp-for="ReporterName" class="form-control" maxlength="80" placeholder="Όνομα" /></div>
+                                <div class="col-sm-5"><input asp-for="ClassName" class="form-control" maxlength="40" placeholder="Τμήμα (π.χ. Β2)" /></div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg">📨 Αποστολή</button>
+                    </form>
+                }
+            </section>
+
+            @if (Model.Documents.Any())
+            {
+                <section class="pub-docs">
+                    @foreach (var d in Model.Documents)
+                    {
+                        <a class="pub-doc" asp-page="/Public/Rules" asp-route-Doc="@d.Key">
+                            <span class="pub-doc-icon">@d.Icon</span>
+                            <span>
+                                <span class="fw-semibold d-block">@d.Title</span>
+                                <span class="small text-muted">Άνοιγμα →</span>
+                            </span>
+                        </a>
+                    }
+                </section>
+            }
+        }
+    </main>
+
+    <footer class="pub-wrap pub-footer">@Model.Settings.SchoolTitle · Ομάδα πληροφορικής</footer>
+
+    <script>
+        (function () {
+            const devices = @Json.Serialize(devicesJson);
+            const loc = document.getElementById("Location");
+            const dev = document.getElementById("Device");
+            if (!loc || !dev) return;
+            const preselect = @Json.Serialize(Model.Device);
+
+            function fill() {
+                const list = devices[loc.value] || [];
+                dev.innerHTML = "";
+                const first = document.createElement("option");
+                first.value = "";
+                first.textContent = loc.value ? "— διάλεξε συσκευή —" : "— διάλεξε πρώτα εργαστήριο —";
+                dev.appendChild(first);
+                list.forEach(function (d) {
+                    const o = document.createElement("option");
+                    o.value = d.id;
+                    o.textContent = d.label;
+                    if (preselect && d.id === preselect) o.selected = true;
+                    dev.appendChild(o);
+                });
+                dev.disabled = !loc.value;
+            }
+
+            loc.addEventListener("change", fill);
+            fill();
+        })();
+    </script>
+</body>
+</html>

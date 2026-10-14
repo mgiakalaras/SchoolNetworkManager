@@ -1,0 +1,29 @@
+name: schoolnetworkmanager
+
+services:
+  schoolnetworkmanager:
+    image: ghcr.io/mgiakalaras/schoolnetworkmanager:latest
+    container_name: schoolnetworkmanager
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      TZ: Europe/Athens
+      ADMIN_PASSWORD: "ΑΛΛΑΞΕ-ΜΕ"
+    volumes:
+      - /DATA/AppData/schoolnetworkmanager/data:/app/data
+      - /DATA/AppData/schoolnetworkmanager/uploads:/app/wwwroot/uploads
+
+x-casaos:
+  architectures:
+    - amd64
+  main: schoolnetworkmanager
+  title:
+    en_us: School Network Manager
+  description:
+    en_us: Καταγραφή και διαχείριση σχολικού δικτύου
+  category: Utilities
+  author: mgiakalaras
+  developer: mgiakalaras
+  port_map: "5055"
+  scheme: http
+  index: /

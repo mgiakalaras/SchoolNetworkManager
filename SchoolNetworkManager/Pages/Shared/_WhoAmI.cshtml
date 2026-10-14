@@ -1,0 +1,52 @@
+@using SchoolNetworkManager.Services
+@*
+    «Ποιος είμαι»: όνομα του χρήστη για το ιστορικό (κωδικοί, αναλώσιμα, βλάβες).
+    Με προσωπικό λογαριασμό το όνομα έρχεται από τη σύνδεση (και ο server το επιβάλλει).
+    Με τον κοινό λογαριασμό admin το θυμάται ο browser του καθενός.
+*@
+@{
+    var accountName = UserPasswords.UserId(User) != null ? UserPasswords.DisplayName(User) : null;
+}
+<script>
+    (function () {
+        const fromAccount = @Json.Serialize(accountName);
+        let name = fromAccount || "";
+        if (!name) {
+            try { name = localStorage.getItem("snm-who") || ""; } catch (e) { }
+        }
+
+        function fill() {
+            document.querySelectorAll(".who-field").forEach(function (f) { f.value = name; });
+            document.querySelectorAll(".who-input").forEach(function (f) {
+                if (fromAccount) { f.value = name; f.readOnly = true; f.title = "Από τον λογαριασμό σου"; }
+                else if (!f.value) { f.value = name; }
+            });
+            document.querySelectorAll(".who-name").forEach(function (f) { f.textContent = name || "—"; });
+        }
+
+        if (!fromAccount) {
+            document.addEventListener("change", function (event) {
+                if (event.target.classList && event.target.classList.contains("who-input")) {
+                    name = event.target.value.trim();
+                    try { localStorage.setItem("snm-who", name); } catch (e) { }
+                    fill();
+                }
+            });
+
+            document.addEventListener("submit", function (event) {
+                const form = event.target;
+                const field = form.querySelector(".who-field");
+                if (field && !name) {
+                    const given = prompt("Το όνομά σου (για το ιστορικό — θα το θυμάται αυτός ο browser):", "");
+                    if (given && given.trim()) {
+                        name = given.trim();
+                        try { localStorage.setItem("snm-who", name); } catch (e) { }
+                        fill();
+                    }
+                }
+            }, true);
+        }
+
+        fill();
+    })();
+</script>
