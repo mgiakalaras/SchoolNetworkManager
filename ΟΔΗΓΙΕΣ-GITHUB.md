@@ -22,6 +22,21 @@
    και αντέγραψε μέσα τα περιεχόμενα του zip.
 4. Στο GitHub Desktop: γράψε στο Summary «School Network Manager 2.11» → **Commit to main** → **Push origin**.
 
+## Νέο Release (η σελίδα «Releases» του αποθετηρίου)
+
+Το README και το CHANGELOG ενημερώνονται μόνα τους με το ανέβασμα. Το Release το φτιάχνεις μία φορά ανά έκδοση:
+
+1. GitHub → το αποθετήριο → δεξιά **Releases** → **Draft a new release**.
+2. **Choose a tag** → γράψε `v2.11.0` → «Create new tag».
+3. Title: `School Network Manager 2.11 (server)`.
+4. Στην περιγραφή επικόλλησε το κείμενο από το `RELEASE-v2.11.md`.
+5. Σύρε μέσα ως συνημμένο το `SchoolNetworkManager-portainer.tar` (για εγκατάσταση χωρίς internet).
+6. Τσέκαρε **Set as the latest release** → **Publish release**.
+
+Η παλιά έκδοση Windows: άνοιξε το Release `v1.0.0` → ✏️ Edit → άλλαξε τον τίτλο σε
+`v1.0.0 — Windows (παλιά έκδοση, δεν αναπτύσσεται πλέον)` → ξε-τσέκαρε το «latest» → Update release.
+Έτσι μένει διαθέσιμη, αλλά δεν μπερδεύει κανέναν.
+
 ## Μετά το ανέβασμα
 
 Στο αποθετήριο υπάρχει έτοιμο GitHub Action (`.github/workflows/docker.yml`): σε κάθε push φτιάχνει μόνο του
