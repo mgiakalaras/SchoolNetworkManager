@@ -171,6 +171,13 @@ using (var scope = app.Services.CreateScope())
         db.SaveChanges();
     }
 
+    // Κλειδί για τους agents των υπολογιστών (μία φορά)
+    if (string.IsNullOrWhiteSpace(settings.AgentKey))
+    {
+        settings.AgentKey = AgentIngest.NewKey();
+        db.SaveChanges();
+    }
+
     app.Services.GetRequiredService<SettingsService>().Update(settings);
 
     // Κρυπτογράφηση κωδικών που είχαν αποθηκευτεί ως απλό κείμενο
@@ -228,6 +235,63 @@ app.Use(async (context, next) =>
 });
 
 app.UseAuthorization();
+
+// ---------- Agent υπολογιστών ----------
+// Οι agents (snm-agent.ps1) στέλνουν εδώ τα στοιχεία τους. Χωρίς σύνδεση χρήστη· με το κλειδί του agent.
+app.MapPost("/api/agent/report", async (HttpContext http, AppDbContext db, SettingsService settings) =>
+{
+    if (!AgentIngest.KeyMatches(settings.Current.AgentKey, http.Request.Headers["X-Agent-Key"]))
+    {
+        return Results.Json(new { ok = false, message = "Λάθος κλειδί agent." }, statusCode: 401);
+    }
+
+    var remote = http.Connection.RemoteIpAddress?.MapToIPv4().ToString();
+
+    if (AgentIngest.Throttle(remote))
+    {
+        return Results.Json(new { ok = false, message = "Πολύ συχνές αναφορές." }, statusCode: 429);
+    }
+
+    AgentIngest.Payload? payload;
+
+    try
+    {
+        payload = await System.Text.Json.JsonSerializer.DeserializeAsync<AgentIngest.Payload>(http.Request.Body, AgentIngest.Json);
+    }
+    catch (System.Text.Json.JsonException)
+    {
+        return Results.Json(new { ok = false, message = "Μη έγκυρα δεδομένα." }, statusCode: 400);
+    }
+
+    if (payload == null)
+    {
+        return Results.Json(new { ok = false, message = "Κενή αναφορά." }, statusCode: 400);
+    }
+
+    var result = await AgentIngest.ProcessAsync(db, payload, remote);
+
+    return Results.Json(new
+    {
+        ok = result.Ok,
+        message = result.Message,
+        latestVersion = AgentIngest.LatestAgentVersion
+    }, statusCode: result.Ok ? 200 : 422);
+}).WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(4 * 1024 * 1024));
+
+// Αυτόματη ενημέρωση του agent: κατεβάζει την τελευταία έκδοση του script.
+app.MapGet("/api/agent/script", (HttpContext http, SettingsService settings) =>
+{
+    if (!AgentIngest.KeyMatches(settings.Current.AgentKey, http.Request.Headers["X-Agent-Key"]))
+    {
+        return Results.StatusCode(401);
+    }
+
+    var path = Path.Combine(AppContext.BaseDirectory, "Resources", "Agent", "snm-agent.ps1");
+
+    return File.Exists(path)
+        ? Results.File(path, "text/plain; charset=utf-8", "snm-agent.ps1")
+        : Results.NotFound();
+});
 
 app.MapStaticAssets();
 app.MapRazorPages()

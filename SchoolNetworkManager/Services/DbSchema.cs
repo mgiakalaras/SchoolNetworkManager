@@ -223,6 +223,70 @@ public static class DbSchema
             Execute(connection, "CREATE INDEX IF NOT EXISTS IX_FaultReports_Status ON FaultReports (Status);");
 
             Execute(connection, """
+                CREATE TABLE IF NOT EXISTS AgentReports (
+                    Id INTEGER NOT NULL CONSTRAINT PK_AgentReports PRIMARY KEY AUTOINCREMENT,
+                    ComputerId INTEGER NOT NULL,
+                    FirstReportAt TEXT NOT NULL,
+                    ReceivedAt TEXT NOT NULL,
+                    AgentVersion TEXT NULL,
+                    Hostname TEXT NULL,
+                    LoggedUser TEXT NULL,
+                    OsName TEXT NULL,
+                    OsVersion TEXT NULL,
+                    LastBoot TEXT NULL,
+                    CpuName TEXT NULL,
+                    RamGb REAL NULL,
+                    DisksJson TEXT NULL,
+                    MinFreePercent REAL NULL,
+                    Manufacturer TEXT NULL,
+                    Model TEXT NULL,
+                    Serial TEXT NULL,
+                    VeyonInstalled INTEGER NOT NULL DEFAULT 0,
+                    VeyonRunning INTEGER NOT NULL DEFAULT 0,
+                    VeyonVersion TEXT NULL,
+                    IpList TEXT NULL,
+                    MacList TEXT NULL,
+                    SoftwareCount INTEGER NOT NULL DEFAULT 0,
+                    Warning TEXT NULL
+                );
+                """);
+            Execute(connection, "CREATE UNIQUE INDEX IF NOT EXISTS IX_AgentReports_ComputerId ON AgentReports (ComputerId);");
+
+            Execute(connection, """
+                CREATE TABLE IF NOT EXISTS InstalledSoftware (
+                    Id INTEGER NOT NULL CONSTRAINT PK_InstalledSoftware PRIMARY KEY AUTOINCREMENT,
+                    ComputerId INTEGER NOT NULL,
+                    Name TEXT NOT NULL,
+                    Version TEXT NULL,
+                    Publisher TEXT NULL,
+                    InstallDate TEXT NULL,
+                    Scope TEXT NULL,
+                    FirstSeen TEXT NOT NULL
+                );
+                """);
+            Execute(connection, "CREATE INDEX IF NOT EXISTS IX_InstalledSoftware_ComputerId ON InstalledSoftware (ComputerId);");
+
+            Execute(connection, """
+                CREATE TABLE IF NOT EXISTS ToolFiles (
+                    Id INTEGER NOT NULL CONSTRAINT PK_ToolFiles PRIMARY KEY AUTOINCREMENT,
+                    Title TEXT NOT NULL,
+                    Description TEXT NULL,
+                    Category TEXT NOT NULL,
+                    Version TEXT NULL,
+                    Url TEXT NULL,
+                    FileName TEXT NULL,
+                    StoredName TEXT NULL,
+                    Size INTEGER NOT NULL DEFAULT 0,
+                    Sha256 TEXT NULL,
+                    UploadedBy TEXT NULL,
+                    UploadedAt TEXT NOT NULL,
+                    UpdatedAt TEXT NULL,
+                    Downloads INTEGER NOT NULL DEFAULT 0,
+                    IsPublic INTEGER NOT NULL DEFAULT 0
+                );
+                """);
+
+            Execute(connection, """
                 CREATE TABLE IF NOT EXISTS Rooms (
                     Id INTEGER NOT NULL CONSTRAINT PK_Rooms PRIMARY KEY AUTOINCREMENT,
                     Name TEXT NOT NULL,
@@ -268,6 +332,7 @@ public static class DbSchema
             AddColumnIfMissing(connection, "AppSettings", "AutoBackup", "INTEGER NOT NULL DEFAULT 1");
             AddColumnIfMissing(connection, "AppSettings", "AutoBackupHour", "INTEGER NOT NULL DEFAULT 0");
             AddColumnIfMissing(connection, "AppSettings", "BackupKeep", "INTEGER NOT NULL DEFAULT 3");
+            AddColumnIfMissing(connection, "AppSettings", "AgentKey", "TEXT NULL");
             AddColumnIfMissing(connection, "AppSettings", "CustomLinks", "TEXT NULL");
             if (AddColumnIfMissing(connection, "AppSettings", "BadgesClearedAt", "TEXT NULL"))
             {

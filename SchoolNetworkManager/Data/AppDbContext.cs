@@ -27,6 +27,9 @@ public class AppDbContext : DbContext
     public DbSet<SchoolDocument> Documents => Set<SchoolDocument>();
     public DbSet<FaultReport> FaultReports => Set<FaultReport>();
     public DbSet<Room> Rooms => Set<Room>();
+    public DbSet<AgentReport> AgentReports => Set<AgentReport>();
+    public DbSet<InstalledSoftware> InstalledSoftware => Set<InstalledSoftware>();
+    public DbSet<ToolFile> ToolFiles => Set<ToolFile>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -54,6 +57,21 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<FaultReport>()
             .HasIndex(r => r.Status);
+
+        modelBuilder.Entity<AgentReport>()
+            .HasIndex(r => r.ComputerId)
+            .IsUnique();
+
+        modelBuilder.Entity<AgentReport>()
+            .Ignore(r => r.IsStale)
+            .Ignore(r => r.LowDisk);
+
+        modelBuilder.Entity<InstalledSoftware>()
+            .HasIndex(s => s.ComputerId);
+
+        modelBuilder.Entity<ToolFile>()
+            .Ignore(t => t.IsLink)
+            .Ignore(t => t.Icon);
 
         modelBuilder.Entity<FaultReport>()
             .Ignore(r => r.ReporterLabel);

@@ -30,6 +30,13 @@ public class DetailsModel : PageModel
 
     public List<PasswordHistoryItem> PasswordHistory { get; set; } = new();
 
+    /// <summary>Η τελευταία αναφορά του agent (αν είναι εγκατεστημένος).</summary>
+    public AgentReport? Agent { get; set; }
+
+    public List<InstalledSoftware> Software { get; set; } = new();
+
+    public List<(string Drive, string? Label, double SizeGb, double FreeGb)> Disks { get; set; } = new();
+
     public class PasswordHistoryItem
     {
         public PasswordRecord Record { get; set; } = new();
@@ -87,6 +94,33 @@ public class DetailsModel : PageModel
             .Take(6)
             .Select(p => new PasswordHistoryItem { Record = p, IsCurrent = currentIds.Contains(p.Id) })
             .ToList();
+
+        Agent = await _context.AgentReports.AsNoTracking().FirstOrDefaultAsync(r => r.ComputerId == id);
+
+        if (Agent != null)
+        {
+            Software = (await _context.InstalledSoftware.AsNoTracking().Where(s => s.ComputerId == id).ToListAsync())
+                .OrderByDescending(s => SchoolNetworkManager.Services.AgentIngest.IsNew(s, Agent))
+                .ThenBy(s => s.Name)
+                .ToList();
+
+            try
+            {
+                using var json = System.Text.Json.JsonDocument.Parse(Agent.DisksJson ?? "[]");
+
+                foreach (var d in json.RootElement.EnumerateArray())
+                {
+                    Disks.Add((
+                        d.TryGetProperty("Drive", out var dr) ? dr.GetString() ?? "" : "",
+                        d.TryGetProperty("Label", out var lb) ? lb.GetString() : null,
+                        d.TryGetProperty("SizeGb", out var sz) ? sz.GetDouble() : 0,
+                        d.TryGetProperty("FreeGb", out var fr) ? fr.GetDouble() : 0));
+                }
+            }
+            catch (System.Text.Json.JsonException)
+            {
+            }
+        }
 
         const int days = 14;
         var today = DateTime.Now.Date;

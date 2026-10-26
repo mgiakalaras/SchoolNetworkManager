@@ -49,6 +49,8 @@ public class DeleteModel : PageModel
         await _context.Faults.Where(f => f.ComputerId == computer.Id).ExecuteDeleteAsync();
         await _context.PlanItems.Where(p => p.ComputerId == computer.Id).ExecuteDeleteAsync();
         await _context.Seats.Where(s => s.ComputerId == computer.Id).ExecuteDeleteAsync();
+        await _context.AgentReports.Where(r => r.ComputerId == computer.Id).ExecuteDeleteAsync();
+        await _context.InstalledSoftware.Where(s => s.ComputerId == computer.Id).ExecuteDeleteAsync();
         await _context.FaultReports.Where(r => r.ComputerId == computer.Id)
             .ExecuteUpdateAsync(u => u.SetProperty(r => r.ComputerId, (int?)null));
 

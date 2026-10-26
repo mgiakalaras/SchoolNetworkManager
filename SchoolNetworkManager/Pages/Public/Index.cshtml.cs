@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SchoolNetworkManager.Data;
@@ -16,12 +16,27 @@ public class IndexModel : PageModel
     private readonly AppDbContext _context;
     private readonly SettingsService _settings;
     private readonly PublicRateLimiter _limiter;
+    private readonly BackupService _storage;
 
-    public IndexModel(AppDbContext context, SettingsService settings, PublicRateLimiter limiter)
+    public IndexModel(AppDbContext context, SettingsService settings, PublicRateLimiter limiter, BackupService storage)
     {
         _context = context;
         _settings = settings;
         _limiter = limiter;
+        _storage = storage;
+    }
+
+    /// <summary>Αρχεία της βιβλιοθήκης που είναι σημειωμένα «δημόσια».</summary>
+    public List<ToolFile> PublicFiles { get; set; } = new();
+
+    public async Task<IActionResult> OnGetFileAsync(int id)
+    {
+        if (!_settings.Current.PublicPortal && User.Identity?.IsAuthenticated != true)
+        {
+            return NotFound();
+        }
+
+        return await SchoolNetworkManager.Pages.Library.IndexModel.Download(_context, _storage, id, publicOnly: true, this);
     }
 
     public AppSettings Settings => _settings.Current;
@@ -85,6 +100,7 @@ public class IndexModel : PageModel
             .ToList();
 
         Documents = (await SchoolDocuments.EnsureAsync(_context)).Where(d => d.IsPublic).ToList();
+        PublicFiles = await _context.ToolFiles.AsNoTracking().Where(t => t.IsPublic).OrderBy(t => t.Title).ToListAsync();
     }
 
     /// <summary>Ό,τι γράφει η ετικέτα της συσκευής — όχι IP.</summary>

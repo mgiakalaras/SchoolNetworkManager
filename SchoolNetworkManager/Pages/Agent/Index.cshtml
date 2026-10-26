@@ -1,0 +1,285 @@
+@page
+@model SchoolNetworkManager.Pages.Agent.IndexModel
+@using SchoolNetworkManager.Services
+
+@{
+    ViewData["Title"] = "Agent υπολογιστών";
+    var tab = Model.Tab switch { "software" => "software", "setup" => "setup", _ => Model.Rows.Any() ? "devices" : "setup" };
+    var greek = new System.Globalization.CultureInfo("el-GR");
+
+    string Ago(DateTime when)
+    {
+        var span = DateTime.Now - when;
+        if (span.TotalMinutes < 2) return "μόλις τώρα";
+        if (span.TotalHours < 1) return $"πριν {(int)span.TotalMinutes}′";
+        if (span.TotalDays < 1) return $"πριν {(int)span.TotalHours} ώρ.";
+        return $"πριν {(int)span.TotalDays} ημ.";
+    }
+}
+
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+    <div>
+        <h1 class="mb-1">🛰️ Agent υπολογιστών</h1>
+        <p class="text-muted mb-0">
+            Οι υπολογιστές στέλνουν μόνοι τους όνομα, IP, MAC, χαρακτηριστικά, δίσκους, Veyon και προγράμματα.
+            · <strong>@Model.Rows.Count</strong> υπολογιστές · <strong>@Model.TotalPrograms</strong> διαφορετικά προγράμματα
+        </p>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-info shadow-sm">@Model.StatusMessage</div>
+}
+
+<ul class="nav nav-pills doc-tabs mb-3">
+    <li class="nav-item"><a class="nav-link @(tab == "devices" ? "active" : "")" asp-route-Tab="devices">🖥️ Υπολογιστές</a></li>
+    <li class="nav-item">
+        <a class="nav-link @(tab == "software" ? "active" : "")" asp-route-Tab="software">
+            💿 Λογισμικό
+            @if (Model.Recent.Any())
+            {
+                <span class="badge text-bg-warning ms-1">@Model.Recent.Count νέα</span>
+            }
+        </a>
+    </li>
+    <li class="nav-item"><a class="nav-link @(tab == "setup" ? "active" : "")" asp-route-Tab="setup">⚙️ Εγκατάσταση</a></li>
+</ul>
+
+@if (tab == "devices")
+{
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Υπολογιστής</th>
+                            <th>Χώρος</th>
+                            <th>Windows</th>
+                            <th>Δίσκος</th>
+                            <th>Veyon</th>
+                            <th>Προγράμματα</th>
+                            <th>Τελευταία αναφορά</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Rows)
+                        {
+                            var r = row.Report;
+                            <tr class="@(r.IsStale ? "agent-stale" : "")">
+                                <td>
+                                    @if (row.Device != null)
+                                    {
+                                        <a class="fw-semibold" asp-page="/Computers/Details" asp-route-id="@row.Device.Id">@(row.Device.Name ?? r.Hostname)</a>
+                                        <div class="small text-muted font-monospace">@row.Device.IpAddress</div>
+                                    }
+                                    else
+                                    {
+                                        <span>@r.Hostname</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(r.Warning))
+                                    {
+                                        <div class="small text-warning" data-hint="@r.Warning">⚠️ προσοχή</div>
+                                    }
+                                </td>
+                                <td>@(row.Device?.Location ?? "—")</td>
+                                <td class="small">@r.OsName</td>
+                                <td style="min-width: 120px;">
+                                    @if (r.MinFreePercent != null)
+                                    {
+                                        var used = 100 - r.MinFreePercent.Value;
+                                        <div class="agent-disk @(r.LowDisk ? "is-low" : used > 75 ? "is-mid" : "")" data-hint="Ελεύθερο @r.MinFreePercent.Value.ToString("0")% στον πιο γεμάτο δίσκο">
+                                            <i style="width: @used.ToString("0", System.Globalization.CultureInfo.InvariantCulture)%"></i>
+                                        </div>
+                                        <div class="small @(r.LowDisk ? "text-danger fw-semibold" : "text-muted")">@used.ToString("0")% γεμάτος</div>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!r.VeyonInstalled)
+                                    {
+                                        <span class="badge bg-secondary">Όχι</span>
+                                    }
+                                    else if (r.VeyonRunning)
+                                    {
+                                        <span class="badge bg-success">Τρέχει</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge veyon-down-badge">🛑 Σταματημένο</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-page="/Computers/Details" asp-route-id="@r.ComputerId" asp-fragment="software">@r.SoftwareCount</a>
+                                    @if (row.NewPrograms > 0)
+                                    {
+                                        <span class="badge text-bg-warning ms-1" data-hint="Νέα προγράμματα τις τελευταίες 14 ημέρες">+@row.NewPrograms νέα</span>
+                                    }
+                                </td>
+                                <td class="small text-nowrap" title="@r.ReceivedAt.ToString("dd/MM/yyyy HH:mm")">
+                                    @Ago(r.ReceivedAt)
+                                    <div class="text-muted">v@(r.AgentVersion)</div>
+                                </td>
+                                <td class="text-end row-actions">
+                                    <form method="post" asp-page-handler="Forget" asp-route-computerId="@r.ComputerId"
+                                          onsubmit="return confirm('Να σβηστούν τα στοιχεία του agent για αυτή τη συσκευή;');">
+                                        <button type="submit" class="row-action is-danger" data-hint="Σβήσιμο στοιχείων agent" aria-label="Σβήσιμο">🗑️</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else if (tab == "software")
+{
+    @if (Model.Recent.Any())
+    {
+        <div class="card shadow-sm mb-4 border-warning">
+            <div class="card-header fw-semibold">🆕 Νέα προγράμματα (τελευταίες 14 ημέρες)</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead><tr><th>Πότε</th><th>Πρόγραμμα</th><th>Υπολογιστής</th><th>Για</th></tr></thead>
+                        <tbody>
+                            @foreach (var n in Model.Recent)
+                            {
+                                <tr>
+                                    <td class="small text-nowrap">@n.Item.FirstSeen.ToString("ddd dd/MM HH:mm", greek)</td>
+                                    <td><strong>@n.Item.Name</strong> <span class="text-muted small">@n.Item.Version</span></td>
+                                    <td>
+                                        @if (n.Device != null)
+                                        {
+                                            <a asp-page="/Computers/Details" asp-route-id="@n.Device.Id" asp-fragment="software">@(n.Device.Name ?? n.Device.IpAddress)</a>
+                                            <span class="small text-muted">@n.Device.Location</span>
+                                        }
+                                    </td>
+                                    <td class="small">@(n.Item.Scope switch { "user" => "👤 έναν χρήστη", "store" => "🛍️ Store", _ => "🖥️ όλους" })</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="get" class="d-flex gap-2 mb-3">
+                <input type="hidden" name="Tab" value="software" />
+                <input name="Q" value="@Model.Q" class="form-control" placeholder="🔎 Ποιοι υπολογιστές έχουν… (π.χ. Roblox, Office, Scratch, Chrome)" autofocus />
+                <button type="submit" class="btn btn-primary">Αναζήτηση</button>
+            </form>
+
+            @if (!Model.Software.Any())
+            {
+                <div class="text-muted text-center py-4">Δεν βρέθηκε πρόγραμμα.</div>
+            }
+            else
+            {
+                <div class="small text-muted mb-2">@Model.Software.Count προγράμματα @(string.IsNullOrWhiteSpace(Model.Q) ? "" : $"για «{Model.Q}»") · κλικ για τους υπολογιστές</div>
+                <div class="sw-list">
+                    @foreach (var g in Model.Software.Take(400))
+                    {
+                        <details class="sw-item">
+                            <summary>
+                                <span class="sw-name">@g.Name</span>
+                                @if (g.AnyUser)
+                                {
+                                    <span class="badge role-badge" data-hint="Εγκαταστάθηκε από χρήστη ή από το Microsoft Store">👤</span>
+                                }
+                                <span class="sw-pub">@g.Publisher</span>
+                                <span class="sw-count">@g.Devices.Count</span>
+                            </summary>
+                            <div class="sw-devices">
+                                @foreach (var d in g.Devices)
+                                {
+                                    <a class="address-chip" asp-page="/Computers/Details" asp-route-id="@d.Id" asp-fragment="software">
+                                        @d.Label <span class="text-muted small">@d.Version</span>
+                                        @if (d.IsNew)
+                                        {
+                                            <span class="badge text-bg-warning">νέο</span>
+                                        }
+                                    </a>
+                                }
+                            </div>
+                        </details>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header fw-semibold">1. Κατέβασε το πακέτο</div>
+                <div class="card-body">
+                    <form method="get" asp-page-handler="Download" class="row g-2 align-items-end">
+                        <div class="col-sm-8">
+                            <label class="form-label" for="serverUrl">Διεύθυνση server (όπως τη βλέπουν οι υπολογιστές)</label>
+                            <input id="serverUrl" name="serverUrl" class="form-control font-monospace" value="@Model.ServerUrl" />
+                        </div>
+                        <div class="col-sm-4 d-grid">
+                            <button type="submit" class="btn btn-primary">⬇️ SNM-Agent.zip</button>
+                        </div>
+                    </form>
+                    <div class="form-text">Το πακέτο έχει μέσα έτοιμη τη διεύθυνση και το κλειδί του σχολείου.</div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header fw-semibold">2. Εγκατάσταση σε κάθε υπολογιστή (μία φορά)</div>
+                <div class="card-body">
+                    <ol class="mb-2">
+                        <li>Αποσυμπίεσε το zip σε USB ή σε κοινόχρηστο φάκελο του Zima.</li>
+                        <li>Σε κάθε υπολογιστή: δεξί κλικ στο <code>install.bat</code> → <strong>Εκτέλεση ως διαχειριστής</strong>.</li>
+                        <li>Σε λίγα δευτερόλεπτα ο υπολογιστής εμφανίζεται στην καρτέλα «Υπολογιστές» — με όνομα, IP, MAC και χαρακτηριστικά.</li>
+                    </ol>
+                    <div class="small text-muted">
+                        Μετά στέλνει μόνος του: στην εκκίνηση, σε κάθε σύνδεση χρήστη και κάθε 2 ώρες. Τρέχει ως SYSTEM, οπότε οι μαθητές δεν μπορούν να τον σταματήσουν
+                        ούτε να διαβάσουν το κλειδί. Ενημερώνεται μόνος του. Αφαίρεση: <code>uninstall.bat</code> ως διαχειριστής.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header fw-semibold">Τι στέλνει</div>
+                <div class="card-body small">
+                    <ul class="ps-3 mb-0">
+                        <li>Όνομα υπολογιστή, IP, MAC (βρίσκει μόνος του ποια καταχώρηση είναι — ή φτιάχνει νέα)</li>
+                        <li>Επεξεργαστής, πυρήνες, μνήμη, δίσκοι (SSD/HDD), κάρτα γραφικών</li>
+                        <li>Windows (έκδοση, build), κατασκευαστής, μοντέλο, σειριακός</li>
+                        <li>Πόσο γεμάτοι είναι οι δίσκοι · αν τρέχει το Veyon · ποιος είναι συνδεδεμένος</li>
+                        <li>Εγκατεστημένα προγράμματα — και όσα έβαλε κάποιος χρήστης στο προφίλ του ή από το Store</li>
+                    </ul>
+                    <div class="mt-2 text-muted">Μόνο διαβάζει. Δεν αλλάζει τίποτα στον υπολογιστή.</div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header fw-semibold">🔑 Κλειδί agent</div>
+                <div class="card-body">
+                    <div class="d-flex gap-2 align-items-center mb-2">
+                        <code class="flex-grow-1 text-truncate" id="agentKey" data-key="@Model.AgentKey">••••••••••••••••</code>
+                        <button type="button" class="row-action" onclick="var k=document.getElementById('agentKey');k.textContent=k.dataset.key;" data-hint="Εμφάνιση" aria-label="Εμφάνιση">👁️</button>
+                    </div>
+                    <form method="post" asp-page-handler="NewKey"
+                          onsubmit="return confirm('Νέο κλειδί; Οι agents που είναι ήδη εγκατεστημένοι θα σταματήσουν να στέλνουν μέχρι να τους ξαναεγκαταστήσεις.');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Νέο κλειδί</button>
+                    </form>
+                    <div class="form-text">Άλλαξέ το μόνο αν πιστεύεις ότι το έμαθε κάποιος.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+}

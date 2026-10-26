@@ -15,6 +15,8 @@
     var pendingReports = 0;
     var toolsActive = currentPath.StartsWith("/Consumables", StringComparison.OrdinalIgnoreCase)
                       || currentPath.StartsWith("/Rules", StringComparison.OrdinalIgnoreCase)
+                      || currentPath.StartsWith("/Agent", StringComparison.OrdinalIgnoreCase)
+                      || currentPath.StartsWith("/Library", StringComparison.OrdinalIgnoreCase)
                       || currentPath.StartsWith("/Passwords", StringComparison.OrdinalIgnoreCase)
                       || currentPath.StartsWith("/Report", StringComparison.OrdinalIgnoreCase);
     if (isSignedIn || string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ADMIN_PASSWORD")))
@@ -131,6 +133,8 @@
                                     </li>
                                     <li><a class="dropdown-item" asp-area="" asp-page="/Passwords/Index">🔑 Κωδικοί συσκευών</a></li>
                                     <li><a class="dropdown-item" asp-area="" asp-page="/Rules/Index">📜 Κανονισμοί</a></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-page="/Agent/Index">🛰️ Agent υπολογιστών &amp; λογισμικό</a></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-page="/Library/Index">📦 Αρχεία &amp; εργαλεία</a></li>
                                     <li><a class="dropdown-item" asp-area="" asp-page="/Public/Index" target="_blank">🌐 Δημόσια σελίδα (δήλωση βλάβης)</a></li>
                                     <li><hr class="dropdown-divider" /></li>
                                     <li><a class="dropdown-item" asp-area="" asp-page="/Report/Index">📑 Ετήσια αναφορά</a></li>

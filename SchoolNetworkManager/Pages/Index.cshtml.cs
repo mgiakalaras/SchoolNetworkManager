@@ -32,6 +32,9 @@ public class IndexModel : PageModel
     public List<Computer> VeyonDownDevices { get; set; } = new();
     public List<Consumable> LowStock { get; set; } = new();
     public int PendingReports { get; set; }
+    public List<(int Id, string Label, double FreePercent)> LowDisk { get; set; } = new();
+    public int NewSoftwarePcs { get; set; }
+    public int NewSoftwareCount { get; set; }
 
     public int DownFaults { get; set; }
 
@@ -224,6 +227,31 @@ public class IndexModel : PageModel
         var computers = await _context.Computers.ToListAsync();
 
         PendingReports = await _context.FaultReports.CountAsync(r => r.Status == FaultReport.StatusNew);
+
+        // Agent υπολογιστών: γεμάτοι δίσκοι και νέα προγράμματα (7 ημέρες)
+        var agentReports = await _context.AgentReports.AsNoTracking().ToListAsync();
+
+        if (agentReports.Count > 0)
+        {
+            var names = await _context.Computers.AsNoTracking()
+                .Select(c => new { c.Id, c.Name, c.IpAddress })
+                .ToDictionaryAsync(c => c.Id, c => string.IsNullOrWhiteSpace(c.Name) ? c.IpAddress : c.Name!);
+
+            LowDisk = agentReports
+                .Where(r => r.MinFreePercent is < 10 && !r.IsStale)
+                .OrderBy(r => r.MinFreePercent)
+                .Select(r => (r.ComputerId, names.GetValueOrDefault(r.ComputerId, r.Hostname ?? "?"), r.MinFreePercent!.Value))
+                .ToList();
+
+            var since = DateTime.Now.AddDays(-7);
+            var byPc = agentReports.ToDictionary(r => r.ComputerId);
+            var fresh = (await _context.InstalledSoftware.AsNoTracking().Where(s => s.FirstSeen > since).ToListAsync())
+                .Where(s => SchoolNetworkManager.Services.AgentIngest.IsNew(s, byPc.GetValueOrDefault(s.ComputerId)))
+                .ToList();
+
+            NewSoftwareCount = fresh.Count;
+            NewSoftwarePcs = fresh.Select(s => s.ComputerId).Distinct().Count();
+        }
 
         LowStock = (await _context.Consumables.ToListAsync())
             .Where(c => c.IsLow)

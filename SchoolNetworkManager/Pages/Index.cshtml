@@ -138,6 +138,28 @@
     </div>
 }
 
+@if (Model.NewSoftwareCount > 0)
+{
+    <div class="dashboard-alert mb-3">
+        <span>💿 <strong>@Model.NewSoftwareCount</strong> νέα προγράμματα εγκαταστάθηκαν σε <strong>@Model.NewSoftwarePcs</strong> υπολογιστές την τελευταία εβδομάδα.</span>
+        <a class="btn btn-sm btn-outline-secondary" asp-page="/Agent/Index" asp-route-Tab="software">Ποια; →</a>
+    </div>
+}
+
+@if (Model.LowDisk.Any())
+{
+    <div class="dashboard-alert is-down mb-3">
+        <span>
+            💽 <strong>Γεμάτος δίσκος</strong> (κάτω από 10% ελεύθερο):
+            @for (var i = 0; i < Model.LowDisk.Count && i < 10; i++)
+            {
+                var d = Model.LowDisk[i];
+                <a asp-page="/Computers/Details" asp-route-id="@d.Id" asp-fragment="agent" class="fw-semibold">@d.Label</a><span class="small"> (@d.FreePercent.ToString("0")%)</span>@(i < Model.LowDisk.Count - 1 && i < 9 ? ", " : "")
+            }
+        </span>
+    </div>
+}
+
 @if (Model.LowStock.Any())
 {
     <div class="dashboard-alert mb-4">

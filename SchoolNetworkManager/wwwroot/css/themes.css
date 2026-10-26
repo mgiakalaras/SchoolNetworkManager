@@ -2456,3 +2456,30 @@ html[data-theme] .form-control::file-selector-button { color: var(--text-main); 
 .add-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .add-ip { font-family: ui-monospace, Consolas, monospace; font-size: 0.82rem; color: var(--text-muted); margin-left: auto; }
 .add-meta { grid-column: 2; font-size: 0.75rem; color: var(--text-muted); }
+
+/* Agent υπολογιστών (2.12) */
+.agent-stale > td { opacity: 0.55; }
+.agent-disk { height: 8px; background: rgba(var(--accent-rgb), 0.12); border-radius: 4px; overflow: hidden; }
+.agent-disk i { display: block; height: 100%; background: #16a34a; }
+.agent-disk.is-mid i { background: #f59e0b; }
+.agent-disk.is-low i { background: #dc2626; }
+.sw-list { display: grid; gap: 0.3rem; }
+.sw-item { border: 1px solid var(--border-soft); border-radius: 10px; padding: 0.45rem 0.8rem; }
+.sw-item summary { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; list-style: none; }
+.sw-item summary::-webkit-details-marker { display: none; }
+.sw-name { font-weight: 600; }
+.sw-pub { color: var(--text-muted); font-size: 0.8rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sw-count { font-weight: 700; color: var(--accent); min-width: 2.5rem; text-align: right; }
+.sw-devices { display: flex; flex-wrap: wrap; gap: 0.35rem; padding-top: 0.6rem; }
+.agent-card .kv-grid dd { word-break: break-word; }
+.sw-table td { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+
+/* Αρχεία & εργαλεία (2.13) */
+.tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 0.9rem; }
+@media (max-width: 520px) { .tool-grid { grid-template-columns: 1fr; } }
+.tool-icon { font-size: 2rem; line-height: 1; width: 2.6rem; text-align: center; }
+.tool-title { font-weight: 700; font-size: 1.02rem; text-decoration: none; }
+.tool-desc { color: var(--text-main); opacity: 0.85; margin-top: 0.2rem; white-space: pre-line; }
+.tool-meta { display: flex; flex-wrap: wrap; gap: 0 0.35rem; font-size: 0.78rem; color: var(--text-muted); margin-top: 0.35rem; min-width: 0; }
+.tool-hash { font-size: 0.72rem; color: var(--text-muted); }
+.tool-progress { width: 160px; height: 8px; }

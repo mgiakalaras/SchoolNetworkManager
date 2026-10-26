@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model SchoolNetworkManager.Pages.Public.IndexModel
 @using SchoolNetworkManager.Models
 @using SchoolNetworkManager.Services
@@ -132,6 +132,29 @@
                     </form>
                 }
             </section>
+
+            @if (Model.PublicFiles.Any())
+            {
+                <section class="pub-card">
+                    <h2 class="h5 fw-bold mb-3">📥 Χρήσιμα αρχεία</h2>
+                    <div class="pub-files">
+                        @foreach (var f in Model.PublicFiles)
+                        {
+                            <a class="pub-file" asp-page="/Public/Index" asp-page-handler="File" asp-route-id="@f.Id" target="@(f.IsLink ? "_blank" : null)">
+                                <span class="pub-doc-icon">@f.Icon</span>
+                                <span class="min-w-0">
+                                    <span class="fw-semibold d-block">@f.Title @(string.IsNullOrWhiteSpace(f.Version) ? "" : "v" + f.Version)</span>
+                                    @if (!string.IsNullOrWhiteSpace(f.Description))
+                                    {
+                                        <span class="small text-muted d-block">@f.Description</span>
+                                    }
+                                </span>
+                                <span class="ms-auto">@(f.IsLink ? "↗️" : "⬇️")</span>
+                            </a>
+                        }
+                    </div>
+                </section>
+            }
 
             @if (Model.Documents.Any())
             {

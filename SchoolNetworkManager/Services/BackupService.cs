@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 using Microsoft.Data.Sqlite;
@@ -67,6 +67,17 @@ public partial class BackupService
     }
 
     private string UploadsDirectory => Path.Combine(_environment.WebRootPath, "uploads");
+
+    /// <summary>Βιβλιοθήκη εργαλείων (μεγάλα αρχεία — δεν μπαίνουν στα αντίγραφα ασφαλείας).</summary>
+    public string LibraryDirectory
+    {
+        get
+        {
+            var folder = Path.Combine(DataDirectory, "library");
+            Directory.CreateDirectory(folder);
+            return folder;
+        }
+    }
 
     public long DatabaseSize => File.Exists(DatabasePath()) ? new FileInfo(DatabasePath()).Length : 0;
 

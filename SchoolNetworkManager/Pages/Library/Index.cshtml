@@ -1,0 +1,242 @@
+@page
+@model SchoolNetworkManager.Pages.Library.IndexModel
+@using SchoolNetworkManager.Models
+@using SchoolNetworkManager.Services
+
+@{
+    ViewData["Title"] = "Αρχεία & εργαλεία";
+    var groups = Model.Items.GroupBy(i => i.Category).ToList();
+}
+
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+    <div>
+        <h1 class="mb-1">📦 Αρχεία &amp; εργαλεία</h1>
+        <p class="text-muted mb-0">
+            Utilities, εγκαταστάτες, scripts, drivers και σύνδεσμοι για την ομάδα ·
+            <strong>@Model.Total</strong> αρχεία · @BackupService.FormatSize(Model.UsedBytes)
+            @if (Model.FreeBytes != null)
+            {
+                <span>· ελεύθερα στον server @BackupService.FormatSize(Model.FreeBytes.Value)</span>
+            }
+        </p>
+    </div>
+    <div class="page-actions">
+        <button type="button" class="icon-action is-primary" data-bs-toggle="collapse" data-bs-target="#addTool" data-hint="Ανέβασμα αρχείου ή συνδέσμου" aria-label="Προσθήκη">➕</button>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-@(Model.StatusKind ?? "info") shadow-sm">@Model.StatusMessage</div>
+}
+
+<!-- Προσθήκη -->
+<div class="collapse" id="addTool">
+    <form method="post" asp-page-handler="Save" enctype="multipart/form-data" class="card shadow-sm mb-4 new-room-card tool-upload">
+        <input type="hidden" name="id" value="0" />
+        <div class="card-body row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Αρχείο</label>
+                <input type="file" name="file" class="form-control" id="toolFile" />
+                <div class="form-text">Έως 8 GB (και ISO). Ή συμπλήρωσε μόνο σύνδεσμο από κάτω.</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Σύνδεσμος <span class="text-muted small">(αντί για αρχείο ή επιπλέον)</span></label>
+                <input name="url" class="form-control" placeholder="https://…" />
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Τίτλος</label>
+                <input name="title" class="form-control" maxlength="120" id="toolTitle" placeholder="π.χ. Rufus — USB εκκίνησης" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Κατηγορία</label>
+                <select name="category" class="form-select">
+                    @foreach (var cat in ToolFile.Categories)
+                    {
+                        <option value="@cat" selected="@(cat == Model.C)">@cat</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Έκδοση</label>
+                <input name="version" class="form-control" maxlength="40" placeholder="π.χ. 4.6" />
+            </div>
+            <div class="col-12">
+                <label class="form-label">Περιγραφή</label>
+                <textarea name="description" class="form-control" rows="2" maxlength="1000" placeholder="Τι κάνει, πώς χρησιμοποιείται, παράμετροι εγκατάστασης…"></textarea>
+            </div>
+            <div class="col-12 d-flex flex-wrap align-items-center gap-3">
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" name="isPublic" value="true" id="newPublic" />
+                    <label class="form-check-label" for="newPublic">🌐 Και στη δημόσια σελίδα (για μαθητές / εκπαιδευτικούς)</label>
+                </div>
+                <div class="ms-auto d-flex align-items-center gap-2">
+                    <div class="progress tool-progress" hidden><div class="progress-bar" style="width: 0%"></div></div>
+                    <button type="submit" class="btn btn-primary">⬆️ Ανέβασμα</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Φίλτρα -->
+<form method="get" class="d-flex flex-wrap gap-2 mb-3">
+    <input name="Q" value="@Model.Q" class="form-control flex-grow-1" style="min-width: 220px;" placeholder="🔎 Αναζήτηση (όνομα, περιγραφή, αρχείο)" />
+    <select name="C" class="form-select w-auto" onchange="this.form.submit()">
+        <option value="">Όλες οι κατηγορίες</option>
+        @foreach (var cat in ToolFile.Categories)
+        {
+            <option value="@cat" selected="@(cat == Model.C)">@cat</option>
+        }
+    </select>
+</form>
+
+@if (!Model.Items.Any())
+{
+    <div class="card shadow-sm">
+        <div class="card-body text-center text-muted py-5">
+            <div class="fs-1">📦</div>
+            @(Model.Total == 0 ? "Η βιβλιοθήκη είναι άδεια. Πάτα ➕ για να ανεβάσεις το πρώτο εργαλείο." : "Δεν βρέθηκε τίποτα.")
+        </div>
+    </div>
+}
+
+@foreach (var g in groups)
+{
+    <h2 class="h6 text-muted text-uppercase mt-4 mb-2">@g.Key · @g.Count()</h2>
+    <div class="tool-grid">
+        @foreach (var t in g)
+        {
+            <div class="card shadow-sm tool-card">
+                <div class="card-body">
+                    <div class="d-flex gap-3">
+                        <div class="tool-icon">@t.Icon</div>
+                        <div class="min-w-0 flex-grow-1">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <a class="tool-title" asp-page-handler="Download" asp-route-id="@t.Id" target="@(t.IsLink ? "_blank" : null)">@t.Title</a>
+                                @if (!string.IsNullOrWhiteSpace(t.Version))
+                                {
+                                    <span class="badge role-badge">v@(t.Version)</span>
+                                }
+                                @if (t.IsPublic)
+                                {
+                                    <span class="badge role-badge" data-hint="Φαίνεται στη δημόσια σελίδα">🌐</span>
+                                }
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(t.Description))
+                            {
+                                <div class="small tool-desc">@t.Description</div>
+                            }
+                            <div class="tool-meta">
+                                @if (t.IsLink)
+                                {
+                                    <span class="text-truncate">@t.Url</span>
+                                }
+                                else
+                                {
+                                    <span>@t.FileName · @BackupService.FormatSize(t.Size)</span>
+                                }
+                                <span>· @(t.UploadedBy ?? "—") · @((t.UpdatedAt ?? t.UploadedAt).ToString("dd/MM/yyyy"))</span>
+                                <span>· ⬇ @t.Downloads</span>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(t.Sha256))
+                            {
+                                <div class="tool-hash" data-hint="SHA-256: για έλεγχο ότι το αρχείο δεν άλλαξε">
+                                    <code>@(t.Sha256[..16])…</code>
+                                    <button type="button" class="copy-btn btn btn-link btn-sm p-0" data-copy="@t.Sha256">⧉</button>
+                                </div>
+                            }
+                        </div>
+                        <div class="d-flex flex-column gap-1 row-actions">
+                            <a class="row-action is-primary" asp-page-handler="Download" asp-route-id="@t.Id" target="@(t.IsLink ? "_blank" : null)"
+                               data-hint="@(t.IsLink ? "Άνοιγμα συνδέσμου" : "Λήψη")" aria-label="Λήψη">@(t.IsLink ? "↗️" : "⬇️")</a>
+                            @if (Model.CanChange(t))
+                            {
+                                <button type="button" class="row-action" data-bs-toggle="collapse" data-bs-target="#edit@(t.Id)" data-hint="Επεξεργασία / νέα έκδοση" aria-label="Επεξεργασία">✏️</button>
+                                <form method="post" asp-page-handler="Delete" asp-route-id="@t.Id" asp-route-C="@Model.C"
+                                      onsubmit="return confirm('Να σβηστεί το «@t.Title»;');">
+                                    <button type="submit" class="row-action is-danger" data-hint="Διαγραφή" aria-label="Διαγραφή">🗑️</button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+
+                    @if (Model.CanChange(t))
+                    {
+                        <form method="post" asp-page-handler="Save" asp-route-C="@Model.C" enctype="multipart/form-data" class="collapse mt-3 tool-upload" id="edit@(t.Id)">
+                            <input type="hidden" name="id" value="@t.Id" />
+                            <div class="row g-2">
+                                <div class="col-md-7"><input name="title" class="form-control form-control-sm" value="@t.Title" maxlength="120" /></div>
+                                <div class="col-md-5"><input name="version" class="form-control form-control-sm" value="@t.Version" placeholder="Έκδοση" maxlength="40" /></div>
+                                <div class="col-12"><textarea name="description" class="form-control form-control-sm" rows="2" maxlength="1000">@t.Description</textarea></div>
+                                <div class="col-md-6">
+                                    <select name="category" class="form-select form-select-sm">
+                                        @foreach (var cat in ToolFile.Categories)
+                                        {
+                                            <option value="@cat" selected="@(cat == t.Category)">@cat</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-6"><input name="url" class="form-control form-control-sm" value="@t.Url" placeholder="Σύνδεσμος (προαιρετικά)" /></div>
+                                <div class="col-12">
+                                    <label class="small text-muted">Νέα έκδοση του αρχείου (προαιρετικά — αντικαθιστά το παλιό)</label>
+                                    <input type="file" name="file" class="form-control form-control-sm" />
+                                </div>
+                                <div class="col-12 d-flex align-items-center gap-2">
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" name="isPublic" value="true" id="pub@(t.Id)" checked="@t.IsPublic" />
+                                        <label class="form-check-label small" for="pub@(t.Id)">🌐 Δημόσιο</label>
+                                    </div>
+                                    <div class="progress tool-progress ms-auto" hidden><div class="progress-bar" style="width: 0%"></div></div>
+                                    <button type="submit" class="btn btn-sm btn-primary">Αποθήκευση</button>
+                                </div>
+                            </div>
+                        </form>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script>
+        // Τίτλος από το όνομα του αρχείου + μπάρα προόδου για μεγάλα αρχεία
+        (function () {
+            const file = document.getElementById("toolFile");
+            const title = document.getElementById("toolTitle");
+            if (file && title) {
+                file.addEventListener("change", function () {
+                    if (!title.value && file.files.length) title.value = file.files[0].name.replace(/\.[^.]+$/, "");
+                });
+            }
+
+            document.querySelectorAll("form.tool-upload").forEach(function (form) {
+                form.addEventListener("submit", function (event) {
+                    const input = form.querySelector('input[type="file"]');
+                    if (!input || !input.files.length) return;      // χωρίς αρχείο: κανονική αποστολή
+
+                    event.preventDefault();
+                    const bar = form.querySelector(".tool-progress");
+                    const fill = bar.querySelector(".progress-bar");
+                    const button = form.querySelector('button[type="submit"]');
+                    bar.hidden = false;
+                    button.disabled = true;
+
+                    const xhr = new XMLHttpRequest();
+                    xhr.open("POST", form.action);
+                    xhr.upload.onprogress = function (e) {
+                        if (e.lengthComputable) {
+                            const pct = Math.round(e.loaded * 100 / e.total);
+                            fill.style.width = pct + "%";
+                            button.textContent = "⏳ " + pct + "%";
+                        }
+                    };
+                    xhr.onload = function () { window.location.href = xhr.responseURL || window.location.href; };
+                    xhr.onerror = function () { button.disabled = false; button.textContent = "Ξανά"; alert("Το ανέβασμα απέτυχε."); };
+                    xhr.send(new FormData(form));
+                });
+            });
+        })();
+    </script>
+}

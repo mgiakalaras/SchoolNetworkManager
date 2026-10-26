@@ -102,5 +102,10 @@ public class AppSettings
     [Display(Name = "Πόσα αυτόματα αντίγραφα κρατάω")]
     public int BackupKeep { get; set; } = 3;
 
+    // ---------- Agent υπολογιστών ----------
+
+    /// <summary>Κλειδί που στέλνει ο agent μαζί με κάθε αναφορά.</summary>
+    public string? AgentKey { get; set; }
+
     public AppSettings Clone() => (AppSettings)MemberwiseClone();
 }

@@ -330,6 +330,117 @@
                 }
             </div>
         </div>
+
+        <!-- Agent -->
+        @if (Model.Agent != null)
+        {
+            var ag = Model.Agent;
+            var newCount = Model.Software.Count(sw => SchoolNetworkManager.Services.AgentIngest.IsNew(sw, ag));
+            <div class="card shadow-sm agent-card" id="agent">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">🛰️ Από τον agent</span>
+                    <span class="small @(ag.IsStale ? "text-warning" : "text-muted")" title="@ag.ReceivedAt.ToString("dd/MM/yyyy HH:mm")">
+                        τελευταία αναφορά @ag.ReceivedAt.ToString("dd/MM HH:mm") · v@(ag.AgentVersion)
+                    </span>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrWhiteSpace(ag.Warning))
+                    {
+                        <div class="alert alert-warning py-2 small">⚠️ @ag.Warning</div>
+                    }
+                    <dl class="kv-grid">
+                        <div><dt>Όνομα Windows</dt><dd class="font-monospace">@ag.Hostname</dd></div>
+                        <div><dt>Συνδεδεμένος χρήστης</dt><dd>@(ag.LoggedUser ?? "—")</dd></div>
+                        <div><dt>Windows</dt><dd>@ag.OsName</dd></div>
+                        <div><dt>Τελευταία εκκίνηση</dt><dd>@(ag.LastBoot?.ToString("dd/MM/yyyy HH:mm") ?? "—")</dd></div>
+                        <div><dt>IP</dt><dd class="font-monospace">@ag.IpList</dd></div>
+                        <div><dt>MAC</dt><dd class="font-monospace">@ag.MacList</dd></div>
+                        <div>
+                            <dt>Veyon</dt>
+                            <dd>
+                                @if (!ag.VeyonInstalled)
+                                {
+                                    <span class="badge bg-secondary">Δεν είναι εγκατεστημένο</span>
+                                }
+                                else if (ag.VeyonRunning)
+                                {
+                                    <span class="badge bg-success">Τρέχει</span> <span class="small text-muted">@ag.VeyonVersion</span>
+                                }
+                                else
+                                {
+                                    <span class="badge veyon-down-badge">🛑 Η υπηρεσία είναι σταματημένη</span>
+                                }
+                            </dd>
+                        </div>
+                        <div><dt>Σειριακός</dt><dd class="font-monospace">@(ag.Serial ?? "—")</dd></div>
+                    </dl>
+
+                    @if (Model.Disks.Any())
+                    {
+                        <div class="spec-block-title mt-3">💽 Δίσκοι</div>
+                        @foreach (var d in Model.Disks)
+                        {
+                            var usedPct = d.SizeGb <= 0 ? 0 : (d.SizeGb - d.FreeGb) * 100 / d.SizeGb;
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="font-monospace" style="width: 2.5rem;">@d.Drive</span>
+                                <div class="agent-disk flex-grow-1 @(usedPct > 90 ? "is-low" : usedPct > 75 ? "is-mid" : "")">
+                                    <i style="width: @usedPct.ToString("0", System.Globalization.CultureInfo.InvariantCulture)%"></i>
+                                </div>
+                                <span class="small text-nowrap @(usedPct > 90 ? "text-danger fw-semibold" : "text-muted")">
+                                    @d.FreeGb.ToString("0.#") GB ελεύθερα από @d.SizeGb.ToString("0")
+                                </span>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+
+            <div class="card shadow-sm" id="software">
+                <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                    <span class="fw-semibold">
+                        💿 Εγκατεστημένα προγράμματα <span class="badge role-badge">@Model.Software.Count</span>
+                        @if (newCount > 0)
+                        {
+                            <span class="badge text-bg-warning">@newCount νέα</span>
+                        }
+                    </span>
+                    <input type="search" class="form-control form-control-sm" style="max-width: 220px;" placeholder="🔎 Αναζήτηση" id="swSearch" />
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 420px;">
+                        <table class="table table-sm table-hover align-middle mb-0 sw-table">
+                            <thead><tr><th class="ps-3">Πρόγραμμα</th><th>Έκδοση</th><th>Εκδότης</th><th>Για</th></tr></thead>
+                            <tbody>
+                                @foreach (var sw in Model.Software)
+                                {
+                                    var isNew = SchoolNetworkManager.Services.AgentIngest.IsNew(sw, ag);
+                                    <tr data-sw="@((sw.Name + " " + sw.Publisher).ToLowerInvariant())">
+                                        <td class="ps-3">
+                                            @sw.Name
+                                            @if (isNew)
+                                            {
+                                                <span class="badge text-bg-warning" title="Εμφανίστηκε @sw.FirstSeen.ToString("dd/MM HH:mm")">νέο</span>
+                                            }
+                                        </td>
+                                        <td class="small text-muted">@sw.Version</td>
+                                        <td class="small text-muted">@sw.Publisher</td>
+                                        <td class="small">@(sw.Scope switch { "user" => "👤", "store" => "🛍️", _ => "🖥️" })</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <script>
+                document.getElementById("swSearch").addEventListener("input", function (e) {
+                    var term = e.target.value.trim().toLowerCase();
+                    document.querySelectorAll("tr[data-sw]").forEach(function (row) {
+                        row.hidden = term && row.dataset.sw.indexOf(term) < 0;
+                    });
+                });
+            </script>
+        }
     </div>
 
     <!-- ====================== Δεξιά στήλη ====================== -->

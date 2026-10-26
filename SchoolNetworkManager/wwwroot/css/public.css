@@ -42,3 +42,7 @@ body { background: #eef2f7; color: #1f2937; min-height: 100vh; }
 .doc-field { display: flex; gap: .6rem; align-items: flex-end; margin: .7rem 0; }
 .doc-field span { font-weight: 600; white-space: nowrap; }
 .doc-field i { flex: 1; border-bottom: 1px dotted #94a3b8; height: 1em; }
+.pub-files { display: grid; gap: 8px; }
+.pub-file { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 12px; text-decoration: none; color: inherit; }
+.pub-file:hover { border-color: var(--pub-accent); color: inherit; }
+.min-w-0 { min-width: 0; }

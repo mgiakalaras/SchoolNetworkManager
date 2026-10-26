@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>2.11.0</Version>
+    <Version>2.13.0</Version>
     <Authors>Μάριος Μ. Γιακαλάρας</Authors>
 	  <OutputType>WinExe</OutputType>
 	  <ApplicationIcon>SchoolNetworkManager.ico</ApplicationIcon>
@@ -15,6 +15,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Resources\Agent\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
     <None Update="Resources\oui.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
