@@ -1,6 +1,6 @@
-# School Network Manager 2.15.0 στο ZimaOS με Portainer
+# School Network Manager 2.15.3 στο ZimaOS με Portainer
 
-## Αναβάθμιση από 2.x → 2.15.0
+## Αναβάθμιση από 2.x → 2.15.3
 
 Μόνο δύο βήματα — το stack ΔΕΝ αλλάζει:
 

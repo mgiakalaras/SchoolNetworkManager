@@ -1,4 +1,4 @@
-<#
+﻿<#
   School Network Manager - screen helper.
 
   Runs INSIDE the logged-in user's session (not as SYSTEM), because only there can it
@@ -13,6 +13,7 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 try {
     $cfg = Get-Content -Raw -Path (Join-Path $here 'screen.json') -Encoding UTF8 | ConvertFrom-Json
 } catch {
+    try { Add-Content -Path (Join-Path $env:TEMP 'snm-screen.log') -Value ("{0:yyyy-MM-dd HH:mm:ss}  screen.json: {1}" -f (Get-Date), $_.Exception.Message) } catch { }
     exit 1
 }
 

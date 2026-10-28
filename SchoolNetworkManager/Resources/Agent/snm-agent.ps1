@@ -1,4 +1,4 @@
-<#
+﻿<#
   School Network Manager - agent for school computers.
 
   Two jobs:
