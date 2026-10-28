@@ -1,4 +1,4 @@
-﻿@page "{id:int}"
+@page "{id:int}"
 @model SchoolNetworkManager.Pages.Computers.EditModel
 
 @{
@@ -103,6 +103,11 @@
                     <div class="form-check form-check-inline">
                         <input asp-for="Computer.HasVeyon" class="form-check-input" />
                         <label asp-for="Computer.HasVeyon" class="form-check-label"></label>
+                    </div>
+
+                    <div class="form-check form-check-inline" title="Δεν θα κλείνει με το αυτόματο βραδινό κλείσιμο του χώρου">
+                        <input asp-for="Computer.NoAutoShutdown" class="form-check-input" />
+                        <label asp-for="Computer.NoAutoShutdown" class="form-check-label">🌙 Εξαίρεση από αυτόματο κλείσιμο</label>
                     </div>
                 </div>
             </div>

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace SchoolNetworkManager.Models;
 
@@ -106,6 +106,26 @@ public class AppSettings
 
     /// <summary>Κλειδί που στέλνει ο agent μαζί με κάθε αναφορά.</summary>
     public string? AgentKey { get; set; }
+
+    // ---------- Οθόνες & απομακρυσμένος έλεγχος ----------
+
+    /// <summary>Μικρογραφίες οθονών στη σελίδα «Οθόνες» (μόνο όσο τη βλέπει κάποιος, δεν αποθηκεύονται).</summary>
+    public bool ScreenWall { get; set; } = true;
+
+    /// <summary>Ο δικός σας RustDesk server (hbbs), π.χ. 192.168.2.114</summary>
+    public string? RustDeskHost { get; set; }
+
+    /// <summary>Το δημόσιο κλειδί του server (id_ed25519.pub).</summary>
+    public string? RustDeskKey { get; set; }
+
+    /// <summary>Μόνιμος κωδικός RustDesk για τους υπολογιστές του εργαστηρίου (κρυπτογραφημένος).</summary>
+    public string? RustDeskPassword { get; set; }
+
+    /// <summary>Οι agents περνούν μόνοι τους τις ρυθμίσεις RustDesk στους υπολογιστές.</summary>
+    public bool RustDeskApply { get; set; }
+
+    /// <summary>Κλειδί μόνο για ανέβασμα μικρογραφίας οθόνης (ξεχωριστό από το AgentKey).</summary>
+    public string? ScreenKey { get; set; }
 
     public AppSettings Clone() => (AppSettings)MemberwiseClone();
 }

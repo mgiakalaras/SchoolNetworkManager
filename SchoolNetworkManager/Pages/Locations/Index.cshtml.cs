@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SchoolNetworkManager.Data;
@@ -34,6 +34,9 @@ public class IndexModel : PageModel
 
     public int DynamicCount { get; set; }
 
+    /// <summary>Εμφάνιση ενεργειών ρεύματος (ρύθμιση).</summary>
+    public bool ShowPower { get; set; } = true;
+
     /// <summary>Όλες οι συσκευές (και dynamic), για το «＋ Προσθήκη συσκευών».</summary>
     public List<Computer> AllDevices { get; set; } = new();
 
@@ -43,7 +46,8 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        var everything = await _context.Computers.AsNoTracking().ToListAsync();
+        ShowPower = _settings.Current.ScreenWall;
+                var everything = await _context.Computers.AsNoTracking().ToListAsync();
         OpenFaults = await FaultLookup.OpenByComputerAsync(_context);
 
         // Οι dynamic διευθύνσεις δεν ανήκουν σε χώρο — δεν εμφανίζονται εδώ.
@@ -70,9 +74,14 @@ public class IndexModel : PageModel
             Groups.Add(new LocationGroup { Name = room.Name, Key = room.Name, Description = room.Description });
         }
 
+        var agentIds = (await _context.AgentReports.Select(r => r.ComputerId).ToListAsync()).ToHashSet();
+
         foreach (var group in Groups)
         {
-            group.Description ??= rooms.FirstOrDefault(r => string.Equals(r.Name, group.Name, StringComparison.OrdinalIgnoreCase))?.Description;
+            var room = rooms.FirstOrDefault(r => string.Equals(r.Name, group.Name, StringComparison.OrdinalIgnoreCase));
+            group.Description ??= room?.Description;
+            group.AutoShutdown = room?.AutoShutdown;
+            group.WithAgent = group.Computers.Count(c => !c.IsEmptySlot && agentIds.Contains(c.Id));
         }
 
         Groups = Groups
@@ -118,6 +127,86 @@ public class IndexModel : PageModel
               " Κάνε «Έλεγχο» σε 1-2 λεπτά."
             : $"{DisplayName(location)}: καμία συσκευή δεν έχει MAC Address.";
 
+        return RedirectToPage();
+    }
+
+    // Κλείσιμο / επανεκκίνηση όλων των υπολογιστών ενός χώρου (όσων έχουν agent).
+    public async Task<IActionResult> OnPostPowerAsync(string? location, string? kind)
+    {
+        if (!AgentCommands.IsValidKind(kind) || kind is not ("shutdown" or "restart"))
+        {
+            StatusKind = "warning";
+            StatusMessage = "Άγνωστη ενέργεια.";
+            return RedirectToPage();
+        }
+
+        var computers = (await LoadLocationAsync(location)).Where(c => !c.IsEmptySlot).ToList();
+        var ids = computers.Select(c => c.Id).ToList();
+
+        var withAgent = await _context.AgentReports
+            .Where(r => ids.Contains(r.ComputerId))
+            .Select(r => r.ComputerId)
+            .ToListAsync();
+
+        var by = UserPasswords.ActorName(User);
+        var sent = 0;
+
+        foreach (var pc in computers.Where(c => withAgent.Contains(c.Id)))
+        {
+            var verb = kind == "restart" ? "επανεκκινήσει" : "κλείσει";
+            await AgentCommands.QueueAsync(_context, pc.Id, kind!, by, delaySeconds: 60,
+                text: $"Το εργαστήριο κλείνει. Ο υπολογιστής θα {verb} σε 1 λεπτό.");
+            sent++;
+        }
+
+        var noAgent = computers.Count - sent;
+        StatusKind = sent > 0 ? "success" : "warning";
+        var label = kind == "restart" ? "Επανεκκίνηση" : "Κλείσιμο";
+        StatusMessage = sent > 0
+            ? $"{DisplayName(location)}: {label.ToLower()} σε {sent} υπολογιστές (σε 1 λεπτό)." +
+              (noAgent > 0 ? $" {noAgent} χωρίς agent δεν δέχονται εντολές." : string.Empty)
+            : $"{DisplayName(location)}: κανένας υπολογιστής δεν έχει agent για να δεχτεί την εντολή.";
+        return RedirectToPage();
+    }
+
+    // Ώρα αυτόματου βραδινού κλεισίματος ανά χώρο («» = καμία).
+    public async Task<IActionResult> OnPostAutoShutdownAsync(string? location, string? time)
+    {
+        var name = location?.Trim();
+
+        if (string.IsNullOrWhiteSpace(name) || name == NoLocationKey)
+        {
+            return RedirectToPage();
+        }
+
+        var room = await _context.Rooms.FirstOrDefaultAsync(r => r.Name == name);
+
+        if (room == null)
+        {
+            room = new Room { Name = name, CreatedAt = DateTime.Now };
+            _context.Rooms.Add(room);
+        }
+
+        if (string.IsNullOrWhiteSpace(time))
+        {
+            room.AutoShutdown = null;
+            StatusMessage = $"{DisplayName(location)}: το αυτόματο βραδινό κλείσιμο απενεργοποιήθηκε.";
+        }
+        else if (TimeOnly.TryParse(time, out var at))
+        {
+            room.AutoShutdown = at.ToString("HH:mm");
+            room.AutoShutdownLast = null;
+            StatusMessage = $"🌙 {DisplayName(location)}: οι υπολογιστές θα κλείνουν αυτόματα κάθε μέρα στις {room.AutoShutdown} (όσοι είναι ανοιχτοί και έχουν agent).";
+        }
+        else
+        {
+            StatusKind = "warning";
+            StatusMessage = "Μη έγκυρη ώρα.";
+            return RedirectToPage();
+        }
+
+        await _context.SaveChangesAsync();
+        StatusKind ??= "success";
         return RedirectToPage();
     }
 
@@ -334,6 +423,8 @@ public class IndexModel : PageModel
         public string Name { get; set; } = string.Empty;
         public string Key { get; set; } = string.Empty;
         public string? Description { get; set; }
+        public string? AutoShutdown { get; set; }
+        public int WithAgent { get; set; }
         public List<Computer> Computers { get; set; } = new();
         public bool IsEmpty => Computers.Count == 0;
 

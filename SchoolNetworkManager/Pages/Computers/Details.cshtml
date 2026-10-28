@@ -1,4 +1,4 @@
-﻿@page "{id:int}"
+@page "{id:int}"
 @model SchoolNetworkManager.Pages.Computers.DetailsModel
 
 @{
@@ -99,6 +99,63 @@
                         data-hint="@(string.IsNullOrWhiteSpace(c.MacAddress) ? "Wake-on-LAN: χρειάζεται MAC" : "Wake-on-LAN: άναμμα από το δίκτυο")"
                         aria-label="Wake-on-LAN" disabled="@(string.IsNullOrWhiteSpace(c.MacAddress))">⚡</button>
             </form>
+
+            @if (Model.HasAgent)
+            {
+                var rd = Model.Agent?.RustDeskId;
+                <div class="dropdown">
+                    <button type="button" class="icon-action is-danger" data-bs-toggle="dropdown" aria-expanded="false"
+                            data-hint="Ενέργειες ρεύματος μέσω agent" aria-label="Ρεύμα">⏻</button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                        <li class="dropdown-header">Ο agent εκτελεί την εντολή σε λίγα δευτερόλεπτα</li>
+                        <li>
+                            <form method="post" asp-page-handler="Command" asp-route-id="@c.Id"
+                                  onsubmit="return confirm('Κλείσιμο του υπολογιστή σε 60 δευτερόλεπτα;');">
+                                <input type="hidden" name="kind" value="shutdown" />
+                                <input type="hidden" name="delay" value="60" />
+                                <input type="hidden" name="text" value="Ο υπολογιστής θα κλείσει σε 1 λεπτό." />
+                                <button type="submit" class="dropdown-item">⏻ Κλείσιμο (σε 1′)</button>
+                            </form>
+                        </li>
+                        <li>
+                            <form method="post" asp-page-handler="Command" asp-route-id="@c.Id"
+                                  onsubmit="return confirm('Άμεσο κλείσιμο του υπολογιστή;');">
+                                <input type="hidden" name="kind" value="shutdown" />
+                                <input type="hidden" name="delay" value="0" />
+                                <button type="submit" class="dropdown-item text-danger">⏻ Άμεσο κλείσιμο</button>
+                            </form>
+                        </li>
+                        <li>
+                            <form method="post" asp-page-handler="Command" asp-route-id="@c.Id"
+                                  onsubmit="return confirm('Επανεκκίνηση του υπολογιστή σε 60 δευτερόλεπτα;');">
+                                <input type="hidden" name="kind" value="restart" />
+                                <input type="hidden" name="delay" value="60" />
+                                <input type="hidden" name="text" value="Ο υπολογιστής θα επανεκκινήσει σε 1 λεπτό." />
+                                <button type="submit" class="dropdown-item">🔄 Επανεκκίνηση (σε 1′)</button>
+                            </form>
+                        </li>
+                        <li>
+                            <form method="post" asp-page-handler="Command" asp-route-id="@c.Id">
+                                <input type="hidden" name="kind" value="logoff" />
+                                <input type="hidden" name="delay" value="0" />
+                                <button type="submit" class="dropdown-item">🚪 Αποσύνδεση χρήστη</button>
+                            </form>
+                        </li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li>
+                            <form method="post" asp-page-handler="Command" asp-route-id="@c.Id">
+                                <input type="hidden" name="kind" value="cancel" />
+                                <button type="submit" class="dropdown-item">✋ Ακύρωση κλεισίματος</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+
+                @if (Model.RustDeskReady && !string.IsNullOrWhiteSpace(rd))
+                {
+                    <a class="icon-action is-info" href="rustdesk://@rd" data-hint="Απομακρυσμένη σύνδεση με RustDesk (ID @rd)" aria-label="RustDesk">🖥️</a>
+                }
+            }
 
             <a class="icon-action is-primary" asp-page="./Edit" asp-route-id="@c.Id" data-hint="Επεξεργασία" aria-label="Επεξεργασία">✏️</a>
 

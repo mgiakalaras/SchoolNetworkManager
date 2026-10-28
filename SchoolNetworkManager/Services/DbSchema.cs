@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using SchoolNetworkManager.Data;
 using SchoolNetworkManager.Models;
@@ -82,6 +82,7 @@ public static class DbSchema
             AddColumnIfMissing(connection, "Computers", "VeyonDownSince", "TEXT NULL");
             AddColumnIfMissing(connection, "Computers", "IsDynamic", "INTEGER NOT NULL DEFAULT 0");
             AddColumnIfMissing(connection, "Computers", "UpdatedBy", "TEXT NULL");
+            AddColumnIfMissing(connection, "Computers", "NoAutoShutdown", "INTEGER NOT NULL DEFAULT 0");
             AddColumnIfMissing(connection, "Faults", "ResolvedBy", "TEXT NULL");
             AddColumnIfMissing(connection, "Faults", "CreatedBy", "TEXT NULL");
 
@@ -295,6 +296,28 @@ public static class DbSchema
                 );
                 """);
 
+            AddColumnIfMissing(connection, "Rooms", "AutoShutdown", "TEXT NULL");
+            AddColumnIfMissing(connection, "Rooms", "AutoShutdownLast", "TEXT NULL");
+            AddColumnIfMissing(connection, "AgentReports", "RustDeskId", "TEXT NULL");
+
+            Execute(connection, """
+                CREATE TABLE IF NOT EXISTS AgentCommands (
+                    Id INTEGER NOT NULL CONSTRAINT PK_AgentCommands PRIMARY KEY AUTOINCREMENT,
+                    ComputerId INTEGER NOT NULL,
+                    Kind TEXT NOT NULL,
+                    Text TEXT NULL,
+                    DelaySeconds INTEGER NOT NULL DEFAULT 0,
+                    Status INTEGER NOT NULL DEFAULT 0,
+                    CreatedAt TEXT NOT NULL,
+                    CreatedBy TEXT NULL,
+                    SentAt TEXT NULL,
+                    DoneAt TEXT NULL,
+                    Result TEXT NULL,
+                    IsAutomatic INTEGER NOT NULL DEFAULT 0
+                );
+                """);
+            Execute(connection, "CREATE INDEX IF NOT EXISTS IX_AgentCommands_ComputerId_Status ON AgentCommands (ComputerId, Status);");
+
             Execute(connection, "CREATE INDEX IF NOT EXISTS IX_PlanItems_Location ON PlanItems (Location);");
             Execute(connection, "CREATE INDEX IF NOT EXISTS IX_Seats_SchoolClassId ON Seats (SchoolClassId);");
             Execute(connection, "CREATE INDEX IF NOT EXISTS IX_PasswordRecords_ComputerId ON PasswordRecords (ComputerId);");
@@ -334,6 +357,12 @@ public static class DbSchema
             AddColumnIfMissing(connection, "AppSettings", "BackupKeep", "INTEGER NOT NULL DEFAULT 3");
             AddColumnIfMissing(connection, "AppSettings", "AgentKey", "TEXT NULL");
             AddColumnIfMissing(connection, "AppSettings", "CustomLinks", "TEXT NULL");
+            AddColumnIfMissing(connection, "AppSettings", "ScreenWall", "INTEGER NOT NULL DEFAULT 1");
+            AddColumnIfMissing(connection, "AppSettings", "RustDeskHost", "TEXT NULL");
+            AddColumnIfMissing(connection, "AppSettings", "RustDeskKey", "TEXT NULL");
+            AddColumnIfMissing(connection, "AppSettings", "RustDeskPassword", "TEXT NULL");
+            AddColumnIfMissing(connection, "AppSettings", "RustDeskApply", "INTEGER NOT NULL DEFAULT 0");
+            AddColumnIfMissing(connection, "AppSettings", "ScreenKey", "TEXT NULL");
             if (AddColumnIfMissing(connection, "AppSettings", "BadgesClearedAt", "TEXT NULL"))
             {
                 // Πρώτη φορά: ό,τι υπάρχει ήδη δεν μετράει ως «ΝΕΟ» — μόνο όσα μπαίνουν από εδώ και πέρα.

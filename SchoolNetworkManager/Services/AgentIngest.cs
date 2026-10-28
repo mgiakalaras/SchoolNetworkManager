@@ -19,7 +19,7 @@ namespace SchoolNetworkManager.Services;
 public static class AgentIngest
 {
     /// <summary>Η έκδοση του snm-agent.ps1 που διανέμει ο server (οι agents ενημερώνονται μόνοι τους).</summary>
-    public const string LatestAgentVersion = "1.0.2";
+    public const string LatestAgentVersion = "1.2.0";
 
     public const string AgentUser = "agent";
 
@@ -44,6 +44,7 @@ public static class AgentIngest
         public List<NetInfo>? Network { get; set; }
         public VeyonInfo? Veyon { get; set; }
         public List<SoftwareInfo>? Software { get; set; }
+        public string? RustDeskId { get; set; }
     }
 
     public class OsInfo
@@ -381,6 +382,7 @@ public static class AgentIngest
         report.VeyonInstalled = veyonInstalled;
         report.VeyonRunning = veyonRunning;
         report.VeyonVersion = Clean(data.Veyon?.Version, 30);
+        report.RustDeskId = Clean(data.RustDeskId, 32);
         report.IpList = string.Join(", ", ips);
         report.MacList = string.Join(", ", macs);
         report.Warning = warnings.Count == 0 ? null : string.Join(" ", warnings);

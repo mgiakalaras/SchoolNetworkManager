@@ -52,6 +52,9 @@ public class AgentReport
 
     public int SoftwareCount { get; set; }
 
+    /// <summary>Το ID του RustDesk στον υπολογιστή (αν είναι εγκατεστημένο).</summary>
+    public string? RustDeskId { get; set; }
+
     /// <summary>Μήνυμα αν δεν μπόρεσε να ενημερωθεί κάτι (π.χ. η IP ανήκει σε άλλη συσκευή).</summary>
     public string? Warning { get; set; }
 

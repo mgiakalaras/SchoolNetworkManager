@@ -34,6 +34,8 @@ public class IndexModel : PageModel
 
     public string AgentKey => _settings.Current.AgentKey ?? string.Empty;
 
+    public string ScreenKey => _settings.Current.ScreenKey ?? string.Empty;
+
     /// <summary>Διευθύνσεις του server που μπορούν να δουν οι υπολογιστές (η πρώτη είναι η προτεινόμενη).</summary>
     public List<string> ServerChoices { get; set; } = new();
 
@@ -178,7 +180,7 @@ public class IndexModel : PageModel
 
         using (var zip = new ZipArchive(memory, ZipArchiveMode.Create, leaveOpen: true))
         {
-            foreach (var file in new[] { "snm-agent.ps1", "install.ps1", "install.bat", "uninstall.ps1", "uninstall.bat" })
+            foreach (var file in new[] { "snm-agent.ps1", "snm-screen.ps1", "install.ps1", "install.bat", "uninstall.ps1", "uninstall.bat" })
             {
                 var path = Path.Combine(folder, file);
 
@@ -189,6 +191,7 @@ public class IndexModel : PageModel
             }
 
             AddText(zip, "SNM-Agent/config.json", JsonSerializer.Serialize(new { server, key = AgentKey }, new JsonSerializerOptions { WriteIndented = true }));
+            AddText(zip, "SNM-Agent/screen.json", JsonSerializer.Serialize(new { server, screenKey = ScreenKey }, new JsonSerializerOptions { WriteIndented = true }));
             AddText(zip, "SNM-Agent/ΔΙΑΒΑΣΕ-ΜΕ.txt", Readme(server), bom: true);
         }
 

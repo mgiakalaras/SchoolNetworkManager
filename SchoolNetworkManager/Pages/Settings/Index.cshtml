@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model SchoolNetworkManager.Pages.Settings.IndexModel
 
 @{
@@ -305,6 +305,46 @@
                                 Pi-hole 5: το API token.
                             </div>
                         </div>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <h3 class="h6 mb-3">🖥️ Απομακρυσμένος έλεγχος (RustDesk)</h3>
+                    <div class="form-text mb-3">
+                        Για να βλέπεις/χειρίζεσαι την οθόνη ενός υπολογιστή. Ο agent εντοπίζει μόνος του το RustDesk ID·
+                        στη σελίδα κάθε υπολογιστή εμφανίζεται κουμπί 🖥️ σύνδεσης. Το κλείσιμο/επανεκκίνηση δουλεύουν χωρίς RustDesk.
+                    </div>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label asp-for="Settings.RustDeskHost" class="form-label">Διεύθυνση RustDesk server</label>
+                            <input asp-for="Settings.RustDeskHost" class="form-control" placeholder="π.χ. 192.168.2.114" />
+                            <div class="form-text">Ο δικός σου server (hbbs) στο ZimaOS. Άδειο = χωρίς κουμπί σύνδεσης.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Settings.RustDeskKey" class="form-label">Δημόσιο κλειδί (προαιρετικό)</label>
+                            <input asp-for="Settings.RustDeskKey" class="form-control" placeholder="id_ed25519.pub" />
+                            <div class="form-text">Το κλειδί του server σου, για κρυπτογραφημένη σύνδεση.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Settings.RustDeskPassword" class="form-label">Μόνιμος κωδικός υπολογιστών</label>
+                            <input asp-for="Settings.RustDeskPassword" class="form-control" type="password" autocomplete="new-password"
+                                   placeholder="κοινός κωδικός για σύνδεση" />
+                            <div class="form-text">Αποθηκεύεται κρυπτογραφημένος. Άφησέ το κενό για να κρατήσεις τον υπάρχοντα.</div>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-center">
+                            <div class="form-check form-switch mt-3">
+                                <input asp-for="Settings.RustDeskApply" class="form-check-input" role="switch" />
+                                <label asp-for="Settings.RustDeskApply" class="form-check-label">Οι agents να ρυθμίζουν μόνοι τους το RustDesk</label>
+                                <div class="form-text">Περνά server + κωδικό στους υπολογιστές που έχουν εγκατεστημένο το RustDesk.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+                    <div class="form-check form-switch">
+                        <input asp-for="Settings.ScreenWall" class="form-check-input" role="switch" />
+                        <label asp-for="Settings.ScreenWall" class="form-check-label">Εμφάνιση ενεργειών ρεύματος ανά χώρο</label>
+                        <div class="form-text">Κλείσιμο/επανεκκίνηση όλων των υπολογιστών ενός χώρου και αυτόματο βραδινό κλείσιμο.</div>
                     </div>
 
                     <div class="alert alert-light border mt-4 mb-0 small">

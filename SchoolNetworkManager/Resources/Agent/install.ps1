@@ -3,36 +3,64 @@ $ErrorActionPreference = 'Stop'
 $source = Split-Path -Parent $MyInvocation.MyCommand.Path
 $target = Join-Path $env:ProgramData 'SchoolNetworkManager\Agent'
 $taskName = 'SchoolNetworkManager Agent'
+$screenTaskName = 'SchoolNetworkManager Screen'
+
+# Σταμάτα τον agent αν τρέχει ήδη (αναβάθμιση), για να μην είναι κλειδωμένο το αρχείο.
+Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+Stop-ScheduledTask -TaskName $screenTaskName -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 2
 
 New-Item -ItemType Directory -Path $target -Force | Out-Null
 Copy-Item -Path (Join-Path $source 'snm-agent.ps1') -Destination $target -Force
 Copy-Item -Path (Join-Path $source 'config.json') -Destination $target -Force
+if (Test-Path (Join-Path $source 'snm-screen.ps1')) { Copy-Item -Path (Join-Path $source 'snm-screen.ps1') -Destination $target -Force }
+if (Test-Path (Join-Path $source 'screen.json'))   { Copy-Item -Path (Join-Path $source 'screen.json')   -Destination $target -Force }
 
 # Only SYSTEM and Administrators may read the folder (it contains the agent key).
 & icacls.exe $target /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
 # The files inherit exactly these permissions from the folder
 & icacls.exe (Join-Path $target '*') /reset | Out-Null
+# Ο screen-helper τρέχει στη συνεδρία του χρήστη → χρειάζεται ανάγνωση σε αυτά τα δύο αρχεία (όχι στο κλειδί του agent).
+foreach ($f in @('snm-screen.ps1', 'screen.json')) {
+    $fp = Join-Path $target $f
+    if (Test-Path $fp) { & icacls.exe $fp /grant:r '*S-1-5-32-545:(RX)' | Out-Null }
+}
 
 $script = Join-Path $target 'snm-agent.ps1'
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' `
     -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$script`""
 
 $atStartup = New-ScheduledTaskTrigger -AtStartup
-$atStartup.Delay = 'PT2M'
+$atStartup.Delay = 'PT1M'
 $atLogon = New-ScheduledTaskTrigger -AtLogOn
-$atLogon.Delay = 'PT1M'
-$every2h = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5) -RepetitionInterval (New-TimeSpan -Hours 2)
+# Keep-alive: every 10 λεπτά ξαναξεκινά τον agent ΜΟΝΟ αν δεν τρέχει ήδη (MultipleInstances IgnoreNew).
+$keepAlive = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5) -RepetitionInterval (New-TimeSpan -Minutes 10)
 
 $principal = New-ScheduledTaskPrincipal -UserId 'S-1-5-18' -LogonType ServiceAccount -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-    -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -MultipleInstances IgnoreNew
+    -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartInterval (New-TimeSpan -Minutes 2) -RestartCount 3 -MultipleInstances IgnoreNew
 
-Register-ScheduledTask -TaskName $taskName -Action $action -Trigger @($atStartup, $atLogon, $every2h) `
+Register-ScheduledTask -TaskName $taskName -Action $action -Trigger @($atStartup, $atLogon, $keepAlive) `
     -Principal $principal -Settings $settings -Description 'Sends hardware/software information to School Network Manager' -Force | Out-Null
 
-# First report right now
+# Τοίχος οθονών: τρέχει στη συνεδρία του συνδεδεμένου χρήστη (όχι SYSTEM), ώστε να «βλέπει» την οθόνη.
+$screen = Join-Path $target 'snm-screen.ps1'
+if (Test-Path $screen) {
+    $screenAction = New-ScheduledTaskAction -Execute 'powershell.exe' `
+        -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$screen`""
+    $screenLogon = New-ScheduledTaskTrigger -AtLogOn
+    $screenKeepAlive = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5) -RepetitionInterval (New-TimeSpan -Minutes 10)
+    $screenPrincipal = New-ScheduledTaskPrincipal -GroupId 'S-1-5-32-545' -RunLevel Limited
+    $screenSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+        -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew
+    Register-ScheduledTask -TaskName $screenTaskName -Action $screenAction -Trigger @($screenLogon, $screenKeepAlive) `
+        -Principal $screenPrincipal -Settings $screenSettings -Description 'School Network Manager - screen wall thumbnails (runs in the user session)' -Force | Out-Null
+}
+
+# First report right now (one-shot), then start the resident task
 Start-Process -FilePath 'powershell.exe' -WindowStyle Hidden -Wait `
-    -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$script`" -now"
+    -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$script`" -Once"
+Start-ScheduledTask -TaskName $taskName
 
 $log = Join-Path $target 'agent.log'
 $server = (Get-Content -Raw -Path (Join-Path $target 'config.json') | ConvertFrom-Json).server

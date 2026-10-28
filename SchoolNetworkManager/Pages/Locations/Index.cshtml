@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model SchoolNetworkManager.Pages.Locations.IndexModel
 @inject SchoolNetworkManager.Services.SettingsService SettingsSvc
 
@@ -135,6 +135,39 @@
                                         <button type="submit" class="dropdown-item" disabled="@(place.WithMac == 0)">⚡ Άναμμα όλων (@place.WithMac με MAC)</button>
                                     </form>
                                 </li>
+                                @if (Model.ShowPower)
+                                {
+                                <li>
+                                    <form method="post" asp-page-handler="Power" asp-route-location="@place.Key"
+                                          onsubmit="return confirm('Να κλείσουν όλοι οι υπολογιστές αυτού του χώρου σε 1 λεπτό;');">
+                                        <input type="hidden" name="kind" value="shutdown" />
+                                        <button type="submit" class="dropdown-item" disabled="@(place.WithAgent == 0)">⏻ Κλείσιμο όλων (@place.WithAgent με agent)</button>
+                                    </form>
+                                </li>
+                                <li>
+                                    <form method="post" asp-page-handler="Power" asp-route-location="@place.Key"
+                                          onsubmit="return confirm('Να επανεκκινήσουν όλοι οι υπολογιστές αυτού του χώρου σε 1 λεπτό;');">
+                                        <input type="hidden" name="kind" value="restart" />
+                                        <button type="submit" class="dropdown-item" disabled="@(place.WithAgent == 0)">🔄 Επανεκκίνηση όλων</button>
+                                    </form>
+                                </li>
+                                @if (!isNoLocation)
+                                {
+                                    <li>
+                                        <form method="post" asp-page-handler="AutoShutdown" asp-route-location="@place.Key" class="px-3 py-2 auto-off-form">
+                                            <label class="small text-muted d-block mb-1">🌙 Αυτόματο βραδινό κλείσιμο</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="time" name="time" class="form-control" value="@place.AutoShutdown" />
+                                                <button type="submit" class="btn btn-outline-primary">OK</button>
+                                            </div>
+                                            @if (!string.IsNullOrWhiteSpace(place.AutoShutdown))
+                                            {
+                                                <div class="small text-success mt-1">Κλείνει κάθε μέρα στις @place.AutoShutdown</div>
+                                            }
+                                        </form>
+                                    </li>
+                                }
+                                }
                                 <li><hr class="dropdown-divider" /></li>
                                 @if (!isNoLocation)
                                 {

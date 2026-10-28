@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SchoolNetworkManager.Models;
 using SchoolNetworkManager.Services;
 
@@ -30,6 +30,7 @@ public class AppDbContext : DbContext
     public DbSet<AgentReport> AgentReports => Set<AgentReport>();
     public DbSet<InstalledSoftware> InstalledSoftware => Set<InstalledSoftware>();
     public DbSet<ToolFile> ToolFiles => Set<ToolFile>();
+    public DbSet<AgentCommand> AgentCommands => Set<AgentCommand>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -68,6 +69,9 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<InstalledSoftware>()
             .HasIndex(s => s.ComputerId);
+
+        modelBuilder.Entity<AgentCommand>()
+            .HasIndex(c => new { c.ComputerId, c.Status });
 
         modelBuilder.Entity<ToolFile>()
             .Ignore(t => t.IsLink)

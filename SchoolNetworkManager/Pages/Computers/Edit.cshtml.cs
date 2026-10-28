@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SchoolNetworkManager.Data;
@@ -87,6 +87,7 @@ public class EditModel : PageModel
         existingComputer.HasLanMessenger = Computer.HasLanMessenger;
         existingComputer.HasVeyon = Computer.HasVeyon;
         existingComputer.IsDynamic = Computer.IsDynamic;
+        existingComputer.NoAutoShutdown = Computer.NoAutoShutdown;
         existingComputer.UpdatedAt = DateTime.Now;
         existingComputer.UpdatedBy = SchoolNetworkManager.Services.UserPasswords.ActorName(User);
 

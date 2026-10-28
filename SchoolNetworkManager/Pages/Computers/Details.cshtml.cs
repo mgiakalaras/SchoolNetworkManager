@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SchoolNetworkManager.Data;
@@ -34,6 +34,11 @@ public class DetailsModel : PageModel
     public AgentReport? Agent { get; set; }
 
     public List<InstalledSoftware> Software { get; set; } = new();
+
+    /// <summary>Έχει ρυθμιστεί RustDesk server για σύνδεση με τον υπολογιστή.</summary>
+    public bool RustDeskReady { get; set; }
+
+    public bool HasAgent => Agent != null;
 
     public List<(string Drive, string? Label, double SizeGb, double FreeGb)> Disks { get; set; } = new();
 
@@ -97,6 +102,7 @@ public class DetailsModel : PageModel
 
         var id = Computer.Id;
         Agent = await _context.AgentReports.AsNoTracking().FirstOrDefaultAsync(r => r.ComputerId == id);
+        RustDeskReady = !string.IsNullOrWhiteSpace(_settings.Current.RustDeskHost);
 
         if (Agent != null)
         {
@@ -384,6 +390,42 @@ public class DetailsModel : PageModel
             ? "Στάλθηκε σήμα αφύπνισης. Ο υπολογιστής θα ανοίξει σε λίγο (αν έχει ενεργό το Wake-on-LAN στο BIOS)."
             : "Δεν στάλθηκε το σήμα αφύπνισης. Έλεγξε τη MAC Address.";
 
+        return RedirectToPage(new { id });
+    }
+
+    // Εντολές στον agent (κλείσιμο / επανεκκίνηση / μήνυμα). Εκτελεί ο agent ως SYSTEM.
+    public async Task<IActionResult> OnPostCommandAsync(int id, string? kind, int delay = 60, string? text = null)
+    {
+        var computer = await _context.Computers.FindAsync(id);
+
+        if (computer == null)
+        {
+            return NotFound();
+        }
+
+        if (!AgentCommands.IsValidKind(kind))
+        {
+            StatusKind = "danger";
+            StatusMessage = "Άγνωστη ενέργεια.";
+            return RedirectToPage(new { id });
+        }
+
+        var hasAgent = await _context.AgentReports.AnyAsync(r => r.ComputerId == id);
+
+        if (!hasAgent)
+        {
+            StatusKind = "warning";
+            StatusMessage = "Αυτός ο υπολογιστής δεν έχει agent, οπότε δεν μπορεί να δεχτεί εντολές. Εγκατέστησε πρώτα τον agent.";
+            return RedirectToPage(new { id });
+        }
+
+        var by = UserPasswords.ActorName(User);
+        await AgentCommands.QueueAsync(_context, id, kind!, by, delay, text);
+
+        StatusKind = "success";
+        StatusMessage = kind == "cancel"
+            ? "Στάλθηκε ακύρωση. Αν ο υπολογιστής προλάβει, το κλείσιμο ματαιώνεται."
+            : $"{AgentCommand.Label(kind!)}: η εντολή μπήκε σε ουρά. Ο agent την εκτελεί μέσα σε λίγα δευτερόλεπτα.";
         return RedirectToPage(new { id });
     }
 

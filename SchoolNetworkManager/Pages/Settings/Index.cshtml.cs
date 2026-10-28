@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.IO.Compression;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
@@ -150,6 +150,18 @@ public class IndexModel : PageModel
             ? AppSettings.DefaultPorts
             : Settings.PortsToScan.Trim();
         existing.WolBroadcast = Settings.WolBroadcast?.Trim();
+
+        // Οθόνες & RustDesk
+        existing.ScreenWall = Settings.ScreenWall;
+        existing.RustDeskApply = Settings.RustDeskApply;
+        existing.RustDeskHost = string.IsNullOrWhiteSpace(Settings.RustDeskHost) ? null : Settings.RustDeskHost.Trim();
+        existing.RustDeskKey = string.IsNullOrWhiteSpace(Settings.RustDeskKey) ? null : Settings.RustDeskKey.Trim();
+        if (!string.IsNullOrWhiteSpace(Settings.RustDeskPassword))
+        {
+            existing.RustDeskPassword = Settings.RustDeskPassword.Trim() == "********"
+                ? existing.RustDeskPassword
+                : PasswordProtector.Protect(Settings.RustDeskPassword.Trim());
+        }
         existing.MySpeedUrl = Settings.MySpeedUrl?.Trim();
         existing.PiholeUrl = Settings.PiholeUrl?.Trim();
 
@@ -246,6 +258,11 @@ public class IndexModel : PageModel
         }
 
         RangeCount = NetworkTools.ParseRange(Settings.ScanRange).Count;
+
+        if (!keepText && !string.IsNullOrWhiteSpace(Settings.RustDeskPassword))
+        {
+            Settings.RustDeskPassword = "********";
+        }
     }
 
     private static double? ParseCoordinate(string? text)

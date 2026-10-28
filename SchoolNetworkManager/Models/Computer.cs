@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 namespace SchoolNetworkManager.Models;
 
@@ -43,6 +43,10 @@ public class Computer
     /// </summary>
     [Display(Name = "Dynamic (DHCP)")]
     public bool IsDynamic { get; set; }
+
+    /// <summary>Να μην κλείνει με το αυτόματο βραδινό κλείσιμο (π.χ. υπολογιστής καθηγητή).</summary>
+    [Display(Name = "Εξαίρεση από αυτόματο κλείσιμο")]
+    public bool NoAutoShutdown { get; set; }
 
     // Φύλακας Veyon: ο υπολογιστής ήταν ανοιχτός αλλά η υπηρεσία Veyon δεν απαντούσε.
     public bool VeyonDown { get; set; }
