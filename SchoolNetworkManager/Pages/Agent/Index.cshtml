@@ -222,16 +222,28 @@ else
             <div class="card shadow-sm mb-4">
                 <div class="card-header fw-semibold">1. Κατέβασε το πακέτο</div>
                 <div class="card-body">
-                    <form method="get" asp-page-handler="Download" class="row g-2 align-items-end">
+                    <form method="get" class="row g-2 align-items-end">
+                        @* Σε φόρμα GET ο browser πετάει το ?handler= της διεύθυνσης — γι' αυτό πάει ως πεδίο *@
+                        <input type="hidden" name="handler" value="Download" />
                         <div class="col-sm-8">
-                            <label class="form-label" for="serverUrl">Διεύθυνση server (όπως τη βλέπουν οι υπολογιστές)</label>
-                            <input id="serverUrl" name="serverUrl" class="form-control font-monospace" value="@Model.ServerUrl" />
+                            <label class="form-label" for="serverUrl">Διεύθυνση server (όπως τη βλέπουν οι υπολογιστές του σχολείου)</label>
+                            <input id="serverUrl" name="serverUrl" class="form-control font-monospace" value="@Model.ServerUrl" list="serverChoices" />
+                            <datalist id="serverChoices">
+                                @foreach (var choice in Model.ServerChoices)
+                                {
+                                    <option value="@choice"></option>
+                                }
+                            </datalist>
                         </div>
                         <div class="col-sm-4 d-grid">
                             <button type="submit" class="btn btn-primary">⬇️ SNM-Agent.zip</button>
                         </div>
                     </form>
-                    <div class="form-text">Το πακέτο έχει μέσα έτοιμη τη διεύθυνση και το κλειδί του σχολείου.</div>
+                    <div class="form-text">
+                        Το πακέτο έχει μέσα έτοιμη τη διεύθυνση και το κλειδί του σχολείου.
+                        Πρέπει να είναι η διεύθυνση του Zima στο σχολικό δίκτυο (π.χ. <code>http://192.168.2.114:5055</code>) —
+                        όχι διεύθυνση VPN / απομακρυσμένης πρόσβασης.
+                    </div>
                 </div>
             </div>
 

@@ -9,8 +9,8 @@ using SchoolNetworkManager.Services;
 namespace SchoolNetworkManager.Pages.Library;
 
 /// <summary>Βιβλιοθήκη εργαλείων: utilities, εγκαταστάτες, scripts, drivers και σύνδεσμοι για την ομάδα.</summary>
-[RequestSizeLimit(MaxUpload)]
-[RequestFormLimits(MultipartBodyLengthLimit = MaxUpload)]
+[RequestSizeLimit(8L * 1024 * 1024 * 1024)]
+[RequestFormLimits(MultipartBodyLengthLimit = 8L * 1024 * 1024 * 1024)]
 public class IndexModel : PageModel
 {
     public const long MaxUpload = 8L * 1024 * 1024 * 1024;   // 8 GB (π.χ. ISO)
@@ -186,7 +186,7 @@ public class IndexModel : PageModel
 
         if (item == null || (publicOnly && !item.IsPublic))
         {
-            return page.NotFound();
+            return new NotFoundResult();
         }
 
         item.Downloads++;
@@ -194,17 +194,21 @@ public class IndexModel : PageModel
 
         if (item.IsLink)
         {
-            return page.Redirect(item.Url!);
+            return new RedirectResult(item.Url!);
         }
 
         var path = string.IsNullOrEmpty(item.StoredName) ? null : Path.Combine(storage.LibraryDirectory, Path.GetFileName(item.StoredName));
 
         if (path == null || !System.IO.File.Exists(path))
         {
-            return page.NotFound();
+            return new NotFoundResult();
         }
 
-        return page.PhysicalFile(path, "application/octet-stream", item.FileName ?? Path.GetFileName(path), enableRangeProcessing: true);
+        return new PhysicalFileResult(path, "application/octet-stream")
+        {
+            FileDownloadName = item.FileName ?? Path.GetFileName(path),
+            EnableRangeProcessing = true
+        };
     }
 
     public bool CanChange(ToolFile item) =>

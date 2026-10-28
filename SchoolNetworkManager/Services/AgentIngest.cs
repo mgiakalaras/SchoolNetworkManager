@@ -19,7 +19,7 @@ namespace SchoolNetworkManager.Services;
 public static class AgentIngest
 {
     /// <summary>Η έκδοση του snm-agent.ps1 που διανέμει ο server (οι agents ενημερώνονται μόνοι τους).</summary>
-    public const string LatestAgentVersion = "1.0.0";
+    public const string LatestAgentVersion = "1.0.2";
 
     public const string AgentUser = "agent";
 
@@ -84,7 +84,14 @@ public static class AgentIngest
     public class NetInfo
     {
         public string? Description { get; set; }
+        public bool? Virtual { get; set; }
         public string? Mac { get; set; }
+
+        /// <summary>VPN / ZeroTier / VirtualBox κ.λπ. — δεν είναι η κάρτα δικτύου του υπολογιστή.</summary>
+        [JsonIgnore]
+        public bool IsVirtual => Virtual == true || System.Text.RegularExpressions.Regex.IsMatch(Description ?? string.Empty,
+            "Virtual|ZeroTier|VPN|TAP-|Hyper-V|VMware|VirtualBox|Tailscale|WireGuard|Loopback|Bluetooth|WAN Miniport|Npcap",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         public List<string>? Ips { get; set; }
         public string? Gateway { get; set; }
         public bool? Dhcp { get; set; }
@@ -165,8 +172,10 @@ public static class AgentIngest
         }
 
         var now = DateTime.Now;
+        // Πρώτα οι πραγματικές κάρτες δικτύου, μετά τα VPN / εικονικά
         var adapters = (data.Network ?? new List<NetInfo>())
             .Where(n => NetworkTools.IsUsableMac(NetworkTools.NormalizeMac(n.Mac)))
+            .OrderBy(n => n.IsVirtual)
             .ToList();
 
         var macs = adapters
@@ -198,9 +207,15 @@ public static class AgentIngest
                        ?? all.FirstOrDefault(c => !c.IsDynamic && string.Equals(c.Name?.Trim(), hostname, StringComparison.OrdinalIgnoreCase));
 
         var primaryIp = ips.FirstOrDefault();
-        var primaryMac = adapters.FirstOrDefault(a => (a.Ips ?? new()).Contains(primaryIp ?? "-"))?.Mac is { } m
-            ? NetworkTools.NormalizeMac(m)
-            : macs.FirstOrDefault();
+        var primaryAdapter = adapters.FirstOrDefault(a => (a.Ips ?? new()).Contains(primaryIp ?? "-"));
+
+        // Αν η αναφορά ήρθε μέσω VPN, η MAC της συσκευής είναι της πραγματικής κάρτας.
+        if (primaryAdapter == null || primaryAdapter.IsVirtual)
+        {
+            primaryAdapter = adapters.FirstOrDefault(a => !a.IsVirtual) ?? primaryAdapter;
+        }
+
+        var primaryMac = primaryAdapter?.Mac is { } m ? NetworkTools.NormalizeMac(m) : macs.FirstOrDefault();
 
         if (computer == null)
         {
@@ -387,12 +402,14 @@ public static class AgentIngest
 
         foreach (var s in software)
         {
+            var (displayName, publisher) = s.Scope == "store" ? StoreNames(s.Name!, s.Publisher) : (s.Name!, s.Publisher);
+
             db.InstalledSoftware.Add(new InstalledSoftware
             {
                 ComputerId = computer.Id,
-                Name = Clean(s.Name, 200)!,
+                Name = Clean(displayName, 200)!,
                 Version = Clean(s.Version, 60),
-                Publisher = Clean(s.Publisher, 120),
+                Publisher = Clean(publisher, 120),
                 InstallDate = Clean(s.InstallDate, 20),
                 Scope = s.Scope is "user" or "store" ? s.Scope : "machine",
                 FirstSeen = firstSeen.GetValueOrDefault(SoftwareKey(s.Name, s.Publisher), now)
@@ -405,6 +422,26 @@ public static class AgentIngest
         var message = created ? $"Νέα συσκευή «{hostname}» ({computer.IpAddress})." : $"Ενημερώθηκε «{computer.Name}» ({computer.IpAddress}).";
 
         return new Result(true, message + (warnings.Count > 0 ? " " + report.Warning : string.Empty), computer.Id, created);
+    }
+
+    /// <summary>
+    /// Εφαρμογές Store χωρίς φιλικό όνομα: «5A894077.McAfeeSecurity» → «McAfee Security»,
+    /// και ο εκδότης-hash (π.χ. «wafk5atnkzcwy») δεν εμφανίζεται.
+    /// </summary>
+    public static (string Name, string? Publisher) StoreNames(string name, string? publisher)
+    {
+        var display = name.Trim();
+
+        if (!display.Contains(' ') && display.Contains('.'))
+        {
+            var parts = display.Split('.', StringSplitOptions.RemoveEmptyEntries);
+            display = parts.Length > 1 ? string.Join(" ", parts.Skip(1)) : display;
+            display = System.Text.RegularExpressions.Regex.Replace(display, "(?<=[a-z])(?=[A-Z])", " ");
+        }
+
+        var hashLike = publisher != null && System.Text.RegularExpressions.Regex.IsMatch(publisher, "^[a-z0-9]{10,16}$");
+
+        return (display, hashLike ? null : publisher);
     }
 
     public static string SoftwareKey(string? name, string? publisher) =>

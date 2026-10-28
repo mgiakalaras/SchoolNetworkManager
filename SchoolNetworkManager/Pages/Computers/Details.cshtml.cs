@@ -95,6 +95,7 @@ public class DetailsModel : PageModel
             .Select(p => new PasswordHistoryItem { Record = p, IsCurrent = currentIds.Contains(p.Id) })
             .ToList();
 
+        var id = Computer.Id;
         Agent = await _context.AgentReports.AsNoTracking().FirstOrDefaultAsync(r => r.ComputerId == id);
 
         if (Agent != null)

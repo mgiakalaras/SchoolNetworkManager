@@ -7,7 +7,7 @@
   Only collects information - it never changes anything on the computer.
 #>
 
-$AgentVersion = '1.0.0'
+$AgentVersion = '1.0.2'
 $ErrorActionPreference = 'SilentlyContinue'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $logFile = Join-Path $here 'agent.log'
@@ -99,9 +99,12 @@ if ($physical.Count -eq 0) {
 $data.physicalDisks = $physical
 
 # ---------------- Network ----------------
-$data.network = @(Get-CimInstance Win32_NetworkAdapterConfiguration -Filter 'IPEnabled=TRUE' | Where-Object { $_.MACAddress } | ForEach-Object {
+$virtualPattern = 'Virtual|ZeroTier|VPN|TAP-|Hyper-V|VMware|VirtualBox|Tailscale|WireGuard|Loopback|Bluetooth|WAN Miniport|Npcap'
+$data.network = @(Get-CimInstance Win32_NetworkAdapterConfiguration -Filter 'IPEnabled=TRUE' | Where-Object { $_.MACAddress } |
+    Sort-Object -Property @{ Expression = { $_.Description -match $virtualPattern } } | ForEach-Object {
     [ordered]@{
         description = $_.Description
+        virtual     = [bool]($_.Description -match $virtualPattern)
         mac         = $_.MACAddress
         ips         = @($_.IPAddress | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' })
         gateway     = (@($_.DefaultIPGateway) | Select-Object -First 1)
@@ -143,15 +146,21 @@ Get-ChildItem 'HKU:\' -ErrorAction SilentlyContinue | Where-Object { $_.PSChildN
 try {
     Get-AppxPackage -AllUsers -ErrorAction Stop |
         Where-Object { -not $_.IsFramework -and $_.SignatureKind -eq 'Store' -and $_.Name -notmatch '^(Microsoft|MicrosoftWindows|Windows|MicrosoftCorporationII|NVIDIA|AppUp|RealtekSemiconductor|AD2F1837)\.' } |
+        # Only apps really installed for a user - not the "staged" ones the manufacturer pre-loads (e.g. McAfee offers)
+        Where-Object { @($_.PackageUserInformation | Where-Object { [string]$_.InstallState -eq 'Installed' }).Count -gt 0 } |
         ForEach-Object {
             $name = $_.Name
+            $publisher = ''
             try {
                 $manifest = Get-AppxPackageManifest -Package $_.PackageFullName -ErrorAction Stop
                 $display = [string]$manifest.Package.Properties.DisplayName
                 if ($display -and $display -notmatch '^ms-resource:') { $name = $display }
+                $pubDisplay = [string]$manifest.Package.Properties.PublisherDisplayName
+                if ($pubDisplay -and $pubDisplay -notmatch '^ms-resource:') { $publisher = $pubDisplay }
             } catch { }
+            if (-not $publisher -and $_.Publisher -match '(?:^|,\s*)(?:O|CN)=([^,]+)') { $publisher = $Matches[1].Trim('"') }
             [void]$software.Add([ordered]@{
-                name = $name; version = [string]$_.Version; publisher = [string]$_.PublisherId; installDate = ''; scope = 'store'
+                name = $name; version = [string]$_.Version; publisher = $publisher; installDate = ''; scope = 'store'
             })
         }
 } catch { }

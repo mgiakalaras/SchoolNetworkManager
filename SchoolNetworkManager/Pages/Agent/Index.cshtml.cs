@@ -34,6 +34,54 @@ public class IndexModel : PageModel
 
     public string AgentKey => _settings.Current.AgentKey ?? string.Empty;
 
+    /// <summary>Διευθύνσεις του server που μπορούν να δουν οι υπολογιστές (η πρώτη είναι η προτεινόμενη).</summary>
+    public List<string> ServerChoices { get; set; } = new();
+
+    /// <summary>
+    /// Ο browser μπορεί να βλέπει τον server από VPN / απομακρυσμένη διεύθυνση (π.χ. 10.242.x.x του ZimaOS).
+    /// Οι υπολογιστές του σχολείου όμως χρειάζονται τη διεύθυνση του σχολικού δικτύου — προτιμάμε αυτή του εύρους σάρωσης.
+    /// </summary>
+    private List<string> SuggestServerUrls()
+    {
+        var port = Request.Host.Port ?? 5055;
+        var scanPrefix = NetworkTools.ParseRange(_settings.Current.ScanRange, 4).FirstOrDefault() is { } first
+            ? string.Join('.', first.Split('.').Take(3)) + "."
+            : "192.168.";
+
+        var addresses = new List<string>();
+
+        try
+        {
+            addresses = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+                .Where(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up)
+                .SelectMany(n => n.GetIPProperties().UnicastAddresses)
+                .Select(a => a.Address)
+                .Where(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && !System.Net.IPAddress.IsLoopback(a))
+                .Select(a => a.ToString())
+                .Where(ip => !ip.StartsWith("172.17.") && !ip.StartsWith("169.254."))
+                .Distinct()
+                .ToList();
+        }
+        catch (Exception)
+        {
+        }
+
+        var ordered = addresses
+            .OrderByDescending(ip => ip.StartsWith(scanPrefix))
+            .ThenByDescending(ip => ip.StartsWith("192.168."))
+            .Select(ip => $"http://{ip}:{port}")
+            .ToList();
+
+        var current = $"{Request.Scheme}://{Request.Host}";
+
+        if (!ordered.Contains(current))
+        {
+            ordered.Add(current);
+        }
+
+        return ordered;
+    }
+
     public List<Row> Rows { get; set; } = new();
     public List<SoftwareGroup> Software { get; set; } = new();
     public List<NewSoftware> Recent { get; set; } = new();
@@ -65,7 +113,8 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        ServerUrl ??= $"{Request.Scheme}://{Request.Host}";
+        ServerChoices = SuggestServerUrls();
+        ServerUrl ??= ServerChoices.First();
 
         var reports = await _context.AgentReports.AsNoTracking().ToListAsync();
         var devices = await _context.Computers.AsNoTracking().ToDictionaryAsync(c => c.Id);
@@ -122,7 +171,7 @@ public class IndexModel : PageModel
     /// <summary>Πακέτο εγκατάστασης για τους υπολογιστές, με έτοιμη διεύθυνση server και κλειδί.</summary>
     public IActionResult OnGetDownload(string? serverUrl)
     {
-        var server = string.IsNullOrWhiteSpace(serverUrl) ? $"{Request.Scheme}://{Request.Host}" : serverUrl.Trim().TrimEnd('/');
+        var server = string.IsNullOrWhiteSpace(serverUrl) ? SuggestServerUrls().First() : serverUrl.Trim().TrimEnd('/');
         var folder = Path.Combine(AppContext.BaseDirectory, "Resources", "Agent");
 
         using var memory = new MemoryStream();
