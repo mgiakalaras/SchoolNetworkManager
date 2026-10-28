@@ -55,6 +55,8 @@ if (Test-Path $screen) {
         -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew
     Register-ScheduledTask -TaskName $screenTaskName -Action $screenAction -Trigger @($screenLogon, $screenKeepAlive) `
         -Principal $screenPrincipal -Settings $screenSettings -Description 'School Network Manager - screen wall thumbnails (runs in the user session)' -Force | Out-Null
+    # Ξεκίνα τον τώρα στη συνεδρία του ήδη συνδεδεμένου χρήστη (χωρίς να περιμένει νέα σύνδεση).
+    Start-ScheduledTask -TaskName $screenTaskName -ErrorAction SilentlyContinue
 }
 
 # First report right now (one-shot), then start the resident task
