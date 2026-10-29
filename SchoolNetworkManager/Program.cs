@@ -139,7 +139,6 @@ builder.Services.AddHttpClient(PiholeClient.HttpClientName)
     });
 builder.Services.AddSingleton<PiholeClient>();
 builder.Services.AddSingleton<PublicRateLimiter>();
-builder.Services.AddSingleton<ScreenStore>();
 builder.Services.AddSingleton<BackupService>();
 builder.Services.AddHostedService<BackupScheduler>();
 builder.Services.AddHostedService<MonitorService>();
@@ -177,12 +176,6 @@ using (var scope = app.Services.CreateScope())
     if (string.IsNullOrWhiteSpace(settings.AgentKey))
     {
         settings.AgentKey = AgentIngest.NewKey();
-        db.SaveChanges();
-    }
-
-    if (string.IsNullOrWhiteSpace(settings.ScreenKey))
-    {
-        settings.ScreenKey = AgentIngest.NewKey();
         db.SaveChanges();
     }
 
@@ -345,58 +338,6 @@ app.MapPost("/api/agent/commands/result", async (HttpContext http, AppDbContext 
     await AgentCommands.CompleteAsync(db, body.Id, body.ComputerId, body.Ok, body.Message);
     return Results.Json(new { ok = true });
 });
-
-// Ο screen-helper ρωτά αν χρειάζεται να τραβήξει οθόνη (μόνο όσο κάποιος βλέπει τον τοίχο).
-app.MapGet("/api/agent/screen-wanted", (HttpContext http, SettingsService settings, ScreenStore screens) =>
-{
-    var key = http.Request.Headers["X-Agent-Key"];
-    var ok = AgentIngest.KeyMatches(settings.Current.ScreenKey, key) || AgentIngest.KeyMatches(settings.Current.AgentKey, key);
-    if (!ok)
-    {
-        return Results.StatusCode(401);
-    }
-
-    var wanted = settings.Current.ScreenWall && screens.IsWatched;
-    return Results.Json(new { wanted });
-});
-
-// Ο screen-helper ανεβάζει μικρογραφία (JPEG). Μόνο στη μνήμη, ποτέ σε δίσκο.
-app.MapPost("/api/agent/screen", async (HttpContext http, AppDbContext db, SettingsService settings, ScreenStore screens) =>
-{
-    var key = http.Request.Headers["X-Agent-Key"];
-    var ok = AgentIngest.KeyMatches(settings.Current.ScreenKey, key) || AgentIngest.KeyMatches(settings.Current.AgentKey, key);
-    if (!ok)
-    {
-        return Results.StatusCode(401);
-    }
-
-    var hostname = ((string?)http.Request.Query["hostname"])?.Trim();
-    if (string.IsNullOrWhiteSpace(hostname))
-    {
-        return Results.BadRequest();
-    }
-
-    var computer = await db.Computers
-        .Where(c => !c.IsDynamic && c.Name != null && c.Name.ToLower() == hostname.ToLower())
-        .Select(c => new { c.Id })
-        .FirstOrDefaultAsync();
-
-    if (computer == null)
-    {
-        return Results.Json(new { ok = false });
-    }
-
-    using var ms = new MemoryStream();
-    await http.Request.Body.CopyToAsync(ms);
-    var bytes = ms.ToArray();
-    if (bytes.Length is 0 or > (3 * 1024 * 1024))
-    {
-        return Results.BadRequest();
-    }
-
-    screens.Put(computer.Id, bytes, "image/jpeg");
-    return Results.Json(new { ok = true });
-}).WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(4 * 1024 * 1024));
 
 // Αυτόματη ενημέρωση του agent: κατεβάζει την τελευταία έκδοση του script.
 app.MapGet("/api/agent/script", (HttpContext http, SettingsService settings) =>
