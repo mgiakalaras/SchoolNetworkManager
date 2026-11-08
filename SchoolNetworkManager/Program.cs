@@ -339,6 +339,37 @@ app.MapPost("/api/agent/commands/result", async (HttpContext http, AppDbContext 
     return Results.Json(new { ok = true });
 });
 
+// Το LabLock (εργαλείο κλειδώματος εργαστηρίων) στέλνει τι έχει κλειδώσει σε κάθε υπολογιστή. Ίδιο κλειδί με τον agent.
+app.MapPost("/api/agent/lablock", async (HttpContext http, AppDbContext db, SettingsService settings) =>
+{
+    if (!AgentIngest.KeyMatches(settings.Current.AgentKey, http.Request.Headers["X-Agent-Key"]))
+    {
+        return Results.Json(new { ok = false, message = "Λάθος κλειδί agent." }, statusCode: 401);
+    }
+
+    LabLockIngest.Payload? payload;
+
+    try
+    {
+        payload = await System.Text.Json.JsonSerializer.DeserializeAsync<LabLockIngest.Payload>(http.Request.Body, AgentIngest.Json);
+    }
+    catch (System.Text.Json.JsonException)
+    {
+        return Results.Json(new { ok = false, message = "Μη έγκυρα δεδομένα." }, statusCode: 400);
+    }
+
+    if (payload == null)
+    {
+        return Results.Json(new { ok = false, message = "Κενή αναφορά." }, statusCode: 400);
+    }
+
+    var remote = http.Connection.RemoteIpAddress?.MapToIPv4().ToString();
+    var result = await LabLockIngest.ProcessAsync(db, payload, remote);
+
+    return Results.Json(new { ok = result.Ok, message = result.Message, computerId = result.ComputerId },
+        statusCode: result.Ok ? 200 : 422);
+}).WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(512 * 1024));
+
 // Αυτόματη ενημέρωση του agent: κατεβάζει την τελευταία έκδοση του script.
 app.MapGet("/api/agent/script", (HttpContext http, SettingsService settings) =>
 {

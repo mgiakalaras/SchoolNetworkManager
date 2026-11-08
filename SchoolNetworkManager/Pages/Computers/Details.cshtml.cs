@@ -40,6 +40,11 @@ public class DetailsModel : PageModel
 
     public bool HasAgent => Agent != null;
 
+    /// <summary>Τι έχει κλειδώσει το LabLock (αν τρέχει στον υπολογιστή και ξέρει τη διεύθυνση του SNM).</summary>
+    public LabLockStatus? LabLock { get; set; }
+
+    public List<LabLockItem> LabLockItems { get; set; } = new();
+
     public List<(string Drive, string? Label, double SizeGb, double FreeGb)> Disks { get; set; } = new();
 
     public class PasswordHistoryItem
@@ -102,6 +107,8 @@ public class DetailsModel : PageModel
 
         var id = Computer.Id;
         Agent = await _context.AgentReports.AsNoTracking().FirstOrDefaultAsync(r => r.ComputerId == id);
+        LabLock = await _context.LabLockStatuses.AsNoTracking().FirstOrDefaultAsync(s => s.ComputerId == id);
+        LabLockItems = LabLock?.ReadItems() ?? new List<LabLockItem>();
         RustDeskReady = !string.IsNullOrWhiteSpace(_settings.Current.RustDeskHost);
 
         if (Agent != null)

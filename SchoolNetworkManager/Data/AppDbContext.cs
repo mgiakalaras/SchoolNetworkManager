@@ -31,6 +31,7 @@ public class AppDbContext : DbContext
     public DbSet<InstalledSoftware> InstalledSoftware => Set<InstalledSoftware>();
     public DbSet<ToolFile> ToolFiles => Set<ToolFile>();
     public DbSet<AgentCommand> AgentCommands => Set<AgentCommand>();
+    public DbSet<LabLockStatus> LabLockStatuses => Set<LabLockStatus>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -72,6 +73,10 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<AgentCommand>()
             .HasIndex(c => new { c.ComputerId, c.Status });
+
+        modelBuilder.Entity<LabLockStatus>()
+            .HasIndex(s => s.ComputerId)
+            .IsUnique();
 
         modelBuilder.Entity<ToolFile>()
             .Ignore(t => t.IsLink)

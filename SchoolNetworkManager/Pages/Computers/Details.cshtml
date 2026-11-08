@@ -388,6 +388,54 @@
             </div>
         </div>
 
+        <!-- LabLock -->
+        @if (Model.LabLock != null)
+        {
+            var ll = Model.LabLock;
+            <div class="card shadow-sm" id="lablock">
+                <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                    <span class="fw-semibold">
+                        🔒 Κλείδωμα (LabLock)
+                        <span class="badge @(ll.AppliedCount > 0 ? "bg-success" : "bg-secondary")">@ll.AppliedCount / @ll.TotalCount</span>
+                    </span>
+                    <span class="small text-muted" title="@ll.ReceivedAt.ToString("dd/MM/yyyy HH:mm")">
+                        @SchoolNetworkManager.Models.LabLockStatus.EventLabel(ll.Event) · @ll.ReceivedAt.ToString("dd/MM HH:mm") · v@(ll.LabLockVersion)
+                    </span>
+                </div>
+                <div class="card-body p-0">
+                    @if (!string.IsNullOrWhiteSpace(ll.Student))
+                    {
+                        <div class="px-3 pt-2 small text-muted">Λογαριασμός μαθητή: <span class="fw-semibold">@ll.Student</span></div>
+                    }
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <tbody>
+                                @foreach (var group in Model.LabLockItems.GroupBy(i => i.Group ?? ""))
+                                {
+                                    <tr><th colspan="3" class="ps-3 small text-uppercase text-muted pt-2">@group.Key</th></tr>
+                                    @foreach (var item in group)
+                                    {
+                                        var badge = item.Kind switch
+                                        {
+                                            "applied" => "bg-success",
+                                            "partly" => "text-bg-warning",
+                                            "off" => "bg-secondary",
+                                            _ => "bg-light text-dark border"
+                                        };
+                                        <tr>
+                                            <td class="ps-3">@item.Title</td>
+                                            <td><span class="badge @badge text-wrap text-start">@item.State</span></td>
+                                            <td class="small text-muted text-nowrap pe-3">@item.Recorded</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
         <!-- Agent -->
         @if (Model.Agent != null)
         {

@@ -4,7 +4,7 @@
 
 ## Τρόπος 1 — με ένα διπλό κλικ (προτείνεται)
 
-1. Αποσυμπίεσε το `SchoolNetworkManager-project-v2.11.zip` σε έναν φάκελο (π.χ. στην Επιφάνεια εργασίας).
+1. Ο φάκελος του project (π.χ. `Documents\Gradetrack\SchoolNetworkManager`) έχει μέσα το `ANEBASMA-STO-GITHUB.bat`.
 2. Αν δεν έχεις Git: https://git-scm.com/download/win → εγκατάσταση με τις προεπιλογές
    (ή PowerShell: `winget install Git.Git`).
 3. Διπλό κλικ στο **`ANEBASMA-STO-GITHUB.bat`**.
