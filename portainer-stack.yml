@@ -3,7 +3,9 @@
 
 services:
   schoolnetworkmanager:
-    image: schoolnetworkmanager:latest
+    # Το image που χτίζει μόνο του το GitHub σε κάθε ανέβασμα (το package πρέπει να είναι Public).
+    # Νέα έκδοση: Update the stack με «Re-pull image» ανοιχτό.
+    image: ghcr.io/mgiakalaras/schoolnetworkmanager:latest
     container_name: schoolnetworkmanager
     restart: unless-stopped
 
