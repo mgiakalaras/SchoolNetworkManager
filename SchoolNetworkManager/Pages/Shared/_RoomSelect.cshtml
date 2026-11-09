@@ -13,3 +13,12 @@
         </optgroup>
     }
 </select>
+@{
+    var roomError = ViewContext.ViewData.ModelState.TryGetValue(Model.FieldName, out var entry)
+        ? entry.Errors.FirstOrDefault()?.ErrorMessage
+        : null;
+}
+@if (!string.IsNullOrEmpty(roomError))
+{
+    <span class="text-danger small d-block" data-valmsg-for="@Model.FieldName">@roomError</span>
+}
