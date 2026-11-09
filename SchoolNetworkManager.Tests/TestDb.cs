@@ -14,6 +14,14 @@ public static class TestDb
 
     public static (AppDbContext Db, SqliteConnection Conn) Create()
     {
+        var (db, conn) = CreateWithoutUpgrade();
+        DbSchema.Upgrade(db);
+        return (db, conn);
+    }
+
+    /// <summary>Μόνο EnsureCreated, χωρίς DbSchema.Upgrade.</summary>
+    public static (AppDbContext Db, SqliteConnection Conn) CreateWithoutUpgrade()
+    {
         lock (InitLock)
         {
             if (!_protectorReady)
@@ -28,8 +36,22 @@ public static class TestDb
         var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(conn).Options;
         var db = new AppDbContext(options);
         db.Database.EnsureCreated();
-        DbSchema.Upgrade(db);
         return (db, conn);
+    }
+
+    public static bool IndexExists(SqliteConnection conn, string index)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name=$n";
+        cmd.Parameters.AddWithValue("$n", index);
+        return Convert.ToInt64(cmd.ExecuteScalar()) > 0;
+    }
+
+    public static void Exec(SqliteConnection conn, string sql)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.ExecuteNonQuery();
     }
 
     public static bool TableExists(SqliteConnection conn, string table)
