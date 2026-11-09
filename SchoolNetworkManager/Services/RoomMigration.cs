@@ -46,10 +46,12 @@ public static class RoomMigration
             return false;
         }
 
-        await using var tx = await db.Database.BeginTransactionAsync();
+        Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? tx = null;
 
         try
         {
+            tx = await db.Database.BeginTransactionAsync();
+
             // 1. Προεπιλεγμένο κτίριο και όροφος
             if (!await db.Buildings.AnyAsync())
             {
@@ -75,12 +77,13 @@ public static class RoomMigration
             }
 
             // 3. Συγχώνευση χώρων που συγκρούονται μετά την κανονικοποίηση (μένει το μικρότερο Id)
-            var byName = new Dictionary<string, Room>(StringComparer.OrdinalIgnoreCase);
+            // Κλειδί: RoomService.MatchKey (χωρίς διάκριση πεζών/κεφαλαίων και τόνων)
+            var byName = new Dictionary<string, Room>(StringComparer.Ordinal);
             var removed = new Dictionary<int, Room>();
 
             foreach (var room in await db.Rooms.OrderBy(r => r.Id).ToListAsync())
             {
-                var key = RoomService.NormaliseName(room.Name);
+                var key = RoomService.MatchKey(room.Name);
 
                 if (key == null)
                 {
@@ -97,7 +100,7 @@ public static class RoomMigration
                 }
                 else
                 {
-                    room.Name = key;
+                    room.Name = RoomService.NormaliseName(room.Name)!;
                     byName[key] = room;
                 }
             }
@@ -113,8 +116,8 @@ public static class RoomMigration
             //    Όνομα: η πιο συχνή παραλλαγή (ισοπαλία → της συσκευής με το μικρότερο Id).
             var missing = computers
                 .Select(c => (Computer: c, Name: RoomService.NormaliseName(c.Location)))
-                .Where(x => x.Name != null && !byName.ContainsKey(x.Name))
-                .GroupBy(x => x.Name!, StringComparer.OrdinalIgnoreCase)
+                .Where(x => x.Name != null && !byName.ContainsKey(RoomService.MatchKey(x.Name)!))
+                .GroupBy(x => RoomService.MatchKey(x.Name)!, StringComparer.Ordinal)
                 .Select(g => g.GroupBy(x => x.Name!, StringComparer.Ordinal)
                     .OrderByDescending(v => v.Count())
                     .ThenBy(v => v.Min(x => x.Computer.Id))
@@ -128,7 +131,7 @@ public static class RoomMigration
 
             foreach (var room in created)
             {
-                byName[room.Name] = room;
+                byName[RoomService.MatchKey(room.Name)!] = room;
             }
 
             if (afterRoomsCreated != null)
@@ -139,7 +142,7 @@ public static class RoomMigration
             // 5. Σύνδεση συσκευών· το Location γίνεται ακριβώς το όνομα του χώρου
             foreach (var computer in computers)
             {
-                var key = RoomService.NormaliseName(computer.Location);
+                var key = RoomService.MatchKey(computer.Location);
 
                 if (key == null)
                 {
@@ -173,22 +176,28 @@ public static class RoomMigration
             settings.RoomsMigratedAt = DateTime.Now;
             await db.SaveChangesAsync();
             await tx.CommitAsync();
+            await tx.DisposeAsync();
 
             log.LogInformation("Μετατροπή χώρων ολοκληρώθηκε: {Rooms} χώροι, {Devices} συσκευές.", byName.Count, computers.Count(c => c.RoomId != null));
             return true;
         }
         catch (Exception ex)
         {
-            try
+            if (tx != null)
             {
-                await tx.RollbackAsync();
-            }
-            catch (Exception rollbackEx)
-            {
-                log.LogError(rollbackEx, "Αποτυχία ακύρωσης της συναλλαγής μετατροπής χώρων.");
+                try
+                {
+                    await tx.RollbackAsync();
+                    await tx.DisposeAsync();
+                }
+                catch (Exception rollbackEx)
+                {
+                    log.LogError(rollbackEx, "Αποτυχία ακύρωσης της συναλλαγής μετατροπής χώρων.");
+                }
             }
 
-            // Να μη μείνουν στο context αλλαγές που δεν αποθηκεύτηκαν
+            // Να μη μείνουν στο context αλλαγές που δεν αποθηκεύτηκαν, ούτε «ψεύτικη» σφραγίδα στη μνήμη
+            settings.RoomsMigratedAt = null;
             db.ChangeTracker.Clear();
             log.LogError(ex, "Η μετατροπή των χώρων απέτυχε· η βάση έμεινε όπως ήταν και θα ξαναδοκιμαστεί στην επόμενη εκκίνηση.");
             return false;
@@ -198,7 +207,7 @@ public static class RoomMigration
     /// <summary>Το όνομα του χώρου αν το κείμενο ταιριάζει σε κάποιον (μετά την κανονικοποίηση), αλλιώς όπως ήταν.</summary>
     private static string Canonical(Dictionary<string, Room> rooms, string location)
     {
-        var key = RoomService.NormaliseName(location);
+        var key = RoomService.MatchKey(location);
         return key != null && rooms.TryGetValue(key, out var room) ? room.Name : location;
     }
 }

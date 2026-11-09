@@ -31,7 +31,41 @@ public class RoomService(AppDbContext db)
         return trimmed.Length > MaxNameLength ? trimmed[..MaxNameLength].TrimEnd() : trimmed;
     }
 
-    /// <summary>Βρίσκει χώρο με το όνομα (κανονικοποιημένο, χωρίς διάκριση πεζών/κεφαλαίων).</summary>
+    /// <summary>
+    /// Κλειδί σύγκρισης ονομάτων χώρων: κανονικοποιημένο, χωρίς τόνους/διαλυτικά, κεφαλαία
+    /// («ΕΡΓΑΣΤΗΡΙΟ 1» ≡ «Εργαστήριο 1»). Το SQLite δεν μπορεί, οπότε συγκρίνουμε στη μνήμη.
+    /// </summary>
+    public static string? MatchKey(string? name)
+    {
+        var normalised = NormaliseName(name);
+
+        if (normalised == null)
+        {
+            return null;
+        }
+
+        var decomposed = normalised.Normalize(System.Text.NormalizationForm.FormD);
+        var stripped = new System.Text.StringBuilder(decomposed.Length);
+
+        foreach (var ch in decomposed)
+        {
+            if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch) != System.Globalization.UnicodeCategory.NonSpacingMark)
+            {
+                stripped.Append(ch);
+            }
+        }
+
+        return stripped.ToString().Normalize(System.Text.NormalizationForm.FormC).ToUpperInvariant();
+    }
+
+    /// <summary>Ίδιο όνομα χώρου με τον κανόνα του MatchKey (δύο κενά/null δεν ταιριάζουν).</summary>
+    public static bool SameName(string? a, string? b)
+    {
+        var ka = MatchKey(a);
+        return ka != null && string.Equals(ka, MatchKey(b), StringComparison.Ordinal);
+    }
+
+    /// <summary>Βρίσκει χώρο με το όνομα (κανονικοποιημένο, χωρίς διάκριση πεζών/κεφαλαίων και τόνων).</summary>
     public async Task<Room?> FindByNameAsync(string? name)
     {
         var normalised = NormaliseName(name);
@@ -48,7 +82,7 @@ public class RoomService(AppDbContext db)
 
         return rooms
             .OrderBy(r => r.Id == 0 ? int.MaxValue : r.Id)
-            .FirstOrDefault(r => string.Equals(NormaliseName(r.Name), normalised, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(r => SameName(r.Name, normalised));
     }
 
     public async Task<Room> CreateAsync(string name, int? floorId = null, int? roomTypeId = null, string? description = null)
@@ -156,7 +190,7 @@ public class RoomService(AppDbContext db)
         var room = await db.Rooms.FindAsync(roomId) ?? throw new ArgumentException($"Δεν υπάρχει χώρος με Id {roomId}.", nameof(roomId));
 
         var clash = (await db.Rooms.ToListAsync())
-            .Any(r => r.Id != roomId && string.Equals(NormaliseName(r.Name), target, StringComparison.OrdinalIgnoreCase));
+            .Any(r => r.Id != roomId && SameName(r.Name, target));
 
         if (clash)
         {
@@ -259,8 +293,7 @@ public class RoomService(AppDbContext db)
         var candidates = await db.Computers.Where(c => c.RoomId == roomId || (c.RoomId == null && c.Location != null)).ToListAsync();
 
         return candidates
-            .Where(c => c.RoomId == roomId
-                || (normalisedName != null && string.Equals(NormaliseName(c.Location), normalisedName, StringComparison.OrdinalIgnoreCase)))
+            .Where(c => c.RoomId == roomId || SameName(c.Location, normalisedName))
             .ToList();
     }
 }

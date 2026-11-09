@@ -53,6 +53,40 @@ public class RoomServiceTests
     }
 
     [Fact]
+    public async Task AssignByName_ReusesRoomIgnoringAccents()
+    {
+        var (db, conn) = TestDb.Create();
+        using var _ = conn; using var __ = db;
+        var svc = new RoomService(db);
+        var room = await svc.CreateAsync(Lab);
+        var pc = Pc("PC1");
+        db.Computers.Add(pc);
+
+        var created = await svc.AssignByNameAsync(pc, "ΕΡΓΑΣΤΗΡΙΟ 1");
+        await db.SaveChangesAsync();
+
+        Assert.False(created);
+        Assert.Equal(room.Id, pc.RoomId);
+        Assert.Equal(Lab, pc.Location);
+        Assert.Equal(1, await db.Rooms.CountAsync());
+    }
+
+    [Fact]
+    public async Task Rename_RejectsNameDifferingOnlyByAccents()
+    {
+        var (db, conn) = TestDb.Create();
+        using var _ = conn; using var __ = db;
+        var svc = new RoomService(db);
+        var a = await svc.CreateAsync(Lab);
+        await svc.CreateAsync("Αίθουσα καθηγητών");
+
+        await Assert.ThrowsAsync<RoomNameTakenException>(() => svc.RenameAsync(a.Id, "ΑΙΘΟΥΣΑ ΚΑΘΗΓΗΤΩΝ"));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(Lab, (await db.Rooms.FindAsync(a.Id))!.Name);
+    }
+
+    [Fact]
     public async Task AssignByName_CreatesUnplacedRoom()
     {
         var (db, conn) = TestDb.Create();

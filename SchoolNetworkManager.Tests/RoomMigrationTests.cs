@@ -130,6 +130,23 @@ public class RoomMigrationTests
     }
 
     [Fact]
+    public async Task Run_MergesAccentVariants()
+    {
+        var (db, conn) = NewDb();
+        using var _ = conn; using var __ = db;
+        db.Computers.AddRange(Pc("A", "Εργαστήριο 1"), Pc("B", "ΕΡΓΑΣΤΗΡΙΟ 1"));
+        db.PlanItems.Add(new PlanItem { Location = "ΕΡΓΑΣΤΗΡΙΟ 1", Label = "x", Kind = "label" });
+        await db.SaveChangesAsync();
+
+        await Run(db);
+
+        var room = Assert.Single(await db.Rooms.ToListAsync());
+        Assert.Equal("Εργαστήριο 1", room.Name);
+        Assert.All(await db.Computers.ToListAsync(), c => Assert.Equal(room.Id, c.RoomId));
+        Assert.Equal("Εργαστήριο 1", (await db.PlanItems.SingleAsync()).Location);
+    }
+
+    [Fact]
     public async Task Run_NormalisesPlanAndClassLocations()
     {
         var (db, conn) = NewDb();
