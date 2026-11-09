@@ -180,6 +180,13 @@ using (var scope = app.Services.CreateScope())
         db.SaveChanges();
     }
 
+    // Εφάπαξ μετατροπή των χώρων (κτίριο/όροφος/χώροι). Πρώτα αντίγραφο ασφαλείας, μετά μία συναλλαγή.
+    RoomMigration.RunAsync(
+            db,
+            () => app.Services.GetRequiredService<BackupService>().CreateAsync(BackupService.KindBeforeRooms),
+            app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("RoomMigration"))
+        .GetAwaiter().GetResult();
+
     app.Services.GetRequiredService<SettingsService>().Update(settings);
 
     // Κρυπτογράφηση κωδικών που είχαν αποθηκευτεί ως απλό κείμενο

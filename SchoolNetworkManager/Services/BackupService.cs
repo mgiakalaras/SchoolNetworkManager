@@ -17,8 +17,9 @@ public partial class BackupService
     public const string KindAuto = "auto";
     public const string KindManual = "manual";
     public const string KindBeforeRestore = "pre-restore";
+    public const string KindBeforeRooms = "pre-rooms";
 
-    [GeneratedRegex(@"^snm_(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})_(auto|manual|pre-restore)\.zip$")]
+    [GeneratedRegex(@"^snm_(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})_(auto|manual|pre-restore|pre-rooms)\.zip$")]
     private static partial Regex BackupName();
 
     private readonly IServiceScopeFactory _scopes;
@@ -39,6 +40,7 @@ public partial class BackupService
         {
             KindAuto => "🕛 Αυτόματο",
             KindBeforeRestore => "↩️ Πριν από επαναφορά",
+            KindBeforeRooms => "🏢 Πριν τη μετατροπή χώρων",
             _ => "💾 Χειροκίνητο"
         };
     }
