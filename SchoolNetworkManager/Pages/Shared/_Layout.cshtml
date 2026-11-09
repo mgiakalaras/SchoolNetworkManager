@@ -95,7 +95,7 @@
                                 <a class="nav-link @Active("/Computers")" asp-area="" asp-page="/Computers/Index"><span class="nav-ico">🖥️</span>Υπολογιστές</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link @Active("/Locations")" asp-area="" asp-page="/Locations/Index"><span class="nav-ico">📍</span>Χώροι</a>
+                                <a class="nav-link @(Active("/Buildings") != "" ? "active" : Active("/Locations"))" asp-area="" asp-page="/Buildings/Index"><span class="nav-ico">🏢</span>Κτίρια</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link @Active("/Network")" asp-area="" asp-page="/Network/Scan"><span class="nav-ico">📡</span>Σάρωση</a>

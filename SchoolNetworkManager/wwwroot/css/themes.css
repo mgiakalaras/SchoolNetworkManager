@@ -846,6 +846,56 @@ html[data-theme="dark"] .online-count.has-online { color: #4ade80; }
     background: var(--body-bg);
 }
 
+/* --- Σελίδα «Κτίρια» --- */
+.bld-room-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.8rem;
+}
+
+.bld-room:hover {
+    transform: none;
+    border-color: var(--bs-primary, #2563eb);
+}
+
+.bld-room .card-body {
+    padding: 0.8rem 0.9rem;
+}
+
+.bld-room-actions {
+    position: relative;
+    z-index: 2;
+}
+
+.bld-count.is-ok { border-color: rgba(34, 197, 94, 0.45); }
+.bld-count.is-diff { border-color: rgba(245, 158, 11, 0.6); }
+
+.bld-unplaced { border-style: dashed; }
+
+.bld-unplaced-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.bld-unplaced-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.6rem;
+    border: 1px solid var(--border-soft);
+    border-radius: 999px;
+    background: var(--body-bg);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.bld-tabs {
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+}
+
 /* --- Συσκευές --- */
 .device-area {
     display: grid;

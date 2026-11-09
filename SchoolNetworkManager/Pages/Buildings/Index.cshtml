@@ -1,0 +1,343 @@
+@page
+@using SchoolNetworkManager.Services
+@model SchoolNetworkManager.Pages.Buildings.IndexModel
+
+@{
+    ViewData["Title"] = "Κτίρια";
+
+    var current = Model.Buildings.FirstOrDefault(b => b.Building.Id == Model.Tab);
+    var allFloors = Model.Buildings
+        .SelectMany(b => b.Floors.Select(f => (Label: Model.Buildings.Count > 1 ? b.Building.Name + " › " + f.Floor.Name : f.Floor.Name, Id: f.Floor.Id, Building: b.Building.Id)))
+        .ToList();
+
+    string Summary(BuildingView b)
+    {
+        var planned = b.Totals.Sum(t => t.Planned);
+        var actual = b.Totals.Sum(t => t.Actual);
+        return $"{b.Floors.Count} όροφοι · {b.Floors.Sum(f => f.Rooms.Count)} χώροι · {actual}/{planned} συσκευές";
+    }
+
+    string RoomJson(RoomCard c) => System.Text.Json.JsonSerializer.Serialize(new
+    {
+        id = c.Room.Id,
+        name = c.Room.Name,
+        floorId = c.Room.FloorId,
+        typeId = c.Room.RoomTypeId,
+        description = c.Room.Description,
+        autoShutdown = c.Room.AutoShutdown,
+        caps = c.Counts.Where(t => t.Planned > 0).Select(t => new { t = t.MachineType, n = t.Planned })
+    });
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h1 class="mb-1">🏢 Κτίρια</h1>
+        <p class="text-muted mb-0">
+            @Model.Buildings.Count κτίρια · @Model.Buildings.Sum(b => b.Floors.Count) όροφοι ·
+            @(Model.Buildings.Sum(b => b.Floors.Sum(f => f.Rooms.Count)) + Model.Unplaced.Count) χώροι
+        </p>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-sm btn-primary" data-open="building">＋ Κτίριο</button>
+        <a class="btn btn-sm btn-outline-primary" asp-page="/Locations/Index">📍 Όλοι οι χώροι (λίστα)</a>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-@(Model.StatusKind ?? "success") shadow-sm">
+        @Model.StatusMessage
+    </div>
+}
+
+@if (Model.Unplaced.Any())
+{
+    <section class="card shadow-sm mb-3 bld-unplaced">
+        <form method="post" asp-page-handler="PlaceRooms" class="card-body">
+            <h2 class="h6 mb-1">Αταξινόμητοι χώροι <span class="text-muted fw-normal">(@Model.Unplaced.Count)</span></h2>
+            <p class="small text-muted">Οι χώροι αυτοί δεν ανήκουν ακόμη σε όροφο. Επίλεξέ τους και μετακίνησέ τους.</p>
+
+            <div class="bld-unplaced-list mb-2">
+                @foreach (var c in Model.Unplaced)
+                {
+                    <label class="bld-unplaced-item">
+                        <input type="checkbox" name="ids" value="@c.Room.Id" />
+                        <span>@(c.Type?.Icon ?? "▫️") @c.Room.Name</span>
+                        <button type="button" class="btn btn-link btn-sm p-0 ms-1" data-open="room" data-room="@RoomJson(c)" aria-label="Επεξεργασία χώρου">✏️</button>
+                    </label>
+                }
+            </div>
+
+            @if (allFloors.Any())
+            {
+                <div class="input-group input-group-sm" style="max-width: 420px;">
+                    <select name="floorId" class="form-select" required aria-label="Όροφος προορισμού">
+                        <option value="">Μετακίνηση σε όροφο…</option>
+                        @foreach (var f in allFloors)
+                        {
+                            <option value="@f.Id">@f.Label</option>
+                        }
+                    </select>
+                    <button type="submit" class="btn btn-primary">Μετακίνηση</button>
+                </div>
+            }
+            else
+            {
+                <div class="small text-muted">Πρόσθεσε πρώτα έναν όροφο σε κάποιο κτίριο.</div>
+            }
+        </form>
+    </section>
+}
+
+@if (!Model.Buildings.Any())
+{
+    <div class="alert alert-info">
+        Δεν υπάρχουν κτίρια ακόμα. Πάτα «＋ Κτίριο» για να ξεκινήσεις.
+    </div>
+}
+else
+{
+    @if (Model.Buildings.Count > 1)
+    {
+        <ul class="nav nav-tabs mb-3 flex-nowrap bld-tabs">
+            @foreach (var b in Model.Buildings)
+            {
+                <li class="nav-item">
+                    <a class="nav-link @(b.Building.Id == current?.Building.Id ? "active" : "")" asp-page="/Buildings/Index" asp-route-tab="@b.Building.Id">@b.Building.Name</a>
+                </li>
+            }
+        </ul>
+    }
+
+    @if (current != null)
+    {
+        <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+            <div class="min-w-0">
+                <h2 class="h4 mb-0">@current.Building.Name</h2>
+                @if (!string.IsNullOrWhiteSpace(current.Building.Description))
+                {
+                    <div class="small text-muted">@current.Building.Description</div>
+                }
+                <div class="text-muted small">@Summary(current)</div>
+                <div class="type-chips mt-1 mb-0"><partial name="_TypeCounts" model="current.Totals" /></div>
+            </div>
+
+            <div class="d-flex gap-1 flex-wrap">
+                <button type="button" class="btn btn-sm btn-outline-primary" data-open="floor" data-building="@current.Building.Id">＋ Όροφος</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-open="building" data-id="@current.Building.Id"
+                        data-name="@current.Building.Name" data-description="@current.Building.Description">✏️ Κτίριο</button>
+                @if (Model.Buildings.Count > 1)
+                {
+                    <form method="post" asp-page-handler="MoveBuilding" class="d-inline">
+                        <input type="hidden" name="id" value="@current.Building.Id" />
+                        <button type="submit" name="dir" value="-1" class="btn btn-sm btn-outline-secondary icon-btn" aria-label="Μετακίνηση κτιρίου αριστερά" title="Μετακίνηση πριν">←</button>
+                        <button type="submit" name="dir" value="1" class="btn btn-sm btn-outline-secondary icon-btn" aria-label="Μετακίνηση κτιρίου δεξιά" title="Μετακίνηση μετά">→</button>
+                    </form>
+                }
+            </div>
+        </div>
+
+        @if (!current.Floors.Any())
+        {
+            <div class="alert alert-info">Το κτίριο δεν έχει ορόφους ακόμα. Πάτα «＋ Όροφος».</div>
+        }
+
+        @foreach (var fv in current.Floors)
+        {
+            <section class="bld-floor mb-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                    <div>
+                        <h3 class="h5 mb-0 d-inline">@fv.Floor.Name</h3>
+                        <span class="text-muted small ms-1">επίπεδο @fv.Floor.Level · @fv.Rooms.Count χώροι</span>
+                        <div class="type-chips mt-1 mb-0"><partial name="_TypeCounts" model="fv.Totals" /></div>
+                    </div>
+                    <div class="d-flex gap-1 flex-wrap">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-open="room" data-floor="@fv.Floor.Id">＋ Χώρος</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-open="floor" data-id="@fv.Floor.Id"
+                                data-building="@fv.Floor.BuildingId" data-name="@fv.Floor.Name" data-level="@fv.Floor.Level">✏️ Όροφος</button>
+                        <form method="post" asp-page-handler="MoveFloor" class="d-inline">
+                            <input type="hidden" name="id" value="@fv.Floor.Id" />
+                            <button type="submit" name="dir" value="-1" class="btn btn-sm btn-outline-secondary icon-btn" aria-label="Μετακίνηση ορόφου πάνω" title="Μετακίνηση πάνω">↑</button>
+                            <button type="submit" name="dir" value="1" class="btn btn-sm btn-outline-secondary icon-btn" aria-label="Μετακίνηση ορόφου κάτω" title="Μετακίνηση κάτω">↓</button>
+                        </form>
+                    </div>
+                </div>
+
+                @if (!fv.Rooms.Any())
+                {
+                    <div class="text-muted small">Κανένας χώρος σε αυτόν τον όροφο.</div>
+                }
+
+                <div class="bld-room-grid">
+                    @foreach (var c in fv.Rooms)
+                    {
+                        <article class="card shadow-sm bld-room" style="@(string.IsNullOrWhiteSpace(c.Type?.Color) ? "" : $"border-left: 4px solid {c.Type!.Color};")">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <div class="min-w-0">
+                                        <h4 class="location-title">
+                                            <a class="stretched-link text-reset text-decoration-none" asp-page="/Locations/Plan" asp-route-Location="@c.Room.Name"
+                                               title="Άνοιγμα χώρου">@(c.Type?.Icon ?? "▫️") @c.Room.Name</a>
+                                        </h4>
+                                        <div class="small text-muted text-truncate">@(c.Type?.Name ?? "Χωρίς είδος")@(string.IsNullOrWhiteSpace(c.Room.Description) ? "" : " · " + c.Room.Description)</div>
+                                    </div>
+                                    <span class="online-count @(c.Online > 0 ? "has-online" : "")" title="Ανοιχτές τώρα / σύνολο">@c.Online<span>/@c.Devices</span></span>
+                                </div>
+
+                                <div class="type-chips mt-2 mb-1"><partial name="_TypeCounts" model="c.Counts" /></div>
+                                @if (!c.Counts.Any())
+                                {
+                                    <div class="small text-muted mt-2">Χωρίς συσκευές ή προγραμματισμό.</div>
+                                }
+
+                                <div class="bld-room-actions d-flex justify-content-between align-items-center mt-2">
+                                    <a class="small" asp-page="/Computers/Index" asp-route-LocationFilter="@c.Room.Name">Συσκευές</a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary icon-btn" data-open="room" data-room="@RoomJson(c)"
+                                            aria-label="Επεξεργασία χώρου" title="Επεξεργασία χώρου">✏️</button>
+                                </div>
+                            </div>
+                        </article>
+                    }
+                </div>
+            </section>
+        }
+    }
+}
+
+<!-- Κτίριο -->
+<div class="modal fade" id="buildingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" asp-page-handler="CreateBuilding" id="buildingForm" class="modal-content"
+              data-create-url="@Url.Page("/Buildings/Index", "CreateBuilding")" data-edit-url="@Url.Page("/Buildings/Index", "EditBuilding")">
+            <input type="hidden" name="id" />
+            <div class="modal-header">
+                <h2 class="modal-title h5" data-title data-create="Νέο κτίριο" data-edit="Επεξεργασία κτιρίου">Νέο κτίριο</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Κλείσιμο"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="bName">Όνομα</label>
+                    <input id="bName" name="name" class="form-control" maxlength="80" required />
+                </div>
+                <div>
+                    <label class="form-label" for="bDesc">Περιγραφή <span class="text-muted small">(προαιρετικά)</span></label>
+                    <input id="bDesc" name="description" class="form-control" maxlength="200" />
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="submit" class="btn btn-outline-danger" data-edit-only hidden formnovalidate
+                        formaction="@Url.Page("/Buildings/Index", "DeleteBuilding")"
+                        onclick="return confirm('Διαγραφή του κτιρίου; Επιτρέπεται μόνο αν δεν έχει χώρους.');">🗑️ Διαγραφή</button>
+                <div class="d-flex gap-2 ms-auto">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Άκυρο</button>
+                    <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Όροφος -->
+<div class="modal fade" id="floorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" asp-page-handler="CreateFloor" id="floorForm" class="modal-content"
+              data-create-url="@Url.Page("/Buildings/Index", "CreateFloor")" data-edit-url="@Url.Page("/Buildings/Index", "EditFloor")">
+            <input type="hidden" name="id" />
+            <input type="hidden" name="buildingId" />
+            <div class="modal-header">
+                <h2 class="modal-title h5" data-title data-create="Νέος όροφος" data-edit="Επεξεργασία ορόφου">Νέος όροφος</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Κλείσιμο"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="fName">Όνομα</label>
+                    <input id="fName" name="name" class="form-control" maxlength="80" required placeholder="π.χ. Ισόγειο, 1ος όροφος" />
+                </div>
+                <div>
+                    <label class="form-label" for="fLevel">Επίπεδο</label>
+                    <input id="fLevel" name="level" type="number" class="form-control" value="0" min="-5" max="50" required />
+                    <div class="form-text">0 = ισόγειο, αρνητικός αριθμός = υπόγειο. Καθορίζει τη σειρά των ορόφων.</div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="submit" class="btn btn-outline-danger" data-edit-only hidden formnovalidate
+                        formaction="@Url.Page("/Buildings/Index", "DeleteFloor")"
+                        onclick="return confirm('Διαγραφή του ορόφου; Επιτρέπεται μόνο αν δεν έχει χώρους.');">🗑️ Διαγραφή</button>
+                <div class="d-flex gap-2 ms-auto">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Άκυρο</button>
+                    <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Χώρος -->
+<div class="modal fade" id="roomModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <form method="post" asp-page-handler="CreateRoom" id="roomForm" class="modal-content"
+              data-create-url="@Url.Page("/Buildings/Index", "CreateRoom")" data-edit-url="@Url.Page("/Buildings/Index", "EditRoom")">
+            <input type="hidden" name="id" />
+            <div class="modal-header">
+                <h2 class="modal-title h5" data-title data-create="Νέος χώρος" data-edit="Επεξεργασία χώρου">Νέος χώρος</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Κλείσιμο"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="rName">Όνομα</label>
+                    <input id="rName" name="name" class="form-control" maxlength="80" required />
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-6">
+                        <label class="form-label" for="rType">Είδος</label>
+                        <select id="rType" name="roomTypeId" class="form-select">
+                            <option value="">— χωρίς είδος —</option>
+                            @foreach (var t in Model.RoomTypes)
+                            {
+                                <option value="@t.Id">@t.Icon @t.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label" for="rFloor">Όροφος</label>
+                        <select id="rFloor" name="floorId" class="form-select">
+                            <option value="">— χωρίς όροφο —</option>
+                            @foreach (var f in allFloors)
+                            {
+                                <option value="@f.Id">@f.Label</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="rDesc">Περιγραφή <span class="text-muted small">(προαιρετικά)</span></label>
+                    <input id="rDesc" name="description" class="form-control" maxlength="200" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="rShut">🌙 Αυτόματο βραδινό κλείσιμο <span class="text-muted small">(κενό = όχι)</span></label>
+                    <input id="rShut" name="autoShutdown" type="time" class="form-control" style="max-width: 160px;" />
+                </div>
+                <div>
+                    <label class="form-label">Προγραμματισμένες συσκευές</label>
+                    <div id="capRows" data-types="@System.Text.Json.JsonSerializer.Serialize(SchoolNetworkManager.Models.MachineTypes.All)"></div>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="capAdd">＋ Τύπος συσκευής</button>
+                    <div class="form-text">π.χ. Υπολογιστής 12, Διαδραστικός Πίνακας 1. Συγκρίνονται με τις πραγματικές συσκευές.</div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="submit" class="btn btn-outline-danger" data-edit-only hidden formnovalidate
+                        formaction="@Url.Page("/Buildings/Index", "DeleteRoom")"
+                        onclick="return confirm('Διαγραφή του χώρου; Οι συσκευές του θα μείνουν χωρίς χώρο (δεν διαγράφονται).');">🗑️ Διαγραφή</button>
+                <div class="d-flex gap-2 ms-auto">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Άκυρο</button>
+                    <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/buildings.js" asp-append-version="true"></script>
+}

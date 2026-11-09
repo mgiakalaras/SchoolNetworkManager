@@ -1,0 +1,15 @@
+@using SchoolNetworkManager.Services
+@model IReadOnlyList<TypeCount>
+@{
+    var unplannedExtra = Model.Where(t => t.Planned == 0).Sum(t => t.Actual);
+}
+@foreach (var t in Model.Where(t => t.Planned > 0))
+{
+    <span class="type-chip bld-count @(t.Ok ? "is-ok" : "is-diff")" title="@t.MachineType: υπάρχουν @t.Actual από @t.Planned">
+        @SchoolNetworkManager.Models.DeviceSpecs.TypeIcon(t.MachineType) @t.Actual/@t.Planned @(t.Ok ? "✅" : "⚠️")
+    </span>
+}
+@if (unplannedExtra > 0)
+{
+    <span class="type-chip bld-count is-diff" title="Συσκευές τύπου που δεν έχει προγραμματιστεί">+@unplannedExtra μη προγραμματισμένα</span>
+}
