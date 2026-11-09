@@ -14,12 +14,30 @@ public class PlanModel : PageModel
     private readonly AppDbContext _context;
     private readonly IWebHostEnvironment _environment;
     private readonly SettingsService _settings;
+    private readonly RoomService _rooms;
 
-    public PlanModel(AppDbContext context, IWebHostEnvironment environment, SettingsService settings)
+    public PlanModel(AppDbContext context, IWebHostEnvironment environment, SettingsService settings, RoomService rooms)
     {
         _context = context;
         _environment = environment;
         _settings = settings;
+        _rooms = rooms;
+    }
+
+    /// <summary>
+    /// Το όνομα από το query string γίνεται το κανονικό όνομα του χώρου (αν υπάρχει), ώστε
+    /// ό,τι διαβάζεται/γράφεται εδώ να ταιριάζει με το Room.Name και με τη μετονομασία.
+    /// </summary>
+    private async Task CanonicaliseLocationAsync()
+    {
+        var trimmed = Location?.Trim();
+
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return;
+        }
+
+        Location = (await _rooms.FindByNameAsync(trimmed))?.Name ?? trimmed;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -53,6 +71,7 @@ public class PlanModel : PageModel
             return RedirectToPage("/Locations/Index");
         }
 
+        await CanonicaliseLocationAsync();
         await LoadAsync();
 
         if (Devices.Count == 0)
@@ -131,6 +150,7 @@ public class PlanModel : PageModel
             return BadRequest();
         }
 
+        await CanonicaliseLocationAsync();
         var key = Location.Trim();
 
         await _context.PlanItems.Where(p => p.Location == key).ExecuteDeleteAsync();
@@ -184,6 +204,7 @@ public class PlanModel : PageModel
             return RedirectToPage("/Locations/Index");
         }
 
+        await CanonicaliseLocationAsync();
         var key = Location.Trim();
         var room = await _context.RoomPlans.FirstOrDefaultAsync(r => r.Location == key);
 
@@ -237,6 +258,8 @@ public class PlanModel : PageModel
             StatusMessage = "⚠️ Γράψε όνομα τμήματος.";
             return RedirectToPage(new { Location });
         }
+
+        await CanonicaliseLocationAsync();
 
         var schoolClass = new SchoolClass
         {

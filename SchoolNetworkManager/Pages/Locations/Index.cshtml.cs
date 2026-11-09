@@ -14,11 +14,13 @@ public class IndexModel : PageModel
 
     private readonly AppDbContext _context;
     private readonly SettingsService _settings;
+    private readonly RoomService _rooms;
 
-    public IndexModel(AppDbContext context, SettingsService settings)
+    public IndexModel(AppDbContext context, SettingsService settings, RoomService rooms)
     {
         _context = context;
         _settings = settings;
+        _rooms = rooms;
     }
 
     public List<LocationGroup> Groups { get; set; } = new();
@@ -179,13 +181,7 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
-        var room = await _context.Rooms.FirstOrDefaultAsync(r => r.Name == name);
-
-        if (room == null)
-        {
-            room = new Room { Name = name, CreatedAt = DateTime.Now };
-            _context.Rooms.Add(room);
-        }
+        var room = await _rooms.FindByNameAsync(name) ?? await _rooms.CreateAsync(name);
 
         if (string.IsNullOrWhiteSpace(time))
         {
@@ -238,26 +234,23 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
-        if (roomName.Length > 80)
-        {
-            roomName = roomName[..80];
-        }
+        var existing = await _rooms.FindByNameAsync(roomName);
+        var exists = existing != null;
 
-        var exists = (await _context.Rooms.Select(r => r.Name).ToListAsync())
-                     .Any(n => string.Equals(n, roomName, StringComparison.OrdinalIgnoreCase)) ||
-                     (await _context.Computers.Where(c => c.Location != null).Select(c => c.Location!).Distinct().ToListAsync())
-                     .Any(n => string.Equals(n.Trim(), roomName, StringComparison.OrdinalIgnoreCase));
-
-        if (!exists)
+        if (existing == null)
         {
-            _context.Rooms.Add(new Room
+            try
             {
-                Name = roomName,
-                Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim(),
-                CreatedAt = DateTime.Now
-            });
-            await _context.SaveChangesAsync();
+                existing = await _rooms.CreateAsync(roomName, description: string.IsNullOrWhiteSpace(description) ? null : description.Trim());
+            }
+            catch (RoomNameTakenException ex)
+            {
+                exists = true;
+                existing = await _rooms.FindByNameAsync(ex.RoomName);
+            }
         }
+
+        roomName = existing?.Name ?? RoomService.NormaliseName(roomName)!;
 
         StatusKind = "success";
         StatusMessage = exists
@@ -283,20 +276,17 @@ public class IndexModel : PageModel
         var by = UserPasswords.ActorName(User);
         var madeStatic = 0;
 
-        foreach (var computer in computers)
+        foreach (var computer in computers.Where(c => c.IsDynamic))
         {
-            if (computer.IsDynamic)
-            {
-                computer.IsDynamic = false;
-                madeStatic++;
-            }
-
-            computer.Location = target;
-            computer.UpdatedAt = DateTime.Now;
-            computer.UpdatedBy = by;
+            computer.IsDynamic = false;
+            madeStatic++;
         }
 
-        await _context.SaveChangesAsync();
+        var roomEntity = await _rooms.FindByNameAsync(target) ?? await _rooms.CreateAsync(target);
+        target = roomEntity.Name;
+
+        // Οι συσκευές είναι ήδη φορτωμένες στο context, οπότε το MoveDevicesAsync αποθηκεύει και την αλλαγή dynamic → static.
+        await _rooms.MoveDevicesAsync(computers.Select(c => c.Id), roomEntity.Id, by);
 
         StatusKind = "success";
         StatusMessage = $"➕ {computers.Count} συσκευές μπήκαν στον χώρο «{target}»." +
@@ -322,11 +312,12 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
-        var rooms = (await _context.Rooms.ToListAsync())
-            .Where(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-        _context.Rooms.RemoveRange(rooms);
-        await _context.SaveChangesAsync();
+        var room = await _rooms.FindByNameAsync(name);
+
+        if (room != null)
+        {
+            await _rooms.DeleteAsync(room.Id);
+        }
 
         StatusKind = "success";
         StatusMessage = $"Ο χώρος «{name}» διαγράφηκε.";
@@ -344,19 +335,18 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
-        var target = string.IsNullOrWhiteSpace(newLocation) ? null : newLocation.Trim();
-        var computers = await _context.Computers.Where(c => ids.Contains(c.Id)).ToListAsync();
+        var target = RoomService.NormaliseName(newLocation);
+        Room? room = null;
 
-        foreach (var computer in computers)
+        if (target != null)
         {
-            computer.Location = target;
-            computer.UpdatedAt = DateTime.Now;
+            room = await _rooms.FindByNameAsync(target) ?? await _rooms.CreateAsync(target);
         }
 
-        await _context.SaveChangesAsync();
+        var moved = await _rooms.MoveDevicesAsync(ids, room?.Id, UserPasswords.ActorName(User));
 
         StatusKind = "success";
-        StatusMessage = $"{computers.Count} συσκευές μεταφέρθηκαν στον χώρο «{DisplayName(target)}».";
+        StatusMessage = $"{moved} συσκευές μεταφέρθηκαν στον χώρο «{DisplayName(room?.Name)}».";
 
         return RedirectToPage();
     }
@@ -364,34 +354,33 @@ public class IndexModel : PageModel
     /// <summary>Μετονομασία χώρου (αλλάζει σε όλες τις συσκευές του).</summary>
     public async Task<IActionResult> OnPostRenameAsync(string? location, string? newName)
     {
-        var target = string.IsNullOrWhiteSpace(newName) ? null : newName.Trim();
-        var computers = await LoadLocationAsync(location);
+        var target = RoomService.NormaliseName(newName);
+        var oldName = RoomService.NormaliseName(location);
 
-        foreach (var computer in computers)
+        if (target == null || oldName == null || location == NoLocationKey)
         {
-            computer.Location = target;
-            computer.UpdatedAt = DateTime.Now;
+            StatusKind = "warning";
+            StatusMessage = "Γράψε το νέο όνομα του χώρου.";
+            return RedirectToPage();
         }
 
-        // Και η εγγραφή του χώρου (αν υπάρχει), μαζί με κάτοψη, τμήματα, θέσεις
-        if (!string.IsNullOrWhiteSpace(location) && location != NoLocationKey && target != null)
+        var count = (await LoadLocationAsync(oldName)).Count;
+
+        try
         {
-            var oldName = location.Trim();
-
-            foreach (var room in (await _context.Rooms.ToListAsync()).Where(r => string.Equals(r.Name, oldName, StringComparison.OrdinalIgnoreCase)))
-            {
-                room.Name = target;
-            }
-
-            await _context.PlanItems.Where(p => p.Location == oldName).ExecuteUpdateAsync(u => u.SetProperty(p => p.Location, target));
-            await _context.RoomPlans.Where(p => p.Location == oldName).ExecuteUpdateAsync(u => u.SetProperty(p => p.Location, target));
-            await _context.SchoolClasses.Where(p => p.Location == oldName).ExecuteUpdateAsync(u => u.SetProperty(p => p.Location, target));
+            // Αν δεν υπάρχει εγγραφή χώρου (παλιά δεδομένα), δημιουργείται για να γίνει η μετονομασία.
+            var room = await _rooms.FindByNameAsync(oldName) ?? await _rooms.CreateAsync(oldName);
+            await _rooms.RenameAsync(room.Id, target);
         }
-
-        await _context.SaveChangesAsync();
+        catch (RoomNameTakenException ex)
+        {
+            StatusKind = "warning";
+            StatusMessage = $"Υπάρχει ήδη χώρος «{ex.RoomName}» — διάλεξε άλλο όνομα.";
+            return RedirectToPage();
+        }
 
         StatusKind = "success";
-        StatusMessage = $"Ο χώρος «{DisplayName(location)}» έγινε «{DisplayName(target)}» ({computers.Count} συσκευές).";
+        StatusMessage = $"Ο χώρος «{DisplayName(oldName)}» έγινε «{DisplayName(target)}» ({count} συσκευές).";
 
         return RedirectToPage();
     }

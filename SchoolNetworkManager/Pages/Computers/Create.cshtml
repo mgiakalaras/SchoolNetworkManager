@@ -68,8 +68,8 @@
                 </div>
 
                 <div class="col-md-3">
-                    <label asp-for="Computer.Location" class="form-label"></label>
-                    <input asp-for="Computer.Location" class="form-control" placeholder="π.χ. Εργαστήριο Πληροφορικής" />
+                    <label class="form-label">Χώρος</label>
+                    @await Html.PartialAsync("_RoomSelect", (Model.RoomOptions, Model.Computer.RoomId, "Computer.RoomId"))
                 </div>
 
                 <div class="col-md-3">

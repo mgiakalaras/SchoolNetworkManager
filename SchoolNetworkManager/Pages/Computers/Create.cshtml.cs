@@ -3,17 +3,23 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SchoolNetworkManager.Data;
 using SchoolNetworkManager.Models;
+using SchoolNetworkManager.Services;
 
 namespace SchoolNetworkManager.Pages.Computers;
 
 public class CreateModel : PageModel
 {
     private readonly AppDbContext _context;
+    private readonly RoomService _rooms;
 
-    public CreateModel(AppDbContext context)
+    public CreateModel(AppDbContext context, RoomService rooms)
     {
         _context = context;
+        _rooms = rooms;
     }
+
+    /// <summary>Επιλογές για τη λίστα «Χώρος».</summary>
+    public List<RoomOption> RoomOptions { get; set; } = new();
 
     [BindProperty]
     public Computer Computer { get; set; } = new();
@@ -27,13 +33,15 @@ public class CreateModel : PageModel
             ? SpecInput.Where(x => x.Value != null).ToDictionary(x => x.Key, x => x.Value!)
             : Computer.SpecValues;
 
-    public void OnGet(string? location)
+    public async Task OnGetAsync(string? location)
     {
-        // «Νέα καταχώρηση εδώ» από τη σελίδα Χώροι
+        // «Νέα καταχώρηση εδώ» από τη σελίδα Χώροι: το όνομα γίνεται επιλεγμένος χώρος
         if (!string.IsNullOrWhiteSpace(location) && location != SchoolNetworkManager.Pages.Locations.IndexModel.NoLocationKey)
         {
-            Computer.Location = location.Trim();
+            Computer.RoomId = (await _rooms.FindByNameAsync(location))?.Id;
         }
+
+        RoomOptions = await Services.RoomOptions.LoadAsync(_context);
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -47,6 +55,7 @@ public class CreateModel : PageModel
 
         if (!ModelState.IsValid)
         {
+            RoomOptions = await Services.RoomOptions.LoadAsync(_context);
             return Page();
         }
 
@@ -56,6 +65,18 @@ public class CreateModel : PageModel
         if (ipExists)
         {
             ModelState.AddModelError("Computer.IpAddress", "Υπάρχει ήδη υπολογιστής με αυτή την IP.");
+            RoomOptions = await Services.RoomOptions.LoadAsync(_context);
+            return Page();
+        }
+
+        try
+        {
+            await _rooms.AssignAsync(Computer, Computer.RoomId);
+        }
+        catch (ArgumentException)
+        {
+            ModelState.AddModelError("Computer.RoomId", "Ο χώρος δεν υπάρχει πια.");
+            RoomOptions = await Services.RoomOptions.LoadAsync(_context);
             return Page();
         }
 

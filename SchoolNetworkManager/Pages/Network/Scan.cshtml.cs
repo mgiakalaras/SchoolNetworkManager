@@ -12,12 +12,14 @@ public class ScanModel : PageModel
     private readonly AppDbContext _context;
     private readonly DeviceProbe _probe;
     private readonly SettingsService _settings;
+    private readonly RoomService _rooms;
 
-    public ScanModel(AppDbContext context, DeviceProbe probe, SettingsService settings)
+    public ScanModel(AppDbContext context, DeviceProbe probe, SettingsService settings, RoomService rooms)
     {
         _context = context;
         _probe = probe;
         _settings = settings;
+        _rooms = rooms;
     }
 
     [BindProperty]
@@ -181,7 +183,7 @@ public class ScanModel : PageModel
                 continue;
             }
 
-            _context.Computers.Add(new Computer
+            var computer = new Computer
             {
                 IpAddress = ip,
                 Name = string.IsNullOrWhiteSpace(row.Name) ? null : row.Name.Trim(),
@@ -190,19 +192,24 @@ public class ScanModel : PageModel
                 Vendor = row.Vendor,
                 OpenPorts = row.OpenPorts,
                 MachineType = string.IsNullOrWhiteSpace(row.MachineType) ? MachineTypes.Default : row.MachineType,
-                Location = location,
                 HasVeyon = row.HasVeyon,
                 IsOnline = true,
                 LastCheckedAt = now,
                 LastSeenOnline = now,
                 CreatedAt = now
-            });
+            };
+
+            await _rooms.AssignByNameAsync(computer, location);
+            _context.Computers.Add(computer);
 
             existingIps.Add(ip);
             added++;
         }
 
         await _context.SaveChangesAsync();
+
+        // Το όνομα όπως είναι γραμμένο στον χώρο (όχι όπως πληκτρολογήθηκε).
+        location = (await _rooms.FindByNameAsync(location))?.Name ?? location;
 
         StatusMessage = added == 1
             ? "Προστέθηκε 1 νέα συσκευή."

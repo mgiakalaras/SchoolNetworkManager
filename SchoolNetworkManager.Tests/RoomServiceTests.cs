@@ -181,6 +181,27 @@ public class RoomServiceTests
     }
 
     [Fact]
+    public async Task Rename_UpdatesLinksDifferingByCaseOrAccent()
+    {
+        var (db, conn) = TestDb.Create();
+        using var _ = conn; using var __ = db;
+        var svc = new RoomService(db);
+        var room = await svc.CreateAsync(Lab);
+        db.PlanItems.Add(new PlanItem { Location = "ΕΡΓΑΣΤΗΡΙΟ 1" });
+        db.RoomPlans.Add(new RoomPlan { Location = "εργαστηριο 1" });
+        db.SchoolClasses.Add(new SchoolClass { Location = " Εργαστήριο 1", Name = "Β1" });
+        db.PlanItems.Add(new PlanItem { Location = "Γραφείο" });
+        await db.SaveChangesAsync();
+
+        await svc.RenameAsync(room.Id, "Εργαστήριο 2");
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(new[] { "Εργαστήριο 2", "Γραφείο" }, (await db.PlanItems.OrderBy(p => p.Id).ToListAsync()).Select(p => p.Location).ToArray());
+        Assert.Equal("Εργαστήριο 2", (await db.RoomPlans.SingleAsync()).Location);
+        Assert.Equal("Εργαστήριο 2", (await db.SchoolClasses.SingleAsync()).Location);
+    }
+
+    [Fact]
     public async Task Rename_RejectsExistingNameIgnoringCase()
     {
         var (db, conn) = TestDb.Create();

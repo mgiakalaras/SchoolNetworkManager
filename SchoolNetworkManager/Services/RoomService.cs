@@ -213,9 +213,14 @@ public class RoomService(AppDbContext db)
 
         await db.SaveChangesAsync();
 
-        await db.PlanItems.Where(p => p.Location == oldName).ExecuteUpdateAsync(u => u.SetProperty(p => p.Location, target));
-        await db.RoomPlans.Where(p => p.Location == oldName).ExecuteUpdateAsync(u => u.SetProperty(p => p.Location, target));
-        await db.SchoolClasses.Where(p => p.Location == oldName).ExecuteUpdateAsync(u => u.SetProperty(p => p.Location, target));
+        // Οι συνδέσεις με όνομα μπορεί να έχουν γραφτεί με άλλη γραφή (πεζά/τόνοι)· φιλτράρουμε στη μνήμη.
+        var planItemIds = await IdsLinkedAsync(db.PlanItems.Where(p => p.Location != null).Select(p => new LinkRow(p.Id, p.Location)), oldName);
+        var roomPlanIds = await IdsLinkedAsync(db.RoomPlans.Where(p => p.Location != null).Select(p => new LinkRow(p.Id, p.Location)), oldName);
+        var classIds = await IdsLinkedAsync(db.SchoolClasses.Where(p => p.Location != null).Select(p => new LinkRow(p.Id, p.Location)), oldName);
+
+        await db.PlanItems.Where(p => planItemIds.Contains(p.Id)).ExecuteUpdateAsync(u => u.SetProperty(p => p.Location, target));
+        await db.RoomPlans.Where(p => roomPlanIds.Contains(p.Id)).ExecuteUpdateAsync(u => u.SetProperty(p => p.Location, target));
+        await db.SchoolClasses.Where(p => classIds.Contains(p.Id)).ExecuteUpdateAsync(u => u.SetProperty(p => p.Location, target));
 
         await tx.CommitAsync();
     }
@@ -243,12 +248,14 @@ public class RoomService(AppDbContext db)
 
         await db.SaveChangesAsync();
 
-        var classIds = await db.SchoolClasses.Where(s => s.Location == name).Select(s => s.Id).ToListAsync();
+        var classIds = await IdsLinkedAsync(db.SchoolClasses.Where(s => s.Location != null).Select(s => new LinkRow(s.Id, s.Location)), name);
+        var planItemIds = await IdsLinkedAsync(db.PlanItems.Where(p => p.Location != null).Select(p => new LinkRow(p.Id, p.Location)), name);
+        var roomPlanIds = await IdsLinkedAsync(db.RoomPlans.Where(p => p.Location != null).Select(p => new LinkRow(p.Id, p.Location)), name);
 
         await db.Seats.Where(s => classIds.Contains(s.SchoolClassId)).ExecuteDeleteAsync();
-        await db.SchoolClasses.Where(s => s.Location == name).ExecuteDeleteAsync();
-        await db.PlanItems.Where(p => p.Location == name).ExecuteDeleteAsync();
-        await db.RoomPlans.Where(p => p.Location == name).ExecuteDeleteAsync();
+        await db.SchoolClasses.Where(s => classIds.Contains(s.Id)).ExecuteDeleteAsync();
+        await db.PlanItems.Where(p => planItemIds.Contains(p.Id)).ExecuteDeleteAsync();
+        await db.RoomPlans.Where(p => roomPlanIds.Contains(p.Id)).ExecuteDeleteAsync();
         await db.RoomCapacities.Where(c => c.RoomId == roomId).ExecuteDeleteAsync();
 
         db.Rooms.Remove(room);
@@ -285,6 +292,14 @@ public class RoomService(AppDbContext db)
         }
 
         await db.SaveChangesAsync();
+    }
+
+    private record LinkRow(int Id, string? Location);
+
+    /// <summary>Id των εγγραφών που συνδέονται με το όνομα (ίδια σύγκριση με το SameName).</summary>
+    private static async Task<List<int>> IdsLinkedAsync(IQueryable<LinkRow> rows, string name)
+    {
+        return (await rows.ToListAsync()).Where(r => SameName(r.Location, name)).Select(r => r.Id).ToList();
     }
 
     /// <summary>Συσκευές του χώρου: με RoomId, ή (δεδομένα χωρίς μετατροπή) χωρίς RoomId και Location ίσο με το όνομα.</summary>

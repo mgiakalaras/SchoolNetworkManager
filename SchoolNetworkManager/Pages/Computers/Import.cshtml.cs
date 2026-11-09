@@ -4,16 +4,19 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SchoolNetworkManager.Data;
 using SchoolNetworkManager.Models;
+using SchoolNetworkManager.Services;
 
 namespace SchoolNetworkManager.Pages.Computers;
 
 public class ImportModel : PageModel
 {
     private readonly AppDbContext _context;
+    private readonly RoomService _rooms;
 
-    public ImportModel(AppDbContext context)
+    public ImportModel(AppDbContext context, RoomService rooms)
     {
         _context = context;
+        _rooms = rooms;
     }
 
     [BindProperty]
@@ -44,6 +47,7 @@ public class ImportModel : PageModel
         var imported = 0;
         var updated = 0;
         var skipped = 0;
+        var newRooms = new List<string>();
 
         using var stream = UploadFile.OpenReadStream();
         using var workbook = new XLWorkbook(stream);
@@ -120,7 +124,15 @@ public class ImportModel : PageModel
 
             existingComputer.Name = GetValue(headers, row, "name", "computername", "pcname", "hostname");
             existingComputer.MacAddress = GetValue(headers, row, "macaddress", "mac");
-            existingComputer.Location = GetValue(headers, row, "location", "room", "place");
+
+            // Κενό κελί = δεν αλλάζει ο χώρος της συσκευής (το AssignByNameAsync θα τον αφαιρούσε).
+            var roomName = GetValue(headers, row, "location", "room", "place");
+
+            if (!string.IsNullOrWhiteSpace(roomName) && await _rooms.AssignByNameAsync(existingComputer, roomName))
+            {
+                newRooms.Add(RoomService.NormaliseName(roomName)!);
+            }
+
             existingComputer.Notes = Computer.MergeNotes(
                 GetValue(headers, row, "notes", "note"),
                 GetValue(headers, row, "σημειωσεις", "comments", "comment"));
@@ -142,7 +154,8 @@ public class ImportModel : PageModel
 
         await _context.SaveChangesAsync();
 
-        ResultMessage = $"Το import ολοκληρώθηκε. Νέες εγγραφές: {imported}, ενημερώσεις: {updated}, αγνοημένες γραμμές: {skipped}.";
+        ResultMessage = $"Το import ολοκληρώθηκε. Νέες εγγραφές: {imported}, ενημερώσεις: {updated}, αγνοημένες γραμμές: {skipped}." +
+                        (newRooms.Count > 0 ? $" Νέοι χώροι: {string.Join(", ", newRooms)}." : string.Empty);
 
         return Page();
     }

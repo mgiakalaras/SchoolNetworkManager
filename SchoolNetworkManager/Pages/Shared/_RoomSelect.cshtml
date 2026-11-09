@@ -1,0 +1,15 @@
+@using SchoolNetworkManager.Services
+@model (List<RoomOption> Options, int? Selected, string FieldName)
+
+<select class="form-select" name="@Model.FieldName">
+    <option value="">— χωρίς χώρο —</option>
+    @foreach (var group in Model.Options.GroupBy(o => o.Group))
+    {
+        <optgroup label="@group.Key">
+            @foreach (var option in group)
+            {
+                <option value="@option.Id" selected="@(Model.Selected == option.Id)">@option.Name</option>
+            }
+        </optgroup>
+    }
+</select>
