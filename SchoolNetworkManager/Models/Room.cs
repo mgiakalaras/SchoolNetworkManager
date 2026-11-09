@@ -19,4 +19,16 @@ public class Room
 
     /// <summary>Πότε έγινε τελευταία φορά το αυτόματο κλείσιμο (για να γίνεται μία φορά τη μέρα).</summary>
     public DateTime? AutoShutdownLast { get; set; }
+
+    public int? FloorId { get; set; }
+
+    public int? RoomTypeId { get; set; }
+
+    public int SortOrder { get; set; }
+
+    /// <summary>Θέση/μέγεθος του χώρου πάνω στην κάτοψη του ορόφου.</summary>
+    public double? PlanX { get; set; }
+    public double? PlanY { get; set; }
+    public double? PlanW { get; set; }
+    public double? PlanH { get; set; }
 }

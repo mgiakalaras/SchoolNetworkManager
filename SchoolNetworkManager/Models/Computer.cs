@@ -22,6 +22,9 @@ public class Computer
     [Display(Name = "Location")]
     public string? Location { get; set; }
 
+    /// <summary>Ο χώρος (Room) στον οποίο ανήκει η συσκευή.</summary>
+    public int? RoomId { get; set; }
+
     [Display(Name = "Username")]
     public string? Username { get; set; }
 

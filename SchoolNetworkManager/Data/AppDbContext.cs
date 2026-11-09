@@ -33,6 +33,10 @@ public class AppDbContext : DbContext
     public DbSet<AgentCommand> AgentCommands => Set<AgentCommand>();
     public DbSet<LabLockStatus> LabLockStatuses => Set<LabLockStatus>();
     public DbSet<LabLockEvent> LabLockEvents => Set<LabLockEvent>();
+    public DbSet<Building> Buildings => Set<Building>();
+    public DbSet<Floor> Floors => Set<Floor>();
+    public DbSet<RoomType> RoomTypes => Set<RoomType>();
+    public DbSet<RoomCapacity> RoomCapacities => Set<RoomCapacity>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -81,6 +85,19 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<LabLockEvent>()
             .HasIndex(e => new { e.ComputerId, e.ReceivedAt });
+
+        modelBuilder.Entity<Floor>()
+            .HasIndex(f => f.BuildingId);
+
+        modelBuilder.Entity<Room>()
+            .HasIndex(r => r.FloorId);
+
+        modelBuilder.Entity<Computer>()
+            .HasIndex(c => c.RoomId);
+
+        modelBuilder.Entity<RoomCapacity>()
+            .HasIndex(c => new { c.RoomId, c.MachineType })
+            .IsUnique();
 
         modelBuilder.Entity<ToolFile>()
             .Ignore(t => t.IsLink)

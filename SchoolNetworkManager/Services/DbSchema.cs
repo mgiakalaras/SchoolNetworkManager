@@ -350,6 +350,57 @@ public static class DbSchema
                 """);
             Execute(connection, "CREATE INDEX IF NOT EXISTS IX_LabLockEvents_ComputerId_ReceivedAt ON LabLockEvents (ComputerId, ReceivedAt);");
 
+            // Κτίρια → όροφοι → χώροι
+            Execute(connection, """
+                CREATE TABLE IF NOT EXISTS Buildings (
+                    Id INTEGER NOT NULL CONSTRAINT PK_Buildings PRIMARY KEY AUTOINCREMENT,
+                    Name TEXT NOT NULL,
+                    Description TEXT NULL,
+                    SortOrder INTEGER NOT NULL DEFAULT 0
+                );
+                """);
+            Execute(connection, """
+                CREATE TABLE IF NOT EXISTS Floors (
+                    Id INTEGER NOT NULL CONSTRAINT PK_Floors PRIMARY KEY AUTOINCREMENT,
+                    BuildingId INTEGER NOT NULL,
+                    Name TEXT NOT NULL,
+                    Level INTEGER NOT NULL DEFAULT 0,
+                    SortOrder INTEGER NOT NULL DEFAULT 0,
+                    PlanImagePath TEXT NULL,
+                    AspectRatio REAL NOT NULL DEFAULT 1.6
+                );
+                """);
+            Execute(connection, "CREATE INDEX IF NOT EXISTS IX_Floors_BuildingId ON Floors (BuildingId);");
+            Execute(connection, """
+                CREATE TABLE IF NOT EXISTS RoomTypes (
+                    Id INTEGER NOT NULL CONSTRAINT PK_RoomTypes PRIMARY KEY AUTOINCREMENT,
+                    Name TEXT NOT NULL,
+                    Icon TEXT NULL,
+                    Color TEXT NULL,
+                    SortOrder INTEGER NOT NULL DEFAULT 0
+                );
+                """);
+            Execute(connection, """
+                CREATE TABLE IF NOT EXISTS RoomCapacities (
+                    Id INTEGER NOT NULL CONSTRAINT PK_RoomCapacities PRIMARY KEY AUTOINCREMENT,
+                    RoomId INTEGER NOT NULL,
+                    MachineType TEXT NOT NULL,
+                    PlannedCount INTEGER NOT NULL DEFAULT 0
+                );
+                """);
+            Execute(connection, "CREATE UNIQUE INDEX IF NOT EXISTS IX_RoomCapacities_RoomId_MachineType ON RoomCapacities (RoomId, MachineType);");
+            AddColumnIfMissing(connection, "Rooms", "FloorId", "INTEGER NULL");
+            AddColumnIfMissing(connection, "Rooms", "RoomTypeId", "INTEGER NULL");
+            AddColumnIfMissing(connection, "Rooms", "SortOrder", "INTEGER NOT NULL DEFAULT 0");
+            AddColumnIfMissing(connection, "Rooms", "PlanX", "REAL NULL");
+            AddColumnIfMissing(connection, "Rooms", "PlanY", "REAL NULL");
+            AddColumnIfMissing(connection, "Rooms", "PlanW", "REAL NULL");
+            AddColumnIfMissing(connection, "Rooms", "PlanH", "REAL NULL");
+            AddColumnIfMissing(connection, "Computers", "RoomId", "INTEGER NULL");
+            AddColumnIfMissing(connection, "AppSettings", "RoomsMigratedAt", "TEXT NULL");
+            Execute(connection, "CREATE INDEX IF NOT EXISTS IX_Rooms_FloorId ON Rooms (FloorId);");
+            Execute(connection, "CREATE INDEX IF NOT EXISTS IX_Computers_RoomId ON Computers (RoomId);");
+
             Execute(connection, "CREATE INDEX IF NOT EXISTS IX_PlanItems_Location ON PlanItems (Location);");
             Execute(connection, "CREATE INDEX IF NOT EXISTS IX_Seats_SchoolClassId ON Seats (SchoolClassId);");
             Execute(connection, "CREATE INDEX IF NOT EXISTS IX_PasswordRecords_ComputerId ON PasswordRecords (ComputerId);");

@@ -127,5 +127,8 @@ public class AppSettings
     /// <summary>Κλειδί μόνο για ανέβασμα μικρογραφίας οθόνης (ξεχωριστό από το AgentKey).</summary>
     public string? ScreenKey { get; set; }
 
+    /// <summary>Πότε έγινε η μετατροπή των χώρων σε κτίρια/ορόφους (null = δεν έγινε ακόμη).</summary>
+    public DateTime? RoomsMigratedAt { get; set; }
+
     public AppSettings Clone() => (AppSettings)MemberwiseClone();
 }

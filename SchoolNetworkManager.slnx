@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="SchoolNetworkManager/SchoolNetworkManager.csproj" />
+  <Project Path="SchoolNetworkManager.Tests/SchoolNetworkManager.Tests.csproj" />
 </Solution>
