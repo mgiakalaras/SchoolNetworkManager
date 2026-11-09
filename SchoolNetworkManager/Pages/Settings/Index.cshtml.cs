@@ -45,6 +45,15 @@ public class IndexModel : PageModel
     [TempData]
     public string? StatusMessage { get; set; }
 
+    [TempData]
+    public string? ErrorMessage { get; set; }
+
+    /// <summary>Οι τύποι χώρων για την καρτέλα «Τύποι χώρων».</summary>
+    public List<RoomType> RoomTypes { get; set; } = new();
+
+    /// <summary>Πόσοι χώροι χρησιμοποιούν κάθε τύπο (RoomTypeId → πλήθος).</summary>
+    public Dictionary<int, int> RoomTypeUsage { get; set; } = new();
+
     public int RangeCount { get; set; }
 
     public async Task<IActionResult> OnGetAsync(string? tab)
@@ -52,8 +61,61 @@ public class IndexModel : PageModel
         Settings = await LoadOrCreateAsync();
         ActiveTab = tab ?? "general";
         FillDisplayFields();
+        await LoadRoomTypesAsync();
 
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostSaveRoomTypeAsync(int? id, string? name, string? icon, string? color)
+    {
+        ActiveTab = "roomtypes";
+
+        try
+        {
+            await RoomTypeOps.SaveAsync(_context, id, name ?? string.Empty, icon, color);
+            StatusMessage = id == null ? "Ο τύπος χώρου προστέθηκε." : "Ο τύπος χώρου αποθηκεύτηκε.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+
+        return RedirectToPage(new { tab = ActiveTab });
+    }
+
+    public async Task<IActionResult> OnPostDeleteRoomTypeAsync(int id)
+    {
+        ActiveTab = "roomtypes";
+
+        try
+        {
+            await RoomTypeOps.DeleteAsync(_context, id);
+            StatusMessage = "Ο τύπος χώρου διαγράφηκε.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+
+        return RedirectToPage(new { tab = ActiveTab });
+    }
+
+    public async Task<IActionResult> OnPostMoveRoomTypeAsync(int id, int dir)
+    {
+        ActiveTab = "roomtypes";
+        await RoomTypeOps.MoveAsync(_context, id, dir);
+
+        return RedirectToPage(new { tab = ActiveTab });
+    }
+
+    private async Task LoadRoomTypesAsync()
+    {
+        RoomTypes = await _context.RoomTypes.AsNoTracking().OrderBy(t => t.SortOrder).ThenBy(t => t.Id).ToListAsync();
+        RoomTypeUsage = await _context.Rooms
+            .Where(r => r.RoomTypeId != null)
+            .GroupBy(r => r.RoomTypeId!.Value)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Key, x => x.Count);
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -119,6 +181,7 @@ public class IndexModel : PageModel
         {
             Settings.LogoPath = existing.LogoPath;
             FillDisplayFields(keepText: true);
+            await LoadRoomTypesAsync();
             return Page();
         }
 
@@ -191,6 +254,7 @@ public class IndexModel : PageModel
                 ModelState.AddModelError("LogoUpload", "Το λογότυπο πρέπει να είναι PNG, JPG, JPEG ή WEBP.");
                 Settings.LogoPath = existing.LogoPath;
                 FillDisplayFields(keepText: true);
+                await LoadRoomTypesAsync();
                 return Page();
             }
 
@@ -199,6 +263,7 @@ public class IndexModel : PageModel
                 ModelState.AddModelError("LogoUpload", "Το λογότυπο δεν πρέπει να ξεπερνά τα 2MB.");
                 Settings.LogoPath = existing.LogoPath;
                 FillDisplayFields(keepText: true);
+                await LoadRoomTypesAsync();
                 return Page();
             }
 

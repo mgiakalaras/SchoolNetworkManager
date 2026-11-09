@@ -27,6 +27,13 @@
     </div>
 }
 
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert alert-danger shadow-sm">
+        @Model.ErrorMessage
+    </div>
+}
+
 <ul class="nav nav-pills settings-nav mb-3 gap-1" role="tablist">
     <li class="nav-item">
         <button class="nav-link @TabClass("general")" data-bs-toggle="pill" data-bs-target="#tab-general" data-tab="general" type="button">🏫 Γενικά</button>
@@ -39,6 +46,9 @@
     </li>
     <li class="nav-item">
         <button class="nav-link @TabClass("backup")" data-bs-toggle="pill" data-bs-target="#tab-backup" data-tab="backup" type="button">💾 Αντίγραφο ασφαλείας</button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @TabClass("roomtypes")" data-bs-toggle="pill" data-bs-target="#tab-roomtypes" data-tab="roomtypes" type="button">🏷️ Τύποι χώρων</button>
     </li>
 </ul>
 
@@ -392,13 +402,74 @@
                 </div>
             </div>
         </div>
+
+        <!-- ===================== Τύποι χώρων ===================== -->
+        <!-- Οι φόρμες βρίσκονται κάτω από τη βασική φόρμα (δεν επιτρέπονται φωλιασμένες)· τα πεδία τις βρίσκουν με το attribute form. -->
+        <div class="tab-pane fade @PaneClass("roomtypes")" id="tab-roomtypes">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted small">Οι τύποι χώρων εμφανίζονται ως εικονίδιο και χρώμα στις κάρτες των χώρων στη σελίδα «Κτίρια». Η μετονομασία ενός τύπου κρατά τους χώρους συνδεδεμένους· διαγραφή επιτρέπεται μόνο όταν κανένας χώρος δεν τον χρησιμοποιεί.</p>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 7rem;">Εικονίδιο</th>
+                                    <th>Όνομα</th>
+                                    <th style="width: 6rem;">Χρώμα</th>
+                                    <th style="width: 6rem;">Χώροι</th>
+                                    <th class="text-end">Ενέργειες</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (var ti = 0; ti < Model.RoomTypes.Count; ti++)
+                                {
+                                    var rt = Model.RoomTypes[ti];
+                                    var used = Model.RoomTypeUsage.TryGetValue(rt.Id, out var usedCount) ? usedCount : 0;
+                                    var formId = $"rt-form-{rt.Id}";
+                                    var pickerColor = SchoolNetworkManager.Services.RoomTypeOps.IsValidColor(rt.Color) && rt.Color!.Length == 7 ? rt.Color : "#6c757d";
+                                    <tr>
+                                        <td><input form="@formId" name="icon" value="@rt.Icon" maxlength="8" class="form-control" aria-label="Εικονίδιο" /></td>
+                                        <td><input form="@formId" name="name" value="@rt.Name" maxlength="80" required class="form-control" aria-label="Όνομα" /></td>
+                                        <td><input form="@formId" type="color" name="color" value="@pickerColor" class="form-control form-control-color" aria-label="Χρώμα" /></td>
+                                        <td>@used</td>
+                                        <td class="text-end text-nowrap">
+                                            <button form="@formId" formaction="?handler=MoveRoomType" name="dir" value="-1" type="submit" class="btn btn-sm btn-outline-secondary" aria-label="Μετακίνηση πάνω" title="Πάνω" disabled="@(ti == 0)">↑</button>
+                                            <button form="@formId" formaction="?handler=MoveRoomType" name="dir" value="1" type="submit" class="btn btn-sm btn-outline-secondary" aria-label="Μετακίνηση κάτω" title="Κάτω" disabled="@(ti == Model.RoomTypes.Count - 1)">↓</button>
+                                            <button form="@formId" formaction="?handler=SaveRoomType" type="submit" class="btn btn-sm btn-primary">Αποθήκευση</button>
+                                            <button form="@formId" formaction="?handler=DeleteRoomType" type="submit" class="btn btn-sm btn-outline-danger" formnovalidate
+                                                    data-confirm="@(used > 0 ? $"Ο τύπος χρησιμοποιείται από {used} χώρο(υς) και δεν θα διαγραφεί. Συνέχεια;" : "Να διαγραφεί ο τύπος χώρου;")">Διαγραφή</button>
+                                        </td>
+                                    </tr>
+                                }
+                                <tr class="table-light">
+                                    <td><input form="rt-form-new" name="icon" maxlength="8" class="form-control" placeholder="🏷️" aria-label="Εικονίδιο νέου τύπου" /></td>
+                                    <td><input form="rt-form-new" name="name" maxlength="80" required class="form-control" placeholder="Νέος τύπος χώρου" aria-label="Όνομα νέου τύπου" /></td>
+                                    <td><input form="rt-form-new" type="color" name="color" value="#6c757d" class="form-control form-control-color" aria-label="Χρώμα νέου τύπου" /></td>
+                                    <td></td>
+                                    <td class="text-end"><button form="rt-form-new" formaction="?handler=SaveRoomType" type="submit" class="btn btn-sm btn-success">+ Προσθήκη</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="d-flex justify-content-end gap-2 mt-3" id="saveBar">
+    <div class="d-flex justify-content-end gap-2 mt-3 @(tab == "roomtypes" ? "d-none" : "")" id="saveBar">
         <a class="btn btn-outline-secondary" asp-page="/Index">Άκυρο</a>
         <button type="submit" class="btn btn-primary">Αποθήκευση ρυθμίσεων</button>
     </div>
 </form>
+
+@* Φόρμες της καρτέλας «Τύποι χώρων» (εκτός της βασικής φόρμας· το antiforgery token μπαίνει από το tag helper) *@
+@foreach (var rtForm in Model.RoomTypes)
+{
+    <form method="post" id="rt-form-@rtForm.Id" class="d-none">
+        <input type="hidden" name="id" value="@rtForm.Id" />
+    </form>
+}
+<form method="post" id="rt-form-new" class="d-none"></form>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
@@ -406,9 +477,16 @@
         document.querySelectorAll(".settings-nav [data-tab]").forEach(function (button) {
             button.addEventListener("shown.bs.tab", function () {
                 document.getElementById("activeTabInput").value = button.dataset.tab;
-                document.getElementById("saveBar").classList.remove("d-none");
+                document.getElementById("saveBar").classList.toggle("d-none", button.dataset.tab === "roomtypes");
             });
         });
 
+        document.querySelectorAll("[data-confirm]").forEach(function (button) {
+            button.addEventListener("click", function (event) {
+                if (!window.confirm(button.dataset.confirm)) {
+                    event.preventDefault();
+                }
+            });
+        });
     </script>
 }
