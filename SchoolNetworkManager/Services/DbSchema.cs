@@ -335,6 +335,21 @@ public static class DbSchema
                 """);
             Execute(connection, "CREATE UNIQUE INDEX IF NOT EXISTS IX_LabLockStatuses_ComputerId ON LabLockStatuses (ComputerId);");
 
+            // Ιστορικό αναφορών του LabLock ανά υπολογιστή (τελευταίες 20)
+            Execute(connection, """
+                CREATE TABLE IF NOT EXISTS LabLockEvents (
+                    Id INTEGER NOT NULL CONSTRAINT PK_LabLockEvents PRIMARY KEY AUTOINCREMENT,
+                    ComputerId INTEGER NOT NULL,
+                    ReceivedAt TEXT NOT NULL,
+                    Event TEXT NULL,
+                    Student TEXT NULL,
+                    LabLockVersion TEXT NULL,
+                    AppliedCount INTEGER NOT NULL DEFAULT 0,
+                    TotalCount INTEGER NOT NULL DEFAULT 0
+                );
+                """);
+            Execute(connection, "CREATE INDEX IF NOT EXISTS IX_LabLockEvents_ComputerId_ReceivedAt ON LabLockEvents (ComputerId, ReceivedAt);");
+
             Execute(connection, "CREATE INDEX IF NOT EXISTS IX_PlanItems_Location ON PlanItems (Location);");
             Execute(connection, "CREATE INDEX IF NOT EXISTS IX_Seats_SchoolClassId ON Seats (SchoolClassId);");
             Execute(connection, "CREATE INDEX IF NOT EXISTS IX_PasswordRecords_ComputerId ON PasswordRecords (ComputerId);");

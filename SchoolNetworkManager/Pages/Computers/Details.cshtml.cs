@@ -45,6 +45,9 @@ public class DetailsModel : PageModel
 
     public List<LabLockItem> LabLockItems { get; set; } = new();
 
+    /// <summary>Οι τελευταίες αναφορές του LabLock (νεότερη πρώτη).</summary>
+    public List<LabLockEvent> LabLockHistory { get; set; } = new();
+
     public List<(string Drive, string? Label, double SizeGb, double FreeGb)> Disks { get; set; } = new();
 
     public class PasswordHistoryItem
@@ -109,6 +112,13 @@ public class DetailsModel : PageModel
         Agent = await _context.AgentReports.AsNoTracking().FirstOrDefaultAsync(r => r.ComputerId == id);
         LabLock = await _context.LabLockStatuses.AsNoTracking().FirstOrDefaultAsync(s => s.ComputerId == id);
         LabLockItems = LabLock?.ReadItems() ?? new List<LabLockItem>();
+        LabLockHistory = LabLock == null
+            ? new List<LabLockEvent>()
+            : await _context.LabLockEvents.AsNoTracking()
+                .Where(e => e.ComputerId == id)
+                .OrderByDescending(e => e.ReceivedAt).ThenByDescending(e => e.Id)
+                .Take(SchoolNetworkManager.Services.LabLockIngest.HistoryKeep)
+                .ToListAsync();
         RustDeskReady = !string.IsNullOrWhiteSpace(_settings.Current.RustDeskHost);
 
         if (Agent != null)

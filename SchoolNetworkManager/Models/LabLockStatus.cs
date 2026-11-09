@@ -60,6 +60,30 @@ public class LabLockStatus
     };
 }
 
+/// <summary>
+/// Μία αναφορά του LabLock στο ιστορικό ενός υπολογιστή (ποιος/τι/πότε), χωρίς τις ρυθμίσεις μία-μία.
+/// Κρατιούνται οι τελευταίες <see cref="Services.LabLockIngest.HistoryKeep"/> ανά υπολογιστή.
+/// </summary>
+public class LabLockEvent
+{
+    public int Id { get; set; }
+
+    public int ComputerId { get; set; }
+
+    public DateTime ReceivedAt { get; set; } = DateTime.Now;
+
+    /// <summary>apply · undo · restore · board</summary>
+    public string? Event { get; set; }
+
+    public string? Student { get; set; }
+
+    public string? LabLockVersion { get; set; }
+
+    public int AppliedCount { get; set; }
+
+    public int TotalCount { get; set; }
+}
+
 /// <summary>Μία ρύθμιση του LabLock και η κατάστασή της στον υπολογιστή.</summary>
 public class LabLockItem
 {

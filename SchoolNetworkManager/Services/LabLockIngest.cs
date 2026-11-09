@@ -15,6 +15,9 @@ public static class LabLockIngest
 {
     public const string LabLockUser = "lablock";
 
+    /// <summary>Πόσες αναφορές του LabLock κρατά το ιστορικό κάθε υπολογιστή.</summary>
+    public const int HistoryKeep = 20;
+
     public class Payload
     {
         /// <summary>Δοκιμή σύνδεσης από το LabLock: ελέγχεται μόνο το κλειδί.</summary>
@@ -63,10 +66,15 @@ public static class LabLockIngest
 
         var all = await db.Computers.ToListAsync();
 
-        // 1) MAC  2) IP  3) όνομα — όπως ο agent
+        // Η συσκευή στη βάση έχει άλλη MAC από όσες έστειλε το LabLock → είναι άλλο PC, ακόμη κι αν έχει την ίδια IP
+        // (π.χ. η IP δόθηκε από το DHCP σε άλλον υπολογιστή). Οι θέσεις Dynamic δεν έχουν δική τους MAC, οπότε εξαιρούνται.
+        bool OtherMac(Computer c) => macs.Count > 0 && !c.IsDynamic && !string.IsNullOrWhiteSpace(c.MacAddress) &&
+                                     !macs.Contains(NetworkTools.NormalizeMac(c.MacAddress)!, StringComparer.OrdinalIgnoreCase);
+
+        // 1) MAC  2) IP (αν δεν έχει άλλη MAC)  3) όνομα — όπως ο agent
         var computer = all.FirstOrDefault(c => !string.IsNullOrWhiteSpace(c.MacAddress) &&
                                                macs.Contains(NetworkTools.NormalizeMac(c.MacAddress)!, StringComparer.OrdinalIgnoreCase))
-                       ?? all.FirstOrDefault(c => ips.Contains(c.IpAddress.Trim()))
+                       ?? all.FirstOrDefault(c => ips.Contains(c.IpAddress.Trim()) && !OtherMac(c))
                        ?? all.FirstOrDefault(c => !c.IsDynamic && string.Equals(c.Name?.Trim(), hostname, StringComparison.OrdinalIgnoreCase));
 
         var now = DateTime.Now;
@@ -74,11 +82,20 @@ public static class LabLockIngest
 
         if (computer == null)
         {
-            var ip = ips.FirstOrDefault();
+            if (ips.Count == 0)
+            {
+                return new AgentIngest.Result(false, "Ο υπολογιστής δεν βρέθηκε και δεν έστειλε διεύθυνση IP.");
+            }
+
+            // Νέα συσκευή μόνο σε IP που δεν την έχει άλλη (η IP είναι μοναδική στη βάση).
+            var ip = ips.FirstOrDefault(i => !all.Any(c => c.IpAddress.Trim() == i));
 
             if (ip == null)
             {
-                return new AgentIngest.Result(false, "Ο υπολογιστής δεν βρέθηκε και δεν έστειλε διεύθυνση IP.");
+                var holder = all.First(c => c.IpAddress.Trim() == ips[0]);
+                return new AgentIngest.Result(false,
+                    $"Η διεύθυνση {ips[0]} ανήκει στη συσκευή «{holder.Name ?? holder.IpAddress}» με άλλη MAC ({holder.MacAddress}). " +
+                    "Διορθώστε τη MAC ή την IP της στο School Network Manager.");
             }
 
             computer = new Computer
@@ -95,11 +112,24 @@ public static class LabLockIngest
             await db.SaveChangesAsync();
             created = true;
         }
-        else if (string.IsNullOrWhiteSpace(computer.MacAddress) && macs.Count > 0)
+        else
         {
-            computer.MacAddress = macs[0];
-            computer.UpdatedAt = now;
-            computer.UpdatedBy = LabLockUser;
+            // Θέση Dynamic στην IP του: το LabLock τρέχει σε υπολογιστή του εργαστηρίου, οπότε η θέση γίνεται
+            // αυτός ο υπολογιστής (όπως κάνει και ο agent).
+            if (computer.IsDynamic)
+            {
+                computer.IsDynamic = false;
+                if (computer.IsEmptySlot || string.IsNullOrWhiteSpace(computer.Name)) computer.Name = hostname;
+                if (macs.Count > 0) computer.MacAddress = macs[0];
+                computer.UpdatedAt = now;
+                computer.UpdatedBy = LabLockUser;
+            }
+            else if (string.IsNullOrWhiteSpace(computer.MacAddress) && macs.Count > 0)
+            {
+                computer.MacAddress = macs[0];
+                computer.UpdatedAt = now;
+                computer.UpdatedBy = LabLockUser;
+            }
         }
 
         var items = (data.Items ?? new List<LabLockItem>())
@@ -133,7 +163,35 @@ public static class LabLockIngest
         status.AppliedCount = items.Count(i => i.Kind == "applied");
         status.TotalCount = items.Count;
 
+        // Ιστορικό: μία γραμμή ανά αναφορά, κρατάμε τις τελευταίες HistoryKeep ανά υπολογιστή.
+        // Η σύνδεση-δοκιμή («check») δεν αλλάζει τίποτα στο PC, οπότε δεν γράφεται.
+        if (status.Event != "check")
+        {
+            db.LabLockEvents.Add(new LabLockEvent
+            {
+                ComputerId = computer.Id,
+                ReceivedAt = now,
+                Event = status.Event,
+                Student = status.Student,
+                LabLockVersion = status.LabLockVersion,
+                AppliedCount = status.AppliedCount,
+                TotalCount = status.TotalCount
+            });
+        }
+
         await db.SaveChangesAsync();
+
+        var oldIds = await db.LabLockEvents
+            .Where(e => e.ComputerId == computer.Id)
+            .OrderByDescending(e => e.ReceivedAt).ThenByDescending(e => e.Id)
+            .Skip(HistoryKeep)
+            .Select(e => e.Id)
+            .ToListAsync();
+
+        if (oldIds.Count > 0)
+        {
+            await db.LabLockEvents.Where(e => oldIds.Contains(e.Id)).ExecuteDeleteAsync();
+        }
 
         var name = computer.Name ?? computer.IpAddress;
         return new AgentIngest.Result(true,

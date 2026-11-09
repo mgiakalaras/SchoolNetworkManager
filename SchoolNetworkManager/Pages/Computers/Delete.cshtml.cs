@@ -51,6 +51,7 @@ public class DeleteModel : PageModel
         await _context.Seats.Where(s => s.ComputerId == computer.Id).ExecuteDeleteAsync();
         await _context.AgentReports.Where(r => r.ComputerId == computer.Id).ExecuteDeleteAsync();
         await _context.LabLockStatuses.Where(s => s.ComputerId == computer.Id).ExecuteDeleteAsync();
+        await _context.LabLockEvents.Where(e => e.ComputerId == computer.Id).ExecuteDeleteAsync();
         await _context.InstalledSoftware.Where(s => s.ComputerId == computer.Id).ExecuteDeleteAsync();
         await _context.FaultReports.Where(r => r.ComputerId == computer.Id)
             .ExecuteUpdateAsync(u => u.SetProperty(r => r.ComputerId, (int?)null));

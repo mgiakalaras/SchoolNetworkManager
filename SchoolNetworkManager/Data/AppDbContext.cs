@@ -32,6 +32,7 @@ public class AppDbContext : DbContext
     public DbSet<ToolFile> ToolFiles => Set<ToolFile>();
     public DbSet<AgentCommand> AgentCommands => Set<AgentCommand>();
     public DbSet<LabLockStatus> LabLockStatuses => Set<LabLockStatus>();
+    public DbSet<LabLockEvent> LabLockEvents => Set<LabLockEvent>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -77,6 +78,9 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<LabLockStatus>()
             .HasIndex(s => s.ComputerId)
             .IsUnique();
+
+        modelBuilder.Entity<LabLockEvent>()
+            .HasIndex(e => new { e.ComputerId, e.ReceivedAt });
 
         modelBuilder.Entity<ToolFile>()
             .Ignore(t => t.IsLink)

@@ -432,6 +432,28 @@
                             </tbody>
                         </table>
                     </div>
+                    @if (Model.LabLockHistory.Count > 0)
+                    {
+                        <details class="border-top">
+                            <summary class="px-3 py-2 small text-muted">🕘 Ιστορικό (@Model.LabLockHistory.Count)</summary>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0 small">
+                                    <tbody>
+                                        @foreach (var ev in Model.LabLockHistory)
+                                        {
+                                            <tr>
+                                                <td class="ps-3 text-nowrap text-muted">@ev.ReceivedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                                <td class="text-nowrap">@SchoolNetworkManager.Models.LabLockStatus.EventLabel(ev.Event)</td>
+                                                <td><span class="badge @(ev.AppliedCount > 0 ? "bg-success" : "bg-secondary")">@ev.AppliedCount / @ev.TotalCount</span></td>
+                                                <td class="text-muted">@ev.Student</td>
+                                                <td class="text-muted pe-3 text-end">v@(ev.LabLockVersion)</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </details>
+                    }
                 </div>
             </div>
         }
