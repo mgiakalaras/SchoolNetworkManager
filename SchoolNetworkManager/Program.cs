@@ -130,6 +130,7 @@ builder.Services.AddSingleton<OuiLookup>();
 builder.Services.AddSingleton<DeviceProbe>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<MySpeedClient>();
+builder.Services.AddScoped<RoomService>();
 
 // Pi-hole: στο τοπικό δίκτυο δεχόμαστε και αυτο-υπογεγραμμένο πιστοποιητικό (https του Pi-hole v6).
 builder.Services.AddHttpClient(PiholeClient.HttpClientName)
