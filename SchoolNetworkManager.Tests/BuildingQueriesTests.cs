@@ -47,6 +47,25 @@ public class BuildingQueriesTests
     }
 
     [Fact]
+    public async Task LoadAsync_OnlineAndDevicesIgnoreDynamicAndEmptySlots()
+    {
+        var (db, conn) = TestDb.Create();
+        using var _ = conn; using var __ = db;
+        var room = await new RoomService(db).CreateAsync("Α1");
+        var dyn = Pc(room.Id, true); dyn.IsDynamic = true;
+        var empty = Pc(room.Id, true); empty.Name = "EMPTY";
+        db.Computers.AddRange(Pc(room.Id, true), dyn, empty);
+        await db.SaveChangesAsync();
+
+        var (_, unplaced) = await BuildingQueries.LoadAsync(db);
+
+        var card = Assert.Single(unplaced);
+        Assert.Equal(1, card.Online);
+        Assert.Equal(1, card.Devices);
+        Assert.Equal(1, Assert.Single(card.Counts).Actual);
+    }
+
+    [Fact]
     public async Task LoadAsync_UnplacedRoomsSeparate()
     {
         var (db, conn) = TestDb.Create();

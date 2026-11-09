@@ -187,7 +187,15 @@ public class IndexModel : PageModel
 
         var list = (await _context.Floors.Where(f => f.BuildingId == floor.BuildingId).ToListAsync())
             .OrderBy(f => f.Level).ThenBy(f => f.SortOrder).ThenBy(f => f.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
-        Swap(list, list.FindIndex(f => f.Id == id), dir, (f, o) => f.SortOrder = o);
+        var index = list.FindIndex(f => f.Id == id);
+        var neighbour = index + (dir < 0 ? -1 : 1);
+
+        if (neighbour >= 0 && neighbour < list.Count && list[neighbour].Level != floor.Level)
+        {
+            return Done("Οι όροφοι ταξινομούνται με βάση το επίπεδο — άλλαξε το επίπεδο για να αλλάξει η σειρά.", "warning", floor.BuildingId);
+        }
+
+        Swap(list, index, dir, (f, o) => f.SortOrder = o);
         await _context.SaveChangesAsync();
 
         return RedirectToPage(new { tab = floor.BuildingId });

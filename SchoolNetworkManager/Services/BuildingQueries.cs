@@ -27,7 +27,7 @@ public static class BuildingQueries
         var rooms = await db.Rooms.AsNoTracking().ToListAsync();
         var types = (await db.RoomTypes.AsNoTracking().ToListAsync()).ToDictionary(t => t.Id);
         var capacities = (await db.RoomCapacities.AsNoTracking().ToListAsync()).ToLookup(c => c.RoomId);
-        var devices = (await db.Computers.AsNoTracking().Where(c => c.RoomId != null).ToListAsync()).ToLookup(c => c.RoomId!.Value);
+        var devices = (await db.Computers.AsNoTracking().Where(c => c.RoomId != null && !c.IsDynamic).ToListAsync()).ToLookup(c => c.RoomId!.Value);
 
         RoomCard Card(Room r)
         {

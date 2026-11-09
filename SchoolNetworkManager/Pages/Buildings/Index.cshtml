@@ -158,8 +158,15 @@ else
                                 data-building="@fv.Floor.BuildingId" data-name="@fv.Floor.Name" data-level="@fv.Floor.Level">✏️ Όροφος</button>
                         <form method="post" asp-page-handler="MoveFloor" class="d-inline">
                             <input type="hidden" name="id" value="@fv.Floor.Id" />
-                            <button type="submit" name="dir" value="-1" class="btn btn-sm btn-outline-secondary icon-btn" aria-label="Μετακίνηση ορόφου πάνω" title="Μετακίνηση πάνω">↑</button>
-                            <button type="submit" name="dir" value="1" class="btn btn-sm btn-outline-secondary icon-btn" aria-label="Μετακίνηση ορόφου κάτω" title="Μετακίνηση κάτω">↓</button>
+                            @{ var fi = current.Floors.IndexOf(fv); }
+                            @if (fi > 0 && current.Floors[fi - 1].Floor.Level == fv.Floor.Level)
+                            {
+                                <button type="submit" name="dir" value="-1" class="btn btn-sm btn-outline-secondary icon-btn" aria-label="Μετακίνηση ορόφου πάνω" title="Μετακίνηση πάνω">↑</button>
+                            }
+                            @if (fi < current.Floors.Count - 1 && current.Floors[fi + 1].Floor.Level == fv.Floor.Level)
+                            {
+                                <button type="submit" name="dir" value="1" class="btn btn-sm btn-outline-secondary icon-btn" aria-label="Μετακίνηση ορόφου κάτω" title="Μετακίνηση κάτω">↓</button>
+                            }
                         </form>
                     </div>
                 </div>
@@ -182,7 +189,7 @@ else
                                         </h4>
                                         <div class="small text-muted text-truncate">@(c.Type?.Name ?? "Χωρίς είδος")@(string.IsNullOrWhiteSpace(c.Room.Description) ? "" : " · " + c.Room.Description)</div>
                                     </div>
-                                    <span class="online-count @(c.Online > 0 ? "has-online" : "")" title="Ανοιχτές τώρα / σύνολο">@c.Online<span>/@c.Devices</span></span>
+                                    <span class="online-count @(c.Online > 0 ? "has-online" : "")" title="Συσκευές online / σύνολο">online @c.Online<span>/@c.Devices</span></span>
                                 </div>
 
                                 <div class="type-chips mt-2 mb-1"><partial name="_TypeCounts" model="c.Counts" /></div>
