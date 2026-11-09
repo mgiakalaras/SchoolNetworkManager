@@ -72,6 +72,55 @@ public class RoomServiceTests
     }
 
     [Fact]
+    public async Task AssignByName_DoesNotSave()
+    {
+        var (db, conn) = TestDb.Create();
+        using var _ = conn; using var __ = db;
+        var svc = new RoomService(db);
+        var pc = Pc("PC1");
+        db.Computers.Add(pc);
+        await db.SaveChangesAsync();
+
+        var created = await svc.AssignByNameAsync(pc, "Νέος χώρος");
+
+        Assert.True(created);
+        using (var other = new SchoolNetworkManager.Data.AppDbContext(
+            new DbContextOptionsBuilder<SchoolNetworkManager.Data.AppDbContext>().UseSqlite(conn).Options))
+        {
+            Assert.Equal(0, await other.Rooms.CountAsync());
+            Assert.Null((await other.Computers.SingleAsync()).RoomId);
+        }
+
+        await db.SaveChangesAsync();
+
+        var room = await db.Rooms.SingleAsync();
+        Assert.Equal(room.Id, pc.RoomId);
+        Assert.Equal("Νέος χώρος", pc.Location);
+    }
+
+    [Fact]
+    public async Task AssignByName_TwoNewVariantsBeforeSave_CreateOneRoom()
+    {
+        var (db, conn) = TestDb.Create();
+        using var _ = conn; using var __ = db;
+        var svc = new RoomService(db);
+        var a = Pc("A");
+        var b = Pc("B");
+        db.Computers.AddRange(a, b);
+
+        var first = await svc.AssignByNameAsync(a, "Lab X");
+        var second = await svc.AssignByNameAsync(b, " lab x ");
+        await db.SaveChangesAsync();
+
+        Assert.True(first);
+        Assert.False(second);
+        var room = await db.Rooms.SingleAsync();
+        Assert.Equal(room.Id, a.RoomId);
+        Assert.Equal(room.Id, b.RoomId);
+        Assert.Equal("Lab X", b.Location);
+    }
+
+    [Fact]
     public async Task Rename_UpdatesDevicesPlansClasses()
     {
         var (db, conn) = TestDb.Create();

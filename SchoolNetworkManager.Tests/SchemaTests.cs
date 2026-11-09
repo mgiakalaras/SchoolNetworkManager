@@ -43,7 +43,27 @@ public class SchemaTests
             // Turn the EF-created DB into the pre-feature shape.
             foreach (var i in NewIndexes) TestDb.Exec(conn, $"DROP INDEX IF EXISTS {i}");
             foreach (var t in NewTables) TestDb.Exec(conn, $"DROP TABLE {t}");
-            foreach (var (t, c) in NewColumns) TestDb.Exec(conn, $"ALTER TABLE {t} DROP COLUMN {c}");
+            foreach (var (t, c) in NewColumns)
+            {
+                if (t == "Computers" && c == "RoomId")
+                {
+                    // RoomId is now an FK column (Computer.Room); SQLite cannot DROP COLUMN it, so rebuild the table without it.
+                    var cols = new List<string>();
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = "SELECT name FROM pragma_table_info('Computers') WHERE name <> 'RoomId'";
+                        using var r = cmd.ExecuteReader();
+                        while (r.Read()) cols.Add($"\"{r.GetString(0)}\"");
+                    }
+                    TestDb.Exec(conn, $"CREATE TABLE Computers_old AS SELECT {string.Join(", ", cols)} FROM Computers");
+                    TestDb.Exec(conn, "DROP TABLE Computers");
+                    TestDb.Exec(conn, "ALTER TABLE Computers_old RENAME TO Computers");
+                }
+                else
+                {
+                    TestDb.Exec(conn, $"ALTER TABLE {t} DROP COLUMN {c}");
+                }
+            }
 
             foreach (var t in NewTables) Assert.False(TestDb.TableExists(conn, t));
             foreach (var (t, c) in NewColumns) Assert.False(TestDb.ColumnExists(conn, t, c));

@@ -42,10 +42,12 @@ public class RoomService(AppDbContext db)
         }
 
         // Το SQLite δεν συγκρίνει χωρίς διάκριση πεζών τα μη-ASCII, οπότε το κάνουμε στη μνήμη.
+        // Περιλαμβάνονται και χώροι που προστέθηκαν αλλά δεν έχουν αποθηκευτεί ακόμη (Local).
         var rooms = await db.Rooms.ToListAsync();
+        rooms.AddRange(db.Rooms.Local.Where(r => r.Id == 0 && !rooms.Contains(r)));
 
         return rooms
-            .OrderBy(r => r.Id)
+            .OrderBy(r => r.Id == 0 ? int.MaxValue : r.Id)
             .FirstOrDefault(r => string.Equals(NormaliseName(r.Name), normalised, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -93,7 +95,10 @@ public class RoomService(AppDbContext db)
         c.Location = name;
     }
 
-    /// <summary>Find-or-create (χωρίς όροφο). Επιστρέφει true όταν δημιουργήθηκε νέος χώρος. Δεν κάνει SaveChanges.</summary>
+    /// <summary>
+    /// Find-or-create (χωρίς όροφο). Επιστρέφει true όταν δημιουργήθηκε νέος χώρος.
+    /// ΔΕΝ κάνει ποτέ SaveChanges: ο νέος χώρος μπαίνει στο context και η συσκευή δένεται μέσω navigation.
+    /// </summary>
     public async Task<bool> AssignByNameAsync(Computer c, string? name)
     {
         var normalised = NormaliseName(name);
@@ -111,12 +116,17 @@ public class RoomService(AppDbContext db)
         {
             room = new Room { Name = normalised };
             db.Rooms.Add(room);
-            // Χρειαζόμαστε το Id· το αποθηκεύουμε μαζί με τον νέο χώρο.
-            await db.SaveChangesAsync();
             created = true;
         }
 
-        await AssignAsync(c, room.Id);
+        if (c.Location != room.Name || (room.Id != 0 && c.RoomId != room.Id))
+        {
+            c.UpdatedAt = DateTime.Now;
+        }
+
+        // Μέσω navigation: το RoomId συμπληρώνεται στο SaveChanges του καλούντος.
+        c.Room = room;
+        c.Location = room.Name;
 
         return created;
     }

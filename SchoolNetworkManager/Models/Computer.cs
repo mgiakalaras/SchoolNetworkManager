@@ -25,6 +25,11 @@ public class Computer
     /// <summary>Ο χώρος (Room) στον οποίο ανήκει η συσκευή.</summary>
     public int? RoomId { get; set; }
 
+    /// <summary>Navigation προς τον χώρο· δεν δένεται ποτέ από φόρμες.</summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    [Microsoft.AspNetCore.Mvc.ModelBinding.Validation.ValidateNever]
+    public Room? Room { get; set; }
+
     [Display(Name = "Username")]
     public string? Username { get; set; }
 

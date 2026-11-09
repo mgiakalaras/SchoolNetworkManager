@@ -93,6 +93,12 @@ public class AppDbContext : DbContext
             .HasIndex(r => r.FloorId);
 
         modelBuilder.Entity<Computer>()
+            .HasOne(c => c.Room)
+            .WithMany()
+            .HasForeignKey(c => c.RoomId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Computer>()
             .HasIndex(c => c.RoomId);
 
         modelBuilder.Entity<RoomCapacity>()
