@@ -1,8 +1,13 @@
 @using SchoolNetworkManager.Services
-@model (List<RoomOption> Options, int? Selected, string FieldName)
+@model (List<RoomOption> Options, int? Selected, string FieldName, string? LegacyName)
 
 <select class="form-select" name="@Model.FieldName">
     <option value="">— χωρίς χώρο —</option>
+    @if (!string.IsNullOrEmpty(Model.LegacyName))
+    {
+        @* Συσκευή με παλιό κείμενο χώρου χωρίς εγγραφή χώρου: να μη σβηστεί στην αποθήκευση *@
+        <option value="@RoomService.LegacyRoomId" selected="@(Model.Selected == RoomService.LegacyRoomId)">«@Model.LegacyName» (παλιός χώρος)</option>
+    }
     @foreach (var group in Model.Options.GroupBy(o => o.Group))
     {
         <optgroup label="@group.Key">
@@ -13,6 +18,11 @@
         </optgroup>
     }
 </select>
+@if (!string.IsNullOrEmpty(Model.LegacyName))
+{
+    @* «Computer.RoomId» → «Computer.Location»: το παλιό κείμενο ξαναστέλνεται για τη νέα καταχώρηση / την επανεμφάνιση της φόρμας *@
+    <input type="hidden" name="@(Model.FieldName[..^"RoomId".Length])Location" value="@Model.LegacyName" />
+}
 @{
     var roomError = ViewContext.ViewData.ModelState.TryGetValue(Model.FieldName, out var entry)
         ? entry.Errors.FirstOrDefault()?.ErrorMessage

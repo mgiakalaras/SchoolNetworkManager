@@ -183,7 +183,7 @@ using (var scope = app.Services.CreateScope())
     // Εφάπαξ μετατροπή των χώρων (κτίριο/όροφος/χώροι). Πρώτα αντίγραφο ασφαλείας, μετά μία συναλλαγή.
     RoomMigration.RunAsync(
             db,
-            () => app.Services.GetRequiredService<BackupService>().CreateAsync(BackupService.KindBeforeRooms),
+            () => app.Services.GetRequiredService<BackupService>().CreateBeforeRoomsAsync(),
             app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("RoomMigration"))
         .GetAwaiter().GetResult();
 

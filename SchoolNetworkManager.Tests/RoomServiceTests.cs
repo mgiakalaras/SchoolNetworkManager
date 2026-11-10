@@ -481,6 +481,11 @@ public class RoomServiceTests
         Assert.Equal((room.Id, (string?)null), await svc.SelectionAsync(null, "εργαστήριο 1"));
         Assert.Equal((RoomService.LegacyRoomId, "Αίθουσα 3"), await svc.SelectionAsync(null, " Αίθουσα 3 "));
         Assert.Equal(((int?)null, (string?)null), await svc.SelectionAsync(null, "  "));
+
+        // Επανεμφάνιση μετά από POST: κρατιέται η επιλογή του χρήστη, ο παλιός χώρος μένει διαθέσιμος
+        Assert.Equal(((int?)null, "Αίθουσα 3"), await svc.SelectionAsync(null, "Αίθουσα 3", posted: true));
+        Assert.Equal((room.Id, "Αίθουσα 3"), await svc.SelectionAsync(room.Id, "Αίθουσα 3", posted: true));
+        Assert.Equal((RoomService.LegacyRoomId, "Αίθουσα 3"), await svc.SelectionAsync(RoomService.LegacyRoomId, "Αίθουσα 3", posted: true));
     }
 
     [Fact]

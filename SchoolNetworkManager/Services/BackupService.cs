@@ -138,6 +138,23 @@ public partial class BackupService
         }
     }
 
+    /// <summary>
+    /// Αντίγραφο πριν τη μετατροπή των χώρων — το πολύ ένα τη μέρα, για να μη μαζεύονται
+    /// ολόκληρα zip αν η μετατροπή αποτυγχάνει σε κάθε εκκίνηση/επαναφορά.
+    /// </summary>
+    public async Task CreateBeforeRoomsAsync()
+    {
+        var today = List().FirstOrDefault(b => b.Kind == KindBeforeRooms && b.CreatedAt.Date == DateTime.Today);
+
+        if (today != null)
+        {
+            _logger.LogInformation("Υπάρχει ήδη σημερινό αντίγραφο πριν τη μετατροπή χώρων ({Name})· δεν φτιάχνεται νέο.", today.Name);
+            return;
+        }
+
+        await CreateAsync(KindBeforeRooms);
+    }
+
     /// <summary>Γράφει το zip σε οποιοδήποτε stream (και για τη «Λήψη τώρα»).</summary>
     public async Task WriteZipAsync(Stream output)
     {
@@ -334,11 +351,23 @@ public partial class BackupService
                 _lock.Release();
             }
 
-            // Παλιότερο αντίγραφο → νέες στήλες / πίνακες, και ανανέωση ρυθμίσεων
+            var converted = false;
+
+            // Παλιότερο αντίγραφο → νέες στήλες / πίνακες, μετατροπή χώρων, και ανανέωση ρυθμίσεων
             using (var scope = _scopes.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 DbSchema.Upgrade(db);
+
+                // Αντίγραφο από πριν τους χώρους: μετατροπή τώρα, όχι στην επόμενη εκκίνηση —
+                // αλλιώς οι συσκευές μένουν χωρίς RoomId και η αποθήκευσή τους θα έσβηνε τον χώρο.
+                // Έξω από το _lock (το αντίγραφο ασφαλείας το παίρνει ξανά).
+                converted = await RoomMigration.RunAsync(db, CreateBeforeRoomsAsync, _logger);
+
+                if (converted)
+                {
+                    _logger.LogInformation("Μετά την επαναφορά έγινε η μετατροπή των χώρων.");
+                }
 
                 var settings = await db.AppSettings.AsNoTracking().FirstOrDefaultAsync(x => x.Id == 1);
 
@@ -348,7 +377,8 @@ public partial class BackupService
                 }
             }
 
-            return (true, $"Η επαναφορά ολοκληρώθηκε. Η προηγούμενη κατάσταση φυλάχτηκε ως «{safety.Name}».");
+            return (true, $"Η επαναφορά ολοκληρώθηκε. Η προηγούμενη κατάσταση φυλάχτηκε ως «{safety.Name}»." +
+                          (converted ? " Οι χώροι του αντιγράφου μετατράπηκαν στη νέα μορφή (κτίρια / όροφοι / χώροι)." : string.Empty));
         }
         catch (InvalidDataException)
         {

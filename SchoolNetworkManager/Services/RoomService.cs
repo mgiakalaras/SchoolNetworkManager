@@ -322,9 +322,17 @@ public class RoomService(AppDbContext db)
     /// Επιλογή για τη λίστα «Χώρος» μιας υπάρχουσας συσκευής. Χωρίς RoomId αλλά με κείμενο Location
     /// (βάση χωρίς μετατροπή): ο χώρος με αυτό το όνομα, αλλιώς <see cref="LegacyRoomId"/> και το
     /// όνομα για μια επιπλέον επιλογή «(παλιός χώρος)» — ώστε η αποθήκευση να μη σβήνει τον χώρο.
+    /// <paramref name="posted"/>: επανεμφάνιση φόρμας μετά από POST — κρατιέται ό,τι διάλεξε ο χρήστης
+    /// (και το «χωρίς χώρο»), και η επιλογή του παλιού χώρου μένει διαθέσιμη.
     /// </summary>
-    public async Task<(int? Selected, string? LegacyName)> SelectionAsync(int? roomId, string? location)
+    public async Task<(int? Selected, string? LegacyName)> SelectionAsync(int? roomId, string? location, bool posted = false)
     {
+        if (posted)
+        {
+            var (legacySelection, legacyName) = await SelectionAsync(LegacyRoomId, location);
+            return (roomId == LegacyRoomId ? legacySelection : roomId, legacyName);
+        }
+
         if (roomId != null && roomId != LegacyRoomId)
         {
             return (roomId, null);

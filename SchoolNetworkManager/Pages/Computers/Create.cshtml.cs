@@ -36,12 +36,21 @@ public class CreateModel : PageModel
     public async Task OnGetAsync(string? location)
     {
         // «Νέα καταχώρηση εδώ» από τη σελίδα Χώροι: το όνομα γίνεται επιλεγμένος χώρος
-        if (!string.IsNullOrWhiteSpace(location) && location != SchoolNetworkManager.Pages.Locations.IndexModel.NoLocationKey)
-        {
-            Computer.RoomId = (await _rooms.FindByNameAsync(location))?.Id;
-        }
+        // (ή «παλιός χώρος» αν δεν υπάρχει ακόμη εγγραφή χώρου — βάση χωρίς μετατροπή).
+        var name = location == SchoolNetworkManager.Pages.Locations.IndexModel.NoLocationKey ? null : location;
+        await PrepareRoomSelectAsync(null, name, posted: false);
+    }
 
+    /// <summary>Επιλεγμένος χώρος στη λίστα· με <see cref="RoomService.LegacyRoomId"/> = παλιός χώρος.</summary>
+    public int? SelectedRoomId { get; set; }
+
+    /// <summary>Όνομα χώρου χωρίς εγγραφή χώρου (βάση χωρίς μετατροπή) — εμφανίζεται ως επιλογή.</summary>
+    public string? LegacyRoomName { get; set; }
+
+    private async Task PrepareRoomSelectAsync(int? roomId, string? location, bool posted)
+    {
         RoomOptions = await Services.RoomOptions.LoadAsync(_context);
+        (SelectedRoomId, LegacyRoomName) = await _rooms.SelectionAsync(roomId, location, posted);
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -55,7 +64,7 @@ public class CreateModel : PageModel
 
         if (!ModelState.IsValid)
         {
-            RoomOptions = await Services.RoomOptions.LoadAsync(_context);
+            await PrepareRoomSelectAsync(Computer.RoomId, Computer.Location, posted: true);
             return Page();
         }
 
@@ -65,7 +74,7 @@ public class CreateModel : PageModel
         if (ipExists)
         {
             ModelState.AddModelError("Computer.IpAddress", "Υπάρχει ήδη υπολογιστής με αυτή την IP.");
-            RoomOptions = await Services.RoomOptions.LoadAsync(_context);
+            await PrepareRoomSelectAsync(Computer.RoomId, Computer.Location, posted: true);
             return Page();
         }
 
@@ -76,7 +85,7 @@ public class CreateModel : PageModel
         catch (ArgumentException)
         {
             ModelState.AddModelError("Computer.RoomId", "Ο χώρος δεν υπάρχει πια.");
-            RoomOptions = await Services.RoomOptions.LoadAsync(_context);
+            await PrepareRoomSelectAsync(Computer.RoomId, Computer.Location, posted: true);
             return Page();
         }
 
