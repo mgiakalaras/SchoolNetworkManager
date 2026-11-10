@@ -434,20 +434,39 @@ public class RoomService(AppDbContext db)
     /// <summary>Τι θα διαγράψει το <see cref="DeleteAsync"/> (ίδια σύνδεση με όνομα).</summary>
     public async Task<RoomDeleteImpact> DeleteImpactAsync(int roomId)
     {
-        var room = await db.Rooms.AsNoTracking().FirstOrDefaultAsync(r => r.Id == roomId);
+        return (await DeleteImpactsAsync()).TryGetValue(roomId, out var impact) ? impact : new RoomDeleteImpact(0, 0, 0, false);
+    }
 
-        if (room == null)
+    /// <summary>Το <see cref="DeleteImpactAsync"/> για όλους τους χώρους μαζί (λίγα ερωτήματα, για λίστες).</summary>
+    public async Task<Dictionary<int, RoomDeleteImpact>> DeleteImpactsAsync()
+    {
+        var rooms = await db.Rooms.AsNoTracking().ToListAsync();
+        var computers = await db.Computers.AsNoTracking()
+            .Where(c => c.RoomId != null || c.Location != null)
+            .Select(c => new { c.RoomId, c.Location })
+            .ToListAsync();
+        var classes = await db.SchoolClasses.AsNoTracking().Where(s => s.Location != null).Select(s => new LinkRow(s.Id, s.Location)).ToListAsync();
+        var seatsByClass = (await db.Seats.AsNoTracking().GroupBy(s => s.SchoolClassId).Select(g => new { g.Key, Count = g.Count() }).ToListAsync())
+            .ToDictionary(x => x.Key, x => x.Count);
+        var planNames = (await db.RoomPlans.AsNoTracking().Where(p => p.Location != null).Select(p => p.Location).ToListAsync())
+            .Concat(await db.PlanItems.AsNoTracking().Where(p => p.Location != null).Select(p => p.Location).ToListAsync())
+            .Select(MatchKey)
+            .Where(k => k != null)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var result = new Dictionary<int, RoomDeleteImpact>();
+
+        foreach (var room in rooms)
         {
-            return new RoomDeleteImpact(0, 0, 0, false);
+            var devices = computers.Count(c => c.RoomId == room.Id || (c.RoomId == null && SameName(c.Location, room.Name)));
+            var classIds = classes.Where(s => SameName(s.Location, room.Name)).Select(s => s.Id).ToList();
+            var seats = classIds.Sum(id => seatsByClass.GetValueOrDefault(id));
+            var key = MatchKey(room.Name);
+
+            result[room.Id] = new RoomDeleteImpact(devices, classIds.Count, seats, key != null && planNames.Contains(key));
         }
 
-        var devices = (await DevicesOfRoomAsync(roomId, NormaliseName(room.Name))).Count;
-        var classIds = await IdsLinkedAsync(db.SchoolClasses.Where(s => s.Location != null).Select(s => new LinkRow(s.Id, s.Location)), room.Name);
-        var seats = await db.Seats.CountAsync(s => classIds.Contains(s.SchoolClassId));
-        var hasPlan = (await IdsLinkedAsync(db.RoomPlans.Where(p => p.Location != null).Select(p => new LinkRow(p.Id, p.Location)), room.Name)).Count > 0
-                      || (await IdsLinkedAsync(db.PlanItems.Where(p => p.Location != null).Select(p => new LinkRow(p.Id, p.Location)), room.Name)).Count > 0;
-
-        return new RoomDeleteImpact(devices, classIds.Count, seats, hasPlan);
+        return result;
     }
 
     /// <summary>Αντικαθιστά τις προγραμματισμένες δυναμικότητες του χώρου (το 0 αγνοείται).</summary>

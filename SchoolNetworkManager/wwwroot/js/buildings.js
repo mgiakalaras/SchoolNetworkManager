@@ -85,6 +85,8 @@
         form.elements.autoShutdown.value = data ? (data.autoShutdown || "") : "";
         byId("capRows").innerHTML = "";
         (data ? data.caps : []).forEach(function (c) { addCapRow(c.t, c.n); });
+        // Το μήνυμα επιβεβαίωσης λέει τι άλλο θα διαγραφεί (υπολογίζεται στον server)
+        byId("roomDelete").dataset.confirm = data && data.deleteConfirm ? data.deleteConfirm : "Διαγραφή του χώρου;";
         setMode(form, !!data);
         show("roomModal");
     }

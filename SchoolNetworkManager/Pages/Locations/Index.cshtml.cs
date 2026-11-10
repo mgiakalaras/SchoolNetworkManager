@@ -84,6 +84,7 @@ public class IndexModel : PageModel
         }
 
         var agentIds = (await _context.AgentReports.Select(r => r.ComputerId).ToListAsync()).ToHashSet();
+        var impacts = await _rooms.DeleteImpactsAsync();
 
         foreach (var group in Groups)
         {
@@ -91,6 +92,13 @@ public class IndexModel : PageModel
             group.Description ??= room?.Description;
             group.AutoShutdown = room?.AutoShutdown;
             group.WithAgent = group.Computers.Count(c => !c.IsEmptySlot && agentIds.Contains(c.Id));
+
+            // Επιβεβαίωση διαγραφής άδειου χώρου: τι άλλο θα χαθεί (τμήματα, θέσεις, κάτοψη)
+            if (group.IsEmpty && room != null)
+            {
+                var impact = impacts.TryGetValue(room.Id, out var found) ? found.Describe() : string.Empty;
+                group.DeleteConfirm = impact.Length == 0 ? "Διαγραφή του άδειου χώρου;" : $"Διαγραφή του άδειου χώρου «{room.Name}»; {impact}";
+            }
         }
 
         Groups = Groups
@@ -449,6 +457,9 @@ public class IndexModel : PageModel
         public string? Description { get; set; }
         public string? AutoShutdown { get; set; }
         public int WithAgent { get; set; }
+
+        /// <summary>Κείμενο επιβεβαίωσης διαγραφής (άδειος χώρος), με ό,τι άλλο θα διαγραφεί.</summary>
+        public string DeleteConfirm { get; set; } = "Διαγραφή του άδειου χώρου;";
         public List<Computer> Computers { get; set; } = new();
         public bool IsEmpty => Computers.Count == 0;
 

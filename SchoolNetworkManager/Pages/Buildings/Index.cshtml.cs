@@ -44,9 +44,17 @@ public class IndexModel : PageModel
     [TempData]
     public string? MergeTargetName { get; set; }
 
+    /// <summary>Κείμενο επιβεβαίωσης διαγραφής ανά χώρο (με ό,τι άλλο θα διαγραφεί).</summary>
+    public Dictionary<int, string> DeleteConfirms { get; set; } = new();
+
     public async Task OnGetAsync()
     {
         (Buildings, Unplaced) = await BuildingQueries.LoadAsync(_context);
+        DeleteConfirms = (await _rooms.DeleteImpactsAsync()).ToDictionary(x => x.Key, x =>
+        {
+            var impact = x.Value.Describe();
+            return impact.Length == 0 ? "Διαγραφή του χώρου;" : $"Διαγραφή του χώρου; {impact}";
+        });
         RoomTypes = await _context.RoomTypes.AsNoTracking().OrderBy(t => t.SortOrder).ThenBy(t => t.Id).ToListAsync();
 
         if (Tab == null || Buildings.All(b => b.Building.Id != Tab))

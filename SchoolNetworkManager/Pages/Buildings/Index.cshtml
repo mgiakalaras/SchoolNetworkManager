@@ -25,6 +25,7 @@
         typeId = c.Room.RoomTypeId,
         description = c.Room.Description,
         autoShutdown = c.Room.AutoShutdown,
+        deleteConfirm = Model.DeleteConfirms.GetValueOrDefault(c.Room.Id, "Διαγραφή του χώρου;"),
         caps = c.Counts.Where(t => t.Planned > 0).Select(t => new { t = t.MachineType, n = t.Planned })
     });
 }
@@ -342,9 +343,9 @@ else
                 </div>
             </div>
             <div class="modal-footer justify-content-between">
-                <button type="submit" class="btn btn-outline-danger" data-edit-only hidden formnovalidate
-                        formaction="@Url.Page("/Buildings/Index", "DeleteRoom")"
-                        onclick="return confirm('Διαγραφή του χώρου; Οι συσκευές του θα μείνουν χωρίς χώρο (δεν διαγράφονται).');">🗑️ Διαγραφή</button>
+                <button type="submit" class="btn btn-outline-danger" data-edit-only hidden formnovalidate id="roomDelete"
+                        formaction="@Url.Page("/Buildings/Index", "DeleteRoom")" data-confirm="Διαγραφή του χώρου;"
+                        onclick="return confirm(this.dataset.confirm);">🗑️ Διαγραφή</button>
                 <div class="d-flex gap-2 ms-auto">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Άκυρο</button>
                     <button type="submit" class="btn btn-primary">Αποθήκευση</button>

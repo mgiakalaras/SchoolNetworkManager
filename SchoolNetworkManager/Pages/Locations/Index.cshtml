@@ -205,7 +205,7 @@
                                     <li><hr class="dropdown-divider" /></li>
                                     <li>
                                         <form method="post" asp-page-handler="DeleteRoom" asp-route-location="@place.Key"
-                                              onsubmit="return confirm('Διαγραφή του άδειου χώρου;');">
+                                              data-confirm="@place.DeleteConfirm" onsubmit="return confirm(this.dataset.confirm);">
                                             <button type="submit" class="dropdown-item text-danger">🗑️ Διαγραφή χώρου</button>
                                         </form>
                                     </li>
