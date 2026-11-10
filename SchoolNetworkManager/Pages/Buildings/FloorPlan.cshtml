@@ -1,0 +1,110 @@
+@page
+@model SchoolNetworkManager.Pages.Buildings.FloorPlanModel
+
+@{
+    ViewData["Title"] = "Κάτοψη · " + Model.Floor.Name;
+
+    var data = new
+    {
+        floorId = Model.FloorId,
+        aspect = Model.Floor.AspectRatio <= 0 ? 1.6 : Model.Floor.AspectRatio,
+        background = Model.Floor.PlanImagePath,
+        startMode = Request.Query.ContainsKey("edit") ? "layout" : "view",
+        layoutUrl = Url.Page("/Buildings/FloorPlan", "Layout", new { floorId = Model.FloorId }),
+        aspectUrl = Url.Page("/Buildings/FloorPlan", "Aspect", new { floorId = Model.FloorId }),
+        rooms = Model.Rooms.Select(r => new
+        {
+            id = r.Card.Room.Id,
+            name = r.Card.Room.Name,
+            icon = r.Card.Type?.Icon ?? "▫️",
+            href = Url.Page("/Locations/Plan", new { Location = r.Card.Room.Name }),
+            status = r.Status,
+            devices = r.Card.Devices,
+            x = r.Card.Room.PlanX,
+            y = r.Card.Room.PlanY,
+            w = r.Card.Room.PlanW,
+            h = r.Card.Room.PlanH
+        })
+    };
+}
+
+@Html.AntiForgeryToken()
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div class="min-w-0">
+        <h1 class="mb-1">🗺️ @Model.Floor.Name</h1>
+        <p class="text-muted mb-0">@Model.BuildingName · κάτοψη ορόφου · @Model.Rooms.Count χώροι</p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <div class="btn-group fp-modes" role="group" aria-label="Λειτουργία">
+            <button type="button" class="btn btn-outline-secondary" data-mode="view">👁️ Προβολή</button>
+            <button type="button" class="btn btn-outline-secondary" data-mode="layout">✏️ Διάταξη</button>
+        </div>
+        <a class="icon-action" asp-page="/Buildings/Index" data-hint="Πίσω στα κτίρια" aria-label="Πίσω">↩️</a>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-@(Model.StatusKind ?? "success") shadow-sm">@Model.StatusMessage</div>
+}
+
+<div id="floorPlanApp" class="plan-layout" data-floor="@System.Text.Json.JsonSerializer.Serialize(data)">
+    <div class="plan-main">
+        <div class="card shadow-sm plan-card">
+            <div class="card-body p-2">
+                <div class="plan-canvas" id="fpCanvas" tabindex="0" aria-label="Κάτοψη ορόφου">
+                    @if (!string.IsNullOrWhiteSpace(Model.Floor.PlanImagePath))
+                    {
+                        <img src="@Model.Floor.PlanImagePath" alt="" class="plan-bg" id="fpBg" />
+                    }
+                    <div class="plan-empty" id="fpEmpty" hidden>
+                        Δεν έχει τοποθετηθεί κανένας χώρος. Πάτα <strong>✏️ Διάταξη</strong> και σύρε τους χώρους στην κάτοψη.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <aside class="plan-side">
+        <div class="card shadow-sm mb-3 fp-side-layout" hidden>
+            <div class="card-header fw-semibold">✏️ Διάταξη</div>
+            <div class="card-body d-grid gap-2">
+                <div class="small text-muted">
+                    Σύρε τους χώρους στην κάτοψη. Αλλαγή μεγέθους από τη γωνία κάτω δεξιά, ✕ για αφαίρεση.
+                </div>
+
+                <div>
+                    <div class="small fw-semibold mb-1">Εκτός κάτοψης <span class="text-muted" id="fpUnplacedCount"></span></div>
+                    <div class="unplaced" id="fpUnplaced"></div>
+                </div>
+
+                <form method="post" asp-page-handler="Background" asp-route-floorId="@Model.FloorId"
+                      enctype="multipart/form-data" class="d-grid gap-1" id="fpBgForm">
+                    <label class="small" for="fpFile">🖼️ Εικόνα κάτοψης (PNG / JPG / WEBP έως 8MB)</label>
+                    <input type="file" id="fpFile" name="file" accept=".png,.jpg,.jpeg,.webp" class="form-control form-control-sm" />
+                    @if (!string.IsNullOrWhiteSpace(Model.Floor.PlanImagePath))
+                    {
+                        <button type="submit" name="remove" value="true" class="btn btn-sm btn-link text-danger p-0 text-start">Αφαίρεση εικόνας</button>
+                    }
+                </form>
+
+                <button type="button" class="btn btn-primary" id="fpSave">💾 Αποθήκευση διάταξης</button>
+                <div class="small text-muted" id="fpStatus" role="status"></div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm fp-side-view">
+            <div class="card-body small d-grid gap-1">
+                <span>✅ όλες οι συσκευές όπως προγραμματίστηκαν</span>
+                <span>⚠️ διαφορά ή συσκευές εκτός προγράμματος</span>
+                <span class="text-muted">Κλικ σε χώρο (Προβολή) → η κάτοψη του χώρου.</span>
+            </div>
+        </div>
+    </aside>
+</div>
+
+@section Scripts {
+    <script src="~/js/floorplan.js" asp-append-version="true"></script>
+}

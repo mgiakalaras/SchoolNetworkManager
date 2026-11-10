@@ -153,6 +153,7 @@ else
                         <div class="type-chips mt-1 mb-0"><partial name="_TypeCounts" model="fv.Totals" /></div>
                     </div>
                     <div class="d-flex gap-1 flex-wrap">
+                        <a class="btn btn-sm btn-outline-secondary" asp-page="/Buildings/FloorPlan" asp-route-floorId="@fv.Floor.Id">🗺️ Κάτοψη</a>
                         <button type="button" class="btn btn-sm btn-outline-primary" data-open="room" data-floor="@fv.Floor.Id">＋ Χώρος</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" data-open="floor" data-id="@fv.Floor.Id"
                                 data-building="@fv.Floor.BuildingId" data-name="@fv.Floor.Name" data-level="@fv.Floor.Level">✏️ Όροφος</button>
