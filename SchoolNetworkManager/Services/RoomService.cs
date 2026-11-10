@@ -10,6 +10,40 @@ public class RoomNameTakenException(string name) : Exception($"Υπάρχει ή
     public string RoomName { get; } = name;
 }
 
+/// <summary>Τι θα χαθεί/επηρεαστεί αν διαγραφεί ένας χώρος (για το μήνυμα επιβεβαίωσης).</summary>
+public record RoomDeleteImpact(int Devices, int Classes, int Seats, bool HasPlan)
+{
+    /// <summary>Κείμενο μόνο με ό,τι υπάρχει (κενό αν δεν υπάρχει τίποτα επιπλέον).</summary>
+    public string Describe()
+    {
+        var parts = new List<string>();
+
+        if (Classes > 0)
+        {
+            var classes = Classes == 1 ? "1 τμήμα" : $"{Classes} τμήματα";
+            var seats = Seats == 0 ? string.Empty : Seats == 1 ? " (με 1 θέση μαθητή)" : $" (με {Seats} θέσεις μαθητών)";
+            parts.Add(classes + seats);
+        }
+
+        if (HasPlan)
+        {
+            parts.Add("η κάτοψη του χώρου");
+        }
+
+        var text = parts.Count == 0 ? string.Empty : $"Θα διαγραφούν επίσης: {string.Join(" και ", parts)}.";
+
+        if (Devices > 0)
+        {
+            var devices = Devices == 1
+                ? "Η 1 συσκευή του μένει χωρίς χώρο (δεν διαγράφεται)."
+                : $"Οι {Devices} συσκευές του μένουν χωρίς χώρο (δεν διαγράφονται).";
+            text = text.Length == 0 ? devices : text + " " + devices;
+        }
+
+        return text;
+    }
+}
+
 /// <summary>
 /// Ο μοναδικός «ιδιοκτήτης» της σχέσης συσκευής ↔ χώρου. Το Computer.Location είναι
 /// συγχρονισμένο αντίγραφο του ονόματος του χώρου και γράφεται μόνο από εδώ.
@@ -18,7 +52,16 @@ public class RoomService(AppDbContext db)
 {
     public const int MaxNameLength = 80;
 
-    /// <summary>Κόβει τα κενά, επιστρέφει null αν είναι κενό, περιορίζει στους 80 χαρακτήρες.</summary>
+    /// <summary>
+    /// Τιμή της λίστας «Χώρος» για συσκευή χωρίς RoomId που έχει ακόμη το παλιό κείμενο Location
+    /// (βάση χωρίς μετατροπή): «κράτα τον παλιό χώρο».
+    /// </summary>
+    public const int LegacyRoomId = -1;
+
+    /// <summary>
+    /// Κόβει τα κενά (και τα πολλαπλά ενδιάμεσα γίνονται ένα), επιστρέφει null αν είναι κενό,
+    /// περιορίζει στους 80 χαρακτήρες.
+    /// </summary>
     public static string? NormaliseName(string? name)
     {
         var trimmed = name?.Trim();
@@ -27,6 +70,8 @@ public class RoomService(AppDbContext db)
         {
             return null;
         }
+
+        trimmed = string.Join(' ', trimmed.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
         return trimmed.Length > MaxNameLength ? trimmed[..MaxNameLength].TrimEnd() : trimmed;
     }
@@ -108,9 +153,18 @@ public class RoomService(AppDbContext db)
         return room;
     }
 
-    /// <summary>Θέτει RoomId + Location (όνομα χώρου ή null). Δεν κάνει SaveChanges.</summary>
+    /// <summary>
+    /// Θέτει RoomId + Location (όνομα χώρου ή null). Δεν κάνει SaveChanges.
+    /// Με <see cref="LegacyRoomId"/> κρατά τον χώρο του τωρινού c.Location (find-or-create).
+    /// </summary>
     public async Task AssignAsync(Computer c, int? roomId)
     {
+        if (roomId == LegacyRoomId)
+        {
+            await AssignByNameAsync(c, c.Location);
+            return;
+        }
+
         string? name = null;
 
         if (roomId != null)
@@ -262,6 +316,138 @@ public class RoomService(AppDbContext db)
         await db.SaveChangesAsync();
 
         await tx.CommitAsync();
+    }
+
+    /// <summary>
+    /// Επιλογή για τη λίστα «Χώρος» μιας υπάρχουσας συσκευής. Χωρίς RoomId αλλά με κείμενο Location
+    /// (βάση χωρίς μετατροπή): ο χώρος με αυτό το όνομα, αλλιώς <see cref="LegacyRoomId"/> και το
+    /// όνομα για μια επιπλέον επιλογή «(παλιός χώρος)» — ώστε η αποθήκευση να μη σβήνει τον χώρο.
+    /// </summary>
+    public async Task<(int? Selected, string? LegacyName)> SelectionAsync(int? roomId, string? location)
+    {
+        if (roomId != null && roomId != LegacyRoomId)
+        {
+            return (roomId, null);
+        }
+
+        var name = NormaliseName(location);
+
+        if (name == null)
+        {
+            return (null, null);
+        }
+
+        var room = await FindByNameAsync(name);
+
+        return room != null ? (room.Id, null) : (LegacyRoomId, name);
+    }
+
+    /// <summary>
+    /// Ενώνει δύο χώρους (διπλότυπα) σε μία συναλλαγή: συσκευές, κάτοψη, τμήματα (με τις θέσεις τους)
+    /// περνούν στον <paramref name="targetRoomId"/>· κρατιούνται η κάτοψη και οι ρυθμίσεις του στόχου
+    /// και συμπληρώνονται μόνο όσες λείπουν· ο χώρος-πηγή διαγράφεται.
+    /// </summary>
+    public async Task MergeAsync(int sourceRoomId, int targetRoomId)
+    {
+        if (sourceRoomId == targetRoomId)
+        {
+            throw new ArgumentException("Ο χώρος δεν μπορεί να ενωθεί με τον εαυτό του.", nameof(targetRoomId));
+        }
+
+        var source = await db.Rooms.FindAsync(sourceRoomId) ?? throw new ArgumentException($"Δεν υπάρχει χώρος με Id {sourceRoomId}.", nameof(sourceRoomId));
+        var target = await db.Rooms.FindAsync(targetRoomId) ?? throw new ArgumentException($"Δεν υπάρχει χώρος με Id {targetRoomId}.", nameof(targetRoomId));
+        var sourceName = source.Name;
+
+        await using var tx = await db.Database.BeginTransactionAsync();
+
+        foreach (var computer in await DevicesOfRoomAsync(sourceRoomId, NormaliseName(sourceName)))
+        {
+            computer.RoomId = target.Id;
+            computer.Location = target.Name;
+            computer.UpdatedAt = DateTime.Now;
+        }
+
+        // Ρυθμίσεις: του στόχου μένουν· από την πηγή μόνο όσες λείπουν
+        if (string.IsNullOrWhiteSpace(target.AutoShutdown))
+        {
+            target.AutoShutdown = source.AutoShutdown;
+            target.AutoShutdownLast = source.AutoShutdownLast;
+        }
+
+        if (string.IsNullOrWhiteSpace(target.Description))
+        {
+            target.Description = source.Description;
+        }
+
+        if (target.FloorId == null && source.FloorId != null)
+        {
+            // Η θέση στην κάτοψη ορόφου αφορά τον όροφο της πηγής, οπότε έρχεται μαζί του.
+            target.FloorId = source.FloorId;
+            target.PlanX = source.PlanX;
+            target.PlanY = source.PlanY;
+            target.PlanW = source.PlanW;
+            target.PlanH = source.PlanH;
+        }
+
+        target.RoomTypeId ??= source.RoomTypeId;
+
+        // Δυναμικότητες: του στόχου μένουν· προστίθενται οι τύποι που δεν έχει
+        var targetTypes = await db.RoomCapacities.Where(c => c.RoomId == target.Id).Select(c => c.MachineType).ToListAsync();
+
+        foreach (var capacity in await db.RoomCapacities.Where(c => c.RoomId == sourceRoomId).ToListAsync())
+        {
+            if (targetTypes.Contains(capacity.MachineType))
+            {
+                db.RoomCapacities.Remove(capacity);
+            }
+            else
+            {
+                capacity.RoomId = target.Id;
+            }
+        }
+
+        await db.SaveChangesAsync();
+
+        var planItemIds = await IdsLinkedAsync(db.PlanItems.Where(p => p.Location != null).Select(p => new LinkRow(p.Id, p.Location)), sourceName);
+        var classIds = await IdsLinkedAsync(db.SchoolClasses.Where(s => s.Location != null).Select(s => new LinkRow(s.Id, s.Location)), sourceName);
+        var sourcePlanIds = await IdsLinkedAsync(db.RoomPlans.Where(p => p.Location != null).Select(p => new LinkRow(p.Id, p.Location)), sourceName);
+        var targetHasPlan = (await IdsLinkedAsync(db.RoomPlans.Where(p => p.Location != null).Select(p => new LinkRow(p.Id, p.Location)), target.Name)).Count > 0;
+
+        await db.PlanItems.Where(p => planItemIds.Contains(p.Id)).ExecuteUpdateAsync(u => u.SetProperty(p => p.Location, target.Name));
+        await db.SchoolClasses.Where(s => classIds.Contains(s.Id)).ExecuteUpdateAsync(u => u.SetProperty(s => s.Location, target.Name));
+
+        if (targetHasPlan)
+        {
+            await db.RoomPlans.Where(p => sourcePlanIds.Contains(p.Id)).ExecuteDeleteAsync();
+        }
+        else
+        {
+            await db.RoomPlans.Where(p => sourcePlanIds.Contains(p.Id)).ExecuteUpdateAsync(u => u.SetProperty(p => p.Location, target.Name));
+        }
+
+        db.Rooms.Remove(source);
+        await db.SaveChangesAsync();
+
+        await tx.CommitAsync();
+    }
+
+    /// <summary>Τι θα διαγράψει το <see cref="DeleteAsync"/> (ίδια σύνδεση με όνομα).</summary>
+    public async Task<RoomDeleteImpact> DeleteImpactAsync(int roomId)
+    {
+        var room = await db.Rooms.AsNoTracking().FirstOrDefaultAsync(r => r.Id == roomId);
+
+        if (room == null)
+        {
+            return new RoomDeleteImpact(0, 0, 0, false);
+        }
+
+        var devices = (await DevicesOfRoomAsync(roomId, NormaliseName(room.Name))).Count;
+        var classIds = await IdsLinkedAsync(db.SchoolClasses.Where(s => s.Location != null).Select(s => new LinkRow(s.Id, s.Location)), room.Name);
+        var seats = await db.Seats.CountAsync(s => classIds.Contains(s.SchoolClassId));
+        var hasPlan = (await IdsLinkedAsync(db.RoomPlans.Where(p => p.Location != null).Select(p => new LinkRow(p.Id, p.Location)), room.Name)).Count > 0
+                      || (await IdsLinkedAsync(db.PlanItems.Where(p => p.Location != null).Select(p => new LinkRow(p.Id, p.Location)), room.Name)).Count > 0;
+
+        return new RoomDeleteImpact(devices, classIds.Count, seats, hasPlan);
     }
 
     /// <summary>Αντικαθιστά τις προγραμματισμένες δυναμικότητες του χώρου (το 0 αγνοείται).</summary>

@@ -65,6 +65,24 @@ public class RoomMigrationTests
     }
 
     [Fact]
+    public async Task Run_MergesDoubleSpaceVariants()
+    {
+        var (db, conn) = NewDb();
+        using var _ = conn; using var __ = db;
+        db.Rooms.Add(new Room { Name = "Αίθουσα  3" });
+        db.Computers.AddRange(Pc("A", "Αίθουσα 3"), Pc("B", "Αίθουσα  3"));
+        db.SchoolClasses.Add(new SchoolClass { Location = "Αίθουσα   3", Name = "Β1" });
+        await db.SaveChangesAsync();
+
+        await Run(db);
+
+        var room = Assert.Single(await db.Rooms.ToListAsync());
+        Assert.Equal("Αίθουσα 3", room.Name);
+        Assert.All(await db.Computers.ToListAsync(), c => { Assert.Equal(room.Id, c.RoomId); Assert.Equal("Αίθουσα 3", c.Location); });
+        Assert.Equal("Αίθουσα 3", (await db.SchoolClasses.SingleAsync()).Location);
+    }
+
+    [Fact]
     public async Task Run_KeepsExistingEmptyRoomsUnplaced()
     {
         var (db, conn) = NewDb();

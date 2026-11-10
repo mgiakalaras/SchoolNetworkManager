@@ -284,6 +284,206 @@ public class RoomServiceTests
     }
 
     [Fact]
+    public void NormaliseName_CollapsesInnerWhitespace()
+    {
+        Assert.Equal("Αίθουσα 3", RoomService.NormaliseName("  Αίθουσα  \t 3 "));
+        Assert.True(RoomService.SameName("Αίθουσα 3", "Αίθουσα  3"));
+    }
+
+    [Fact]
+    public async Task AssignByName_ReusesRoomIgnoringDoubleSpaces()
+    {
+        var (db, conn) = TestDb.Create();
+        using var _ = conn; using var __ = db;
+        var svc = new RoomService(db);
+        var room = await svc.CreateAsync("Αίθουσα 3");
+        var pc = Pc("PC1");
+        db.Computers.Add(pc);
+
+        var created = await svc.AssignByNameAsync(pc, "Αίθουσα  3");
+        await db.SaveChangesAsync();
+
+        Assert.False(created);
+        Assert.Equal(room.Id, pc.RoomId);
+        Assert.Equal(1, await db.Rooms.CountAsync());
+    }
+
+    [Fact]
+    public async Task Merge_MovesEverythingToTargetAndDeletesSource()
+    {
+        var (db, conn) = TestDb.Create();
+        using var _ = conn; using var __ = db;
+        var svc = new RoomService(db);
+        var source = await svc.CreateAsync("Lab A", description: "παλιά περιγραφή");
+        source.AutoShutdown = "21:00";
+        source.RoomTypeId = null;
+        var target = await svc.CreateAsync("Lab B");
+        var pcA = Pc("PC1");
+        var pcB = Pc("PC2");
+        var legacy = Pc("PC3", "lab a");
+        db.Computers.AddRange(pcA, pcB, legacy);
+        await svc.AssignAsync(pcA, source.Id);
+        await svc.AssignAsync(pcB, target.Id);
+        var cls = new SchoolClass { Location = "Lab A", Name = "Β1" };
+        db.SchoolClasses.Add(cls);
+        db.PlanItems.Add(new PlanItem { Location = "LAB A", Label = "πόρτα", Kind = "label" });
+        db.RoomPlans.Add(new RoomPlan { Location = "Lab A", AspectRatio = 2 });
+        await db.SaveChangesAsync();
+        db.Seats.Add(new Seat { SchoolClassId = cls.Id, ComputerId = pcA.Id, StudentName = "Α" });
+        db.RoomCapacities.AddRange(
+            new RoomCapacity { RoomId = source.Id, MachineType = MachineTypes.Default, PlannedCount = 9 },
+            new RoomCapacity { RoomId = source.Id, MachineType = "Laptop", PlannedCount = 2 },
+            new RoomCapacity { RoomId = target.Id, MachineType = MachineTypes.Default, PlannedCount = 5 });
+        await db.SaveChangesAsync();
+
+        await svc.MergeAsync(source.Id, target.Id);
+
+        db.ChangeTracker.Clear();
+        var room = await db.Rooms.SingleAsync();
+        Assert.Equal(target.Id, room.Id);
+        Assert.Equal("21:00", room.AutoShutdown);
+        Assert.Equal("παλιά περιγραφή", room.Description);
+        Assert.All(await db.Computers.ToListAsync(), c => { Assert.Equal(target.Id, c.RoomId); Assert.Equal("Lab B", c.Location); });
+        Assert.Equal("Lab B", (await db.SchoolClasses.SingleAsync()).Location);
+        Assert.Equal("Α", (await db.Seats.SingleAsync()).StudentName);
+        Assert.Equal("Lab B", (await db.PlanItems.SingleAsync()).Location);
+        var plan = await db.RoomPlans.SingleAsync();
+        Assert.Equal("Lab B", plan.Location);
+        Assert.Equal(2, plan.AspectRatio);
+        var caps = await db.RoomCapacities.OrderBy(c => c.MachineType).ToListAsync();
+        Assert.All(caps, c => Assert.Equal(target.Id, c.RoomId));
+        Assert.Equal(5, caps.Single(c => c.MachineType == MachineTypes.Default).PlannedCount);
+        Assert.Equal(2, caps.Single(c => c.MachineType == "Laptop").PlannedCount);
+    }
+
+    [Fact]
+    public async Task Merge_KeepsTargetPlanAndSettings()
+    {
+        var (db, conn) = TestDb.Create();
+        using var _ = conn; using var __ = db;
+        var svc = new RoomService(db);
+        var building = new Building { Name = "Κ1" };
+        db.Buildings.Add(building);
+        await db.SaveChangesAsync();
+        var floor1 = new Floor { Name = "Ισόγειο", BuildingId = building.Id };
+        var floor2 = new Floor { Name = "1ος", BuildingId = building.Id, Level = 1 };
+        db.Floors.AddRange(floor1, floor2);
+        await db.SaveChangesAsync();
+        var source = await svc.CreateAsync("Lab A", floor1.Id, description: "Α");
+        source.AutoShutdown = "21:00";
+        var target = await svc.CreateAsync("Lab B", floor2.Id, description: "Β");
+        target.AutoShutdown = "20:00";
+        db.RoomPlans.AddRange(new RoomPlan { Location = "Lab A", AspectRatio = 2 }, new RoomPlan { Location = "Lab B", AspectRatio = 1 });
+        await db.SaveChangesAsync();
+
+        await svc.MergeAsync(source.Id, target.Id);
+
+        db.ChangeTracker.Clear();
+        var room = await db.Rooms.SingleAsync();
+        Assert.Equal(floor2.Id, room.FloorId);
+        Assert.Equal("Β", room.Description);
+        Assert.Equal("20:00", room.AutoShutdown);
+        var plan = await db.RoomPlans.SingleAsync();
+        Assert.Equal("Lab B", plan.Location);
+        Assert.Equal(1, plan.AspectRatio);
+    }
+
+    [Fact]
+    public async Task Merge_RejectsSameRoom()
+    {
+        var (db, conn) = TestDb.Create();
+        using var _ = conn; using var __ = db;
+        var svc = new RoomService(db);
+        var room = await svc.CreateAsync(Lab);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => svc.MergeAsync(room.Id, room.Id));
+        Assert.Equal(1, await db.Rooms.CountAsync());
+    }
+
+    [Fact]
+    public async Task DeleteImpact_CountsWhatDeleteRemoves()
+    {
+        var (db, conn) = TestDb.Create();
+        using var _ = conn; using var __ = db;
+        var svc = new RoomService(db);
+        var room = await svc.CreateAsync(Lab);
+        await svc.CreateAsync("Γραφείο");
+        var pc = Pc("PC1");
+        db.Computers.AddRange(pc, Pc("PC2", "Γραφείο"));
+        await svc.AssignAsync(pc, room.Id);
+        var c1 = new SchoolClass { Location = "ΕΡΓΑΣΤΗΡΙΟ 1", Name = "Β1" };
+        var c2 = new SchoolClass { Location = Lab, Name = "Β2" };
+        db.SchoolClasses.AddRange(c1, c2, new SchoolClass { Location = "Γραφείο", Name = "Γ1" });
+        db.PlanItems.Add(new PlanItem { Location = Lab, Label = "x", Kind = "label" });
+        await db.SaveChangesAsync();
+        db.Seats.AddRange(
+            new Seat { SchoolClassId = c1.Id, ComputerId = pc.Id, StudentName = "Α" },
+            new Seat { SchoolClassId = c2.Id, ComputerId = pc.Id, StudentName = "Β" });
+        await db.SaveChangesAsync();
+
+        var impact = await svc.DeleteImpactAsync(room.Id);
+
+        Assert.Equal(1, impact.Devices);
+        Assert.Equal(2, impact.Classes);
+        Assert.Equal(2, impact.Seats);
+        Assert.True(impact.HasPlan);
+        Assert.Equal("Θα διαγραφούν επίσης: 2 τμήματα (με 2 θέσεις μαθητών) και η κάτοψη του χώρου. Η 1 συσκευή του μένει χωρίς χώρο (δεν διαγράφεται).",
+            impact.Describe());
+    }
+
+    [Fact]
+    public async Task DeleteImpact_EmptyRoomHasShortText()
+    {
+        var (db, conn) = TestDb.Create();
+        using var _ = conn; using var __ = db;
+        var svc = new RoomService(db);
+        var room = await svc.CreateAsync(Lab);
+
+        var impact = await svc.DeleteImpactAsync(room.Id);
+
+        Assert.Equal(new RoomDeleteImpact(0, 0, 0, false), impact);
+        Assert.Equal(string.Empty, impact.Describe());
+        Assert.Equal("Θα διαγραφούν επίσης: 1 τμήμα και η κάτοψη του χώρου.", new RoomDeleteImpact(0, 1, 0, true).Describe());
+    }
+
+    [Fact]
+    public async Task Assign_LegacyValueKeepsOldLocationText()
+    {
+        var (db, conn) = TestDb.Create();
+        using var _ = conn; using var __ = db;
+        var svc = new RoomService(db);
+        var pc = Pc("PC1", "Αίθουσα 3");
+        var blank = Pc("PC2", "  ");
+        db.Computers.AddRange(pc, blank);
+        await db.SaveChangesAsync();
+
+        await svc.AssignAsync(pc, RoomService.LegacyRoomId);
+        await svc.AssignAsync(blank, RoomService.LegacyRoomId);
+        await db.SaveChangesAsync();
+
+        var room = await db.Rooms.SingleAsync();
+        Assert.Equal("Αίθουσα 3", room.Name);
+        Assert.Equal(room.Id, pc.RoomId);
+        Assert.Equal("Αίθουσα 3", pc.Location);
+        Assert.Null(blank.RoomId);
+        Assert.Null(blank.Location);
+    }
+
+    [Fact]
+    public async Task Selection_PreservesUnconvertedLocation()
+    {
+        var (db, conn) = TestDb.Create();
+        using var _ = conn; using var __ = db;
+        var svc = new RoomService(db);
+        var room = await svc.CreateAsync(Lab);
+
+        Assert.Equal((room.Id, (string?)null), await svc.SelectionAsync(room.Id, Lab));
+        Assert.Equal((room.Id, (string?)null), await svc.SelectionAsync(null, "εργαστήριο 1"));
+        Assert.Equal((RoomService.LegacyRoomId, "Αίθουσα 3"), await svc.SelectionAsync(null, " Αίθουσα 3 "));
+        Assert.Equal(((int?)null, (string?)null), await svc.SelectionAsync(null, "  "));
+    }
+
+    [Fact]
     public async Task MoveDevices_SetsRoomAndUpdatedBy()
     {
         var (db, conn) = TestDb.Create();
