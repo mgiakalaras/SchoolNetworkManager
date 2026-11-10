@@ -66,13 +66,13 @@ public class IndexModel : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostSaveRoomTypeAsync(int? id, string? name, string? icon, string? color)
+    public async Task<IActionResult> OnPostSaveRoomTypeAsync(int? id, string? name, string? icon, string? color, bool noColor)
     {
         ActiveTab = "roomtypes";
 
         try
         {
-            await RoomTypeOps.SaveAsync(_context, id, name ?? string.Empty, icon, color);
+            await RoomTypeOps.SaveAsync(_context, id, name ?? string.Empty, icon, noColor ? null : color);
             StatusMessage = id == null ? "Ο τύπος χώρου προστέθηκε." : "Ο τύπος χώρου αποθηκεύτηκε.";
         }
         catch (InvalidOperationException ex)

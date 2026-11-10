@@ -95,6 +95,11 @@ public static class RoomTypeOps
     /// <summary>Μετακινεί τον τύπο μία θέση πάνω (dir &lt; 0) ή κάτω (dir &gt; 0).</summary>
     public static async Task MoveAsync(AppDbContext db, int id, int dir)
     {
+        if (dir == 0)
+        {
+            return;
+        }
+
         var ordered = await db.RoomTypes.OrderBy(t => t.SortOrder).ThenBy(t => t.Id).ToListAsync();
 
         // Κανονικοποίηση ώστε να μη χαλάνε οι ισοβαθμίες το swap

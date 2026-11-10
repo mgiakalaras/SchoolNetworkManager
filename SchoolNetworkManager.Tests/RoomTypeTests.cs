@@ -126,4 +126,30 @@ public class RoomTypeTests
         await RoomTypeOps.MoveAsync(db, after[0], -1);
         Assert.Equal(after, await db.RoomTypes.OrderBy(t => t.SortOrder).ThenBy(t => t.Id).Select(t => t.Id).ToListAsync());
     }
+
+    [Fact]
+    public async Task Move_ZeroDirIsNoOp()
+    {
+        var (db, conn) = TestDb.Create();
+        using var _ = conn; using var __ = db;
+        await SeedDefaultsAsync(db);
+        var before = await db.RoomTypes.OrderBy(t => t.SortOrder).ThenBy(t => t.Id).Select(t => t.Id).ToListAsync();
+
+        await RoomTypeOps.MoveAsync(db, before[1], 0);
+
+        Assert.Equal(before, await db.RoomTypes.OrderBy(t => t.SortOrder).ThenBy(t => t.Id).Select(t => t.Id).ToListAsync());
+    }
+
+    [Fact]
+    public async Task Save_EmptyColorStoresNull()
+    {
+        var (db, conn) = TestDb.Create();
+        using var _ = conn; using var __ = db;
+        await RoomTypeOps.SaveAsync(db, null, "Έγχρωμος", null, "#123456");
+        var id = (await db.RoomTypes.SingleAsync()).Id;
+
+        await RoomTypeOps.SaveAsync(db, id, "Έγχρωμος", null, "");
+
+        Assert.Null((await db.RoomTypes.SingleAsync()).Color);
+    }
 }

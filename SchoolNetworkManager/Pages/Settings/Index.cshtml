@@ -426,25 +426,45 @@
                                     var rt = Model.RoomTypes[ti];
                                     var used = Model.RoomTypeUsage.TryGetValue(rt.Id, out var usedCount) ? usedCount : 0;
                                     var formId = $"rt-form-{rt.Id}";
-                                    var pickerColor = SchoolNetworkManager.Services.RoomTypeOps.IsValidColor(rt.Color) && rt.Color!.Length == 7 ? rt.Color : "#6c757d";
+                                    var hasColor = SchoolNetworkManager.Services.RoomTypeOps.IsValidColor(rt.Color);
+                                    var pickerColor = hasColor && rt.Color!.Length == 7 ? rt.Color : "#6c757d";
                                     <tr>
                                         <td><input form="@formId" name="icon" value="@rt.Icon" maxlength="8" class="form-control" aria-label="Εικονίδιο" /></td>
                                         <td><input form="@formId" name="name" value="@rt.Name" maxlength="80" required class="form-control" aria-label="Όνομα" /></td>
-                                        <td><input form="@formId" type="color" name="color" value="@pickerColor" class="form-control form-control-color" aria-label="Χρώμα" /></td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <input form="@formId" type="color" name="color" value="@pickerColor" class="form-control form-control-color" aria-label="Χρώμα" data-color-picker />
+                                                <div class="form-check mb-0 text-nowrap">
+                                                    <input form="@formId" type="checkbox" name="noColor" value="true" id="nc-@rt.Id" class="form-check-input" checked="@(!hasColor)" data-no-color />
+                                                    <label for="nc-@rt.Id" class="form-check-label small">χωρίς χρώμα</label>
+                                                </div>
+                                            </div>
+                                        </td>
                                         <td>@used</td>
-                                        <td class="text-end text-nowrap">
-                                            <button form="@formId" formaction="?handler=MoveRoomType" name="dir" value="-1" type="submit" class="btn btn-sm btn-outline-secondary" aria-label="Μετακίνηση πάνω" title="Πάνω" disabled="@(ti == 0)">↑</button>
-                                            <button form="@formId" formaction="?handler=MoveRoomType" name="dir" value="1" type="submit" class="btn btn-sm btn-outline-secondary" aria-label="Μετακίνηση κάτω" title="Κάτω" disabled="@(ti == Model.RoomTypes.Count - 1)">↓</button>
-                                            <button form="@formId" formaction="?handler=SaveRoomType" type="submit" class="btn btn-sm btn-primary">Αποθήκευση</button>
-                                            <button form="@formId" formaction="?handler=DeleteRoomType" type="submit" class="btn btn-sm btn-outline-danger" formnovalidate
-                                                    data-confirm="@(used > 0 ? $"Ο τύπος χρησιμοποιείται από {used} χώρο(υς) και δεν θα διαγραφεί. Συνέχεια;" : "Να διαγραφεί ο τύπος χώρου;")">Διαγραφή</button>
+                                        <td class="text-end">
+                                            @* Το Save είναι το πρώτο submit στο DOM (άρα το προεπιλεγμένο στο Enter)· η οπτική σειρά ορίζεται με order-*. *@
+                                            <div class="d-inline-flex flex-nowrap gap-1">
+                                                <button form="@formId" formaction="?handler=SaveRoomType" type="submit" class="btn btn-sm btn-primary order-3">Αποθήκευση</button>
+                                                <button form="@formId" formaction="?handler=MoveRoomType" name="dir" value="-1" type="submit" formnovalidate class="btn btn-sm btn-outline-secondary order-1" aria-label="Μετακίνηση πάνω" title="Πάνω" disabled="@(ti == 0)">↑</button>
+                                                <button form="@formId" formaction="?handler=MoveRoomType" name="dir" value="1" type="submit" formnovalidate class="btn btn-sm btn-outline-secondary order-2" aria-label="Μετακίνηση κάτω" title="Κάτω" disabled="@(ti == Model.RoomTypes.Count - 1)">↓</button>
+                                                <button form="@formId" formaction="?handler=DeleteRoomType" type="submit" class="btn btn-sm btn-outline-danger order-4" formnovalidate
+                                                        data-confirm="@(used > 0 ? $"Ο τύπος χρησιμοποιείται από {used} χώρο(υς) και δεν θα διαγραφεί. Συνέχεια;" : "Να διαγραφεί ο τύπος χώρου;")">Διαγραφή</button>
+                                            </div>
                                         </td>
                                     </tr>
                                 }
                                 <tr class="table-light">
                                     <td><input form="rt-form-new" name="icon" maxlength="8" class="form-control" placeholder="🏷️" aria-label="Εικονίδιο νέου τύπου" /></td>
                                     <td><input form="rt-form-new" name="name" maxlength="80" required class="form-control" placeholder="Νέος τύπος χώρου" aria-label="Όνομα νέου τύπου" /></td>
-                                    <td><input form="rt-form-new" type="color" name="color" value="#6c757d" class="form-control form-control-color" aria-label="Χρώμα νέου τύπου" /></td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <input form="rt-form-new" type="color" name="color" value="#6c757d" class="form-control form-control-color" aria-label="Χρώμα νέου τύπου" data-color-picker />
+                                            <div class="form-check mb-0 text-nowrap">
+                                                <input form="rt-form-new" type="checkbox" name="noColor" value="true" id="nc-new" class="form-check-input" checked data-no-color />
+                                                <label for="nc-new" class="form-check-label small">χωρίς χρώμα</label>
+                                            </div>
+                                        </div>
+                                    </td>
                                     <td></td>
                                     <td class="text-end"><button form="rt-form-new" formaction="?handler=SaveRoomType" type="submit" class="btn btn-sm btn-success">+ Προσθήκη</button></td>
                                 </tr>
@@ -478,6 +498,14 @@
             button.addEventListener("shown.bs.tab", function () {
                 document.getElementById("activeTabInput").value = button.dataset.tab;
                 document.getElementById("saveBar").classList.toggle("d-none", button.dataset.tab === "roomtypes");
+            });
+        });
+
+        // Όταν ο χρήστης διαλέγει χρώμα, ξε-τσεκάρεται το «χωρίς χρώμα» της ίδιας φόρμας
+        document.querySelectorAll("[data-color-picker]").forEach(function (picker) {
+            picker.addEventListener("input", function () {
+                var box = document.querySelector('[data-no-color][form="' + picker.getAttribute("form") + '"]');
+                if (box) { box.checked = false; }
             });
         });
 
