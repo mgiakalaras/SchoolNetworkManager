@@ -42,6 +42,9 @@ public class IndexModel : PageModel
     public List<string> Types { get; set; } = new();
     public List<LocationRow> ByLocation { get; set; } = new();
 
+    /// <summary>Ομάδες κτίριο › όροφος για τον πίνακα «ανά χώρο»· null όταν κανένας χώρος δεν έχει όροφο.</summary>
+    public List<RoomGroup>? FloorGroups { get; set; }
+
     public List<FaultRow> Faults { get; set; } = new();
     public int FaultsOpened { get; set; }
     public int FaultsClosed { get; set; }
@@ -106,6 +109,13 @@ public class IndexModel : PageModel
                 ByType = g.GroupBy(d => d.DisplayMachineType).ToDictionary(t => t.Key, t => t.Count())
             })
             .ToList();
+
+        // Όταν υπάρχουν όροφοι: ομαδοποίηση κτίριο › όροφος › χώρος (αλλιώς μένει η επίπεδη λίστα).
+        FloorGroups = RoomGrouping.Group(
+            await _context.Rooms.AsNoTracking().ToListAsync(),
+            await _context.Floors.AsNoTracking().ToListAsync(),
+            await _context.Buildings.AsNoTracking().ToListAsync(),
+            ByLocation.Select(r => r.Name));
 
         // ---------- Βλάβες ----------
         var faults = (await _context.Faults

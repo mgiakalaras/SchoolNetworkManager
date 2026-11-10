@@ -144,7 +144,23 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var row in Model.ByLocation)
+                @{
+                    var rowLookup = Model.ByLocation.ToLookup(r => r.Name);
+                    var colCount = 2 + types.Count + (otherTypes.Count > 0 ? 1 : 0);
+                    var sections = Model.FloorGroups == null
+                        ? new List<(string? Header, List<SchoolNetworkManager.Pages.Report.IndexModel.LocationRow> Rows)> { (null, Model.ByLocation) }
+                        : Model.FloorGroups
+                            .Select(g => ((string?)(g.Floor == null ? "Χωρίς όροφο" : (Model.FloorGroups.Where(x => x.Building != null).Select(x => x.Building).Distinct().Count() > 1 ? g.Building + " › " : "") + g.Floor),
+                                          g.RoomNames.SelectMany(n => rowLookup[n]).ToList()))
+                            .ToList();
+                }
+                @foreach (var grp in sections)
+                {
+                    if (grp.Item1 != null)
+                    {
+                        <tr class="table-light"><th colspan="@colCount">🏢 @grp.Item1</th></tr>
+                    }
+                @foreach (var row in grp.Item2)
                 {
                     <tr>
                         <td>@row.Name</td>
@@ -159,6 +175,7 @@
                         }
                         <td class="text-end fw-semibold">@row.Total</td>
                     </tr>
+                }
                 }
             </tbody>
             <tfoot>

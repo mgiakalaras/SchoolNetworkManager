@@ -86,6 +86,10 @@
                 }
                 <div class="flex-grow-1">
                     <div class="print-school">@Model.Settings.SchoolTitle</div>
+                    @if (place.Floor != null)
+                    {
+                        <div class="small text-muted">🏢 @place.Floor</div>
+                    }
                     <h1 class="print-title">@place.Name</h1>
                 </div>
                 <div class="text-end small">

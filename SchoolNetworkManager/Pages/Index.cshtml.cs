@@ -62,6 +62,9 @@ public class IndexModel : PageModel
         SchoolSubtitle = "Γρήγορη εικόνα του σχολικού δικτύου"
     };
 
+    /// <summary>Γραμμές της κάρτας «Ανά όροφο»· άδεια όταν κανένας όροφος δεν έχει χώρους.</summary>
+    public List<FloorSummary> FloorRows { get; set; } = new();
+
     public List<LocationSummary> Locations { get; set; } = new();
     public List<MachineTypeSummary> MachineTypeStats { get; set; } = new();
     public List<Computer> LatestComputers { get; set; } = new();
@@ -303,6 +306,24 @@ public class IndexModel : PageModel
 
         MacWarnings = computers.Count(c => c.HasMacMismatch);
 
+        // Κάρτα «Ανά όροφο»: μόνο όροφοι που έχουν χώρους· πρόθεμα κτιρίου όταν υπάρχουν πολλά.
+        var (buildingViews, _) = await BuildingQueries.LoadAsync(_context);
+        var multiBuilding = buildingViews.Count > 1;
+
+        FloorRows = buildingViews
+            .SelectMany(b => b.Floors.Where(f => f.Rooms.Count > 0).Select(f => new FloorSummary
+            {
+                BuildingId = b.Building.Id,
+                Name = multiBuilding ? $"{b.Building.Name} › {f.Floor.Name}" : f.Floor.Name,
+                Rooms = f.Rooms.Count,
+                PcActual = f.Totals.Where(t => t.MachineType == "Υπολογιστής").Sum(t => t.Actual),
+                PcPlanned = f.Totals.Where(t => t.MachineType == "Υπολογιστής").Sum(t => t.Planned),
+                BoardActual = f.Totals.Where(t => t.MachineType == "Διαδραστικός Πίνακας").Sum(t => t.Actual),
+                BoardPlanned = f.Totals.Where(t => t.MachineType == "Διαδραστικός Πίνακας").Sum(t => t.Planned)
+            }))
+            .ToList();
+        MultipleBuildings = multiBuilding;
+
         var realDevices = computers
     .Where(c => !c.IsEmptySlot)
     .ToList();
@@ -323,6 +344,22 @@ public class IndexModel : PageModel
             .OrderByDescending(c => ChangeBadge.LastChange(c))
             .Take(8)
             .ToList();
+    }
+
+    public bool MultipleBuildings { get; set; }
+
+    public class FloorSummary
+    {
+        public int BuildingId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int Rooms { get; set; }
+        public int PcActual { get; set; }
+        public int PcPlanned { get; set; }
+        public int BoardActual { get; set; }
+        public int BoardPlanned { get; set; }
+
+        public bool PcDiffers => PcActual != PcPlanned;
+        public bool BoardDiffers => BoardActual != BoardPlanned;
     }
 
     public class LocationSummary

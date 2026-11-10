@@ -62,7 +62,17 @@ public class IndexModel : PageModel
             ? AllLocationKeys
             : new List<string> { Location };
 
-        foreach (var key in selected)
+        // Όταν υπάρχουν όροφοι: σειρά κτίριο › όροφος › χώρος, με τίτλο κτιρίου/ορόφου πάνω από τον χώρο.
+        var floorGroups = RoomGrouping.Group(
+            await _context.Rooms.AsNoTracking().ToListAsync(),
+            await _context.Floors.AsNoTracking().ToListAsync(),
+            await _context.Buildings.AsNoTracking().ToListAsync(),
+            selected);
+        var ordered = floorGroups == null
+            ? selected.Select(k => (Key: k, Group: (RoomGroup?)null)).ToList()
+            : floorGroups.SelectMany(g => g.RoomNames.Select(k => (Key: k, Group: (RoomGroup?)g))).ToList();
+
+        foreach (var (key, group) in ordered)
         {
             var items = computers
                 .Where(c => LocationsPage.MatchesLocation(c, key))
@@ -78,6 +88,7 @@ public class IndexModel : PageModel
             Groups.Add(new PrintGroup
             {
                 Name = key == LocationsPage.NoLocationKey ? LocationsPage.NoLocationName : key,
+                Floor = group == null ? null : group.Floor == null ? "Χωρίς όροφο" : string.IsNullOrEmpty(group.Building) ? group.Floor : $"{group.Building} › {group.Floor}",
                 Computers = items
             });
         }
@@ -89,6 +100,9 @@ public class IndexModel : PageModel
     public class PrintGroup
     {
         public string Name { get; set; } = string.Empty;
+
+        /// <summary>«Κτίριο › Όροφος» όταν υπάρχουν όροφοι· αλλιώς null.</summary>
+        public string? Floor { get; set; }
         public List<Computer> Computers { get; set; } = new();
     }
 }
