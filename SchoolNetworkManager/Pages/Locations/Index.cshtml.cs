@@ -34,6 +34,13 @@ public class IndexModel : PageModel
     [TempData]
     public string? StatusKind { get; set; }
 
+    /// <summary>Μετονομασία σε όνομα άλλου χώρου: προσφέρεται «Ένωση» (πηγή → στόχος).</summary>
+    [TempData]
+    public string? MergeSource { get; set; }
+
+    [TempData]
+    public string? MergeTarget { get; set; }
+
     public int DynamicCount { get; set; }
 
     /// <summary>Εμφάνιση ενεργειών ρεύματος (ρύθμιση).</summary>
@@ -372,15 +379,43 @@ public class IndexModel : PageModel
             var room = await _rooms.FindByNameAsync(oldName) ?? await _rooms.CreateAsync(oldName);
             await _rooms.RenameAsync(room.Id, target);
         }
-        catch (RoomNameTakenException ex)
+        catch (RoomNameTakenException)
         {
+            var existing = await _rooms.FindByNameAsync(target);
             StatusKind = "warning";
-            StatusMessage = $"Υπάρχει ήδη χώρος «{ex.RoomName}» — διάλεξε άλλο όνομα.";
+            StatusMessage = $"Υπάρχει ήδη χώρος «{existing?.Name ?? target}». Αν είναι ο ίδιος χώρος, ένωσέ τους: " +
+                            $"οι συσκευές, τα τμήματα και η κάτοψη του «{oldName}» περνούν στον «{existing?.Name ?? target}». Αλλιώς διάλεξε άλλο όνομα.";
+            MergeSource = oldName;
+            MergeTarget = existing?.Name ?? target;
             return RedirectToPage();
         }
 
         StatusKind = "success";
         StatusMessage = $"Ο χώρος «{DisplayName(oldName)}» έγινε «{DisplayName(target)}» ({count} συσκευές).";
+
+        return RedirectToPage();
+    }
+
+    /// <summary>Ένωση δύο χώρων (π.χ. διπλότυπο από άλλη γραφή): όλα περνούν στον target.</summary>
+    public async Task<IActionResult> OnPostMergeAsync(string? source, string? target)
+    {
+        var from = RoomService.NormaliseName(source);
+        var into = await _rooms.FindByNameAsync(target);
+
+        if (from == null || into == null || RoomService.SameName(from, into.Name))
+        {
+            StatusKind = "warning";
+            StatusMessage = "Οι χώροι για την ένωση δεν βρέθηκαν.";
+            return RedirectToPage();
+        }
+
+        // Παλιά δεδομένα χωρίς εγγραφή χώρου: δημιουργείται για να γίνει η ένωση.
+        var room = await _rooms.FindByNameAsync(from) ?? await _rooms.CreateAsync(from);
+        var name = room.Name;
+        await _rooms.MergeAsync(room.Id, into.Id);
+
+        StatusKind = "success";
+        StatusMessage = $"🔗 Ο χώρος «{name}» ενώθηκε με τον «{into.Name}».";
 
         return RedirectToPage();
     }

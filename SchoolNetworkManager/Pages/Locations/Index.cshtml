@@ -54,6 +54,14 @@
 {
     <div class="alert alert-@(Model.StatusKind ?? "success") shadow-sm">
         @Model.StatusMessage
+        @if (!string.IsNullOrWhiteSpace(Model.MergeSource) && !string.IsNullOrWhiteSpace(Model.MergeTarget))
+        {
+            <form method="post" asp-page-handler="Merge" class="mt-2">
+                <input type="hidden" name="source" value="@Model.MergeSource" />
+                <input type="hidden" name="target" value="@Model.MergeTarget" />
+                <button type="submit" class="btn btn-sm btn-warning">🔗 Ένωση με «@Model.MergeTarget»</button>
+            </form>
+        }
     </div>
 }
 

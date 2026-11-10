@@ -48,6 +48,14 @@
 {
     <div class="alert alert-@(Model.StatusKind ?? "success") shadow-sm">
         @Model.StatusMessage
+        @if (Model.MergeSourceId != null && Model.MergeTargetId != null)
+        {
+            <form method="post" asp-page-handler="MergeRoom" class="mt-2">
+                <input type="hidden" name="sourceId" value="@Model.MergeSourceId" />
+                <input type="hidden" name="targetId" value="@Model.MergeTargetId" />
+                <button type="submit" class="btn btn-sm btn-warning">🔗 Ένωση με «@Model.MergeTargetName»</button>
+            </form>
+        }
     </div>
 }
 

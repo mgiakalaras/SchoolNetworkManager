@@ -34,6 +34,16 @@ public class IndexModel : PageModel
     [TempData]
     public string? StatusKind { get; set; }
 
+    /// <summary>Μετονομασία σε όνομα άλλου χώρου: προσφέρεται «Ένωση» (πηγή → στόχος).</summary>
+    [TempData]
+    public int? MergeSourceId { get; set; }
+
+    [TempData]
+    public int? MergeTargetId { get; set; }
+
+    [TempData]
+    public string? MergeTargetName { get; set; }
+
     public async Task OnGetAsync()
     {
         (Buildings, Unplaced) = await BuildingQueries.LoadAsync(_context);
@@ -279,7 +289,27 @@ public class IndexModel : PageModel
         {
             if (!string.Equals(room.Name, RoomService.NormaliseName(name), StringComparison.Ordinal))
             {
-                await _rooms.RenameAsync(id, name ?? string.Empty);
+                try
+                {
+                    await _rooms.RenameAsync(id, name ?? string.Empty);
+                }
+                catch (RoomNameTakenException)
+                {
+                    var existing = await _rooms.FindByNameAsync(name);
+
+                    if (existing == null || existing.Id == id)
+                    {
+                        throw;
+                    }
+
+                    MergeSourceId = id;
+                    MergeTargetId = existing.Id;
+                    MergeTargetName = existing.Name;
+
+                    return Done($"Υπάρχει ήδη χώρος «{existing.Name}» — δεν αποθηκεύτηκε καμία αλλαγή. Αν είναι ο ίδιος χώρος, ένωσέ τους: " +
+                                $"οι συσκευές, τα τμήματα και η κάτοψη του «{room.Name}» περνούν στον «{existing.Name}». Αλλιώς διάλεξε άλλο όνομα.",
+                        "warning", floor?.BuildingId);
+                }
             }
 
             room = await _context.Rooms.FindAsync(id) ?? room;
@@ -313,6 +343,25 @@ public class IndexModel : PageModel
 
         return Done(room == null ? "Ο χώρος δεν βρέθηκε." : $"Ο χώρος «{room.Name}» διαγράφηκε· οι συσκευές του έμειναν χωρίς χώρο.",
             room == null ? "warning" : "success", building);
+    }
+
+    /// <summary>Ένωση δύο χώρων (διπλότυπα): όλα περνούν στον targetId, ο sourceId διαγράφεται.</summary>
+    public async Task<IActionResult> OnPostMergeRoomAsync(int sourceId, int targetId)
+    {
+        var source = await _context.Rooms.AsNoTracking().FirstOrDefaultAsync(r => r.Id == sourceId);
+        var target = await _context.Rooms.AsNoTracking().FirstOrDefaultAsync(r => r.Id == targetId);
+
+        if (source == null || target == null || sourceId == targetId)
+        {
+            return Done("Οι χώροι για την ένωση δεν βρέθηκαν.", "warning");
+        }
+
+        await _rooms.MergeAsync(sourceId, targetId);
+
+        var floorId = target.FloorId ?? source.FloorId;
+        var buildingId = floorId == null ? null : (await _context.Floors.FindAsync(floorId))?.BuildingId;
+
+        return Done($"🔗 Ο χώρος «{source.Name}» ενώθηκε με τον «{target.Name}».", building: buildingId);
     }
 
     public async Task<IActionResult> OnPostPlaceRoomsAsync(int[]? ids, int floorId)
